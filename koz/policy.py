@@ -30,6 +30,18 @@ STATUS_INTERVAL_S = 1.0        # a status heartbeat at least this often while ru
 # color_finder: "center" means within this distance of the middle (0..1 across the frame).
 TARGET_CENTER_HALF_WIDTH = 0.1
 
+# Privacy guard: Places365 scene classes that stop the job (index in categories_places365.txt, name).
+PRIVATE_SCENES = {
+    "PRIVATE_BATHROOM": ((45, "bathroom"), (195, "jacuzzi/indoor"), (295, "sauna"), (303, "shower")),
+    "PRIVATE_BEDROOM": ((51, "bedchamber"), (52, "bedroom"), (55, "berth"), (89, "childs_room"),
+                        (124, "dorm_room"), (179, "hospital_room"), (182, "hotel_room"),
+                        (196, "jail_cell"), (240, "nursery"), (363, "youth_hostel")),
+    "PRIVATE_CHANGING_ROOM": ((126, "dressing_room"), (219, "locker_room")),
+}
+# Places365 has no toilet class; a toilet stall is a trial case (docs/TRIALS.md).
+SCENE_PRIVATE_SUM_BLOCKS = 0.15   # proposed: private classes together this likely -> blocked
+SCENE_MIN_TOP_PROB = 0.20         # proposed: below this, the scene is "uncertain" -> not approved
+
 # face_blur (proposed). A low score threshold blurs more: a false blur is safe, a missed face is not.
 FACE_SCORE_THRESHOLD = 0.5
 FACE_MARGIN = 0.25             # grow each face box by this share on every side

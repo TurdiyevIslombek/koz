@@ -7,8 +7,8 @@ When something can't be trusted (frame too old, processing too slow), outputs sa
 "unknown", never 0 or an old value. When privacy or blur fails, or anything
 unexpected goes wrong, the job stops.
 
-Built so far: the gate, face blur, color_finder, and the dashboard action (= the
-observation events). The fly brain, motors and the other blocks come later; recipes
+Built so far: the privacy guard, face blur, color_finder, and the dashboard action
+(= the observation events). The fly brain, motors and the other blocks come later; recipes
 that need them are refused in koz.recipe with UNSUPPORTED_CAPABILITY."""
 import time
 
@@ -17,8 +17,9 @@ import cv2
 from . import policy
 from .blocks import TASK_BLOCKS, FaceBlur, FrameContext
 from .errors import KozError
-from .privacy import APPROVED, UNKNOWN, NoSceneModel, PrivacyGate
+from .privacy import APPROVED, UNKNOWN, PrivacyGate
 from .recipe import CheckedRecipe, check_recipe
+from .scene import PlacesSceneChecker
 
 OPENCV_MAJOR = int(cv2.__version__.split(".")[0])
 
@@ -27,8 +28,8 @@ class Runner:
     """Runs one checked recipe on one camera and sends events to `events` (a koz.events.EventLog).
 
     `scene_checker` and `face_detector` are only replaced in tests. By default the
-    privacy guard never approves (the scene classifier isn't built yet) and face blur
-    uses the pinned YuNet model."""
+    privacy guard uses the pinned Places365 model and face blur the pinned YuNet model;
+    if either file is missing or changed, the runner refuses to start."""
 
     def __init__(self, recipe, setup, camera, events, scene_checker=None, face_detector=None,
                  revision=1, clock=time.monotonic):
@@ -45,7 +46,7 @@ class Runner:
         width, height = (int(n) for n in recipe.data["camera"]["size"].split("x"))
         self.size = (width, height)
         self._mask = setup.mask(width, height)
-        self._gate = PrivacyGate(scene_checker if scene_checker is not None else NoSceneModel(), clock)
+        self._gate = PrivacyGate(scene_checker if scene_checker is not None else PlacesSceneChecker(), clock)
         self._blur = FaceBlur({}, detector=face_detector)
         self._blocks = [TASK_BLOCKS[b["type"]](b["settings"]) for b in recipe.data["blocks"][2:]]
         self._has_target = any(b["type"] == "color_finder" for b in recipe.data["blocks"])

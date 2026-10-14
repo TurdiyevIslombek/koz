@@ -2,9 +2,7 @@
 
 It sits between the camera and every block. Only APPROVED frames go on. Anything else
 (a private room, low confidence, a missing model, an error, a slow or stuck check)
-stops the job. The real scene classifier is the next task; until it exists,
-NoSceneModel answers UNKNOWN, so the runner refuses to run anything. That is the
-fail-closed rule."""
+stops the job. The scene check itself is koz.scene.PlacesSceneChecker."""
 import threading
 import time
 from dataclasses import dataclass
@@ -22,13 +20,6 @@ class PrivacyResult:
 
 
 FAILED = PrivacyResult(UNKNOWN, "PRIVACY_UNAVAILABLE")
-
-
-class NoSceneModel:
-    """Stands in until the scene classifier is built: never approves."""
-
-    def check(self, image):
-        return FAILED
 
 
 class PrivacyGate:

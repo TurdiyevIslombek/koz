@@ -10,13 +10,11 @@ sharpened back; averaged squares can't.
 
 It fails closed: if the model file is missing, has the wrong SHA-256, or detection
 fails, the frame goes no further (BLUR_UNAVAILABLE)."""
-import hashlib
-from pathlib import Path
-
 import cv2
 
 from .. import MODELS, policy
 from ..errors import KozError
+from ..pinned import require_pinned
 from .base import Block
 
 # OpenCV Zoo, models/face_detection_yunet (MIT license, see koz/models/YUNET_LICENSE).
@@ -29,13 +27,7 @@ class YuNetDetector:
     """OpenCV 5 DNN face detector. detect(image) -> list of (x, y, w, h) boxes in pixels."""
 
     def __init__(self, model_path=MODEL_PATH, score_threshold=policy.FACE_SCORE_THRESHOLD):
-        model_path = Path(model_path)
-        try:
-            digest = hashlib.sha256(model_path.read_bytes()).hexdigest()
-        except OSError:
-            raise KozError("BLUR_UNAVAILABLE", "face model missing") from None
-        if digest != MODEL_SHA256:
-            raise KozError("BLUR_UNAVAILABLE", "face model is not the pinned file")
+        require_pinned(model_path, MODEL_SHA256, "BLUR_UNAVAILABLE")
         self._size = (320, 240)
         try:
             self._net = cv2.FaceDetectorYN.create(str(model_path), "", self._size, score_threshold)

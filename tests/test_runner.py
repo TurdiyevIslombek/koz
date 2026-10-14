@@ -11,7 +11,7 @@ from koz.capture import FileCamera
 from koz.errors import KozError
 from koz.events import EventLog
 from koz.local_setup import LocalSetup
-from koz.privacy import PrivacyGate, PrivacyResult
+from koz.privacy import FAILED, PrivacyGate, PrivacyResult
 from koz.recipe import check_recipe
 from koz.runner import Runner
 
@@ -59,10 +59,17 @@ def test_at_most_one_observation_per_second(test_video):
     assert len(of_type(sent, "observation")) == 2   # 18 frames at 10 fps = 1.8 s
 
 
-def test_default_guard_never_approves(test_video):
-    """The scene classifier isn't built yet, so nothing may run."""
+def test_without_the_scene_model_the_runner_refuses_to_start(test_video, tmp_path, monkeypatch):
+    monkeypatch.setattr("koz.scene.MODEL_PATH", tmp_path / "missing.onnx")
+    with pytest.raises(KozError) as caught:
+        Runner(check_recipe(color_recipe()), LocalSetup(True, FULL_FRAME), FileCamera(test_video),
+               EventLog(list().append), face_detector=FakeFaces())
+    assert caught.value.code == "PRIVACY_UNAVAILABLE"
+
+
+def test_an_unavailable_check_lets_nothing_through(test_video):
     faces = FakeFaces()
-    runner, sent, _ = make(test_video, face_detector=faces)
+    runner, sent, _ = make(test_video, scene_checker=Sequence(FAILED), face_detector=faces)
     assert runner.run() == "refused"
     assert of_type(sent, "fault") == [{"code": "PRIVACY_UNAVAILABLE", "effect": "off"}]
     assert of_type(sent, "observation")[0]["target"] == "unknown"

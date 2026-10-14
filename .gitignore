@@ -8,3 +8,6 @@ __pycache__/
 
 # Real face or people videos for local tests stay on this computer only (CLAUDE.md rule 8)
 tests/fixtures/private/
+
+# Places365 scene model: published as a GitHub Release asset, fetched by scripts/fetch_models.py
+koz/models/places365_resnet18.onnx
