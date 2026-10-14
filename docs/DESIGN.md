@@ -29,6 +29,11 @@ Plus: recipe export/import (a file), language switch (Oʻzbek / Русский /
 ## Personality
 Trustworthy, calm, local. Think of a well-made instrument (a scale in a bazaar, a good thermometer), not a sci-fi dashboard. One accent color; the rest neutral. A small touch of identity is welcome (the name Ko'z, the eye), not decoration everywhere.
 
+## Tools to use
+- **Design skills installed on this Mac** (Islombek added design-quality skills such as "taste" and "impeccable"): load and follow them before designing, and run their review/audit step on every mockup before showing it. If a name differs, list the installed skills and use the design ones.
+- **Look at real products first, then design.** Search the web for 5–8 real interfaces in this space and write 2 lines on what each does well: camera/security apps (UniFi Protect, Apple Home cameras, Nest), calm tool UIs (Linear, Stripe dashboard, Vercel), status-first displays (Apple Weather, airport boards). Collections such as Mobbin, Refero or Godly are fine for browsing. Save the notes in `web/design/references.md`. Learn patterns; never copy a layout, logo or brand.
+- Check contrast with a real contrast checker, and look at each mockup at 360 px and in dark mode before calling it done.
+
 ## Process
 1. Codex: make **two different directions** as static HTML mockups of the Live job screen only, in `web/design/direction-a.html` and `direction-b.html`, with real Uzbek text and both themes. Explain each in 3 lines.
 2. Islombek picks one (or mixes).
