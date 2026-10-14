@@ -8,7 +8,8 @@ from koz.events import EventLog, count_known, count_unknown, new_id
 
 def observation(**changes):
     data = {"round": None, "privacy": "approved", "occupancy": None, "entered": None, "exited": None,
-            "coverage": "complete", "target": "left", "motion": None, "looming": None, "alert": None}
+            "coverage": "complete", "target": "left", "motion": None, "looming": None, "alert": None,
+            "unknown_reason": None}
     data.update(changes)
     return data
 
@@ -30,7 +31,8 @@ def test_envelope_and_numbering():
 def test_counts_known_and_unknown_are_allowed():
     sent = []
     EventLog(sent.append).emit("observation", observation(
-        occupancy=count_known(0), entered=count_unknown("FRAME_STALE"), exited=None))
+        occupancy=count_known(0), entered=count_unknown("FRAME_STALE"), exited=None,
+        unknown_reason="FRAME_STALE"))
     assert sent[0]["data"]["occupancy"] == {"state": "known", "value": 0, "reason": None}
 
 
@@ -67,15 +69,40 @@ def test_unknown_types_revisions_and_ids_are_refused():
 
 def test_closed_privacy_gate_hides_every_output():
     log = EventLog([].append)
-    for data in (observation(privacy="blocked"),                                   # target still "left"
-                 observation(privacy="unknown", target="unknown", occupancy=count_known(5)),
-                 observation(privacy="blocked", target="unknown", alert="count_changed")):
+    closed = {"privacy": "blocked", "unknown_reason": "PRIVATE_BATHROOM"}
+    for data in (observation(**closed),                                            # target still "left"
+                 observation(**closed, target="unknown", occupancy=count_known(5)),
+                 observation(**closed, target="unknown", alert="count_changed")):
         with pytest.raises(KozError):
             log.emit("observation", data)
-    log.emit("observation", observation(privacy="blocked", target="unknown",
+    log.emit("observation", observation(**closed, target="unknown",
                                         occupancy=count_unknown("PRIVATE_BATHROOM")))
 
 
 def test_ids_must_be_exactly_32_hex_characters():
     with pytest.raises(KozError):
         EventLog([].append, job_id="a" * 32 + "\n")
+
+
+@pytest.mark.parametrize("data", [
+    observation(target="unknown"),                                       # unknown with no reason
+    observation(unknown_reason="FRAME_STALE"),                           # a reason with nothing unknown
+    observation(privacy="unknown", target=None),                         # gate closed, no reason
+    observation(target="unknown", unknown_reason="camera broke"),        # free text
+    observation(target="unknown", unknown_reason="FRAME_STALE",
+                occupancy=count_unknown("OVERLOADED")),                  # two different causes
+])
+def test_unknown_reason_rules_refuse(data):
+    with pytest.raises(KozError) as caught:
+        EventLog([].append).emit("observation", data)
+    assert caught.value.code == "INVALID_EVENT"
+
+
+@pytest.mark.parametrize("data", [
+    observation(target="unknown", unknown_reason="OVERLOADED"),
+    observation(target="lost"),                                          # lost is a measurement
+    observation(privacy="blocked", target=None, unknown_reason="PRIVATE_BEDROOM"),   # nothing configured
+    observation(privacy="unknown", target="unknown", unknown_reason="FRAME_STALE"),  # before the first check
+])
+def test_unknown_reason_rules_allow(data):
+    EventLog([].append).emit("observation", data)

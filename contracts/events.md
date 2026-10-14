@@ -4,6 +4,10 @@ Status: agreed Oct 14. Claude and Codex each proposed one independently,
 debated once and merged them; Islombek approved. It changes only when both
 lanes agree.
 
+Changes since then (both lanes agreed):
+- Oct 14: `observation.unknown_reason` added (section 8.3), so the dashboard can say
+  why an output is unknown.
+
 `recipe.schema.json` and this file are the contract together.
 **MVP** = built by Oct 26. **stretch** = only if built; the dashboard must not
 show a stretch feature as active unless `status.capabilities` lists it.
@@ -214,7 +218,8 @@ Every runner event has exactly these fields:
     {"state": "unknown", "value": null, "reason": "FRAME_STALE"}
 
 - `known`: `value` is an integer 0..2147483647. `0` means it measured zero.
-- `unknown`: `value` is null; `reason` is a code from section 11.
+- `unknown`: `value` is null; `reason` is a code from section 11. Inside an
+  observation it equals that observation's `unknown_reason`.
 - Unknown never enters totals or averages as 0.
 - A top-level `null` instead of a Count means "not configured".
 
@@ -310,7 +315,8 @@ shows it running. Offer download of the exact `recipe` object. Store 7 days.
 ### 8.3 observation
 
 From real processing: at most once per second, and at once when a check needs
-evidence or an output becomes unknown.
+evidence, an output becomes unknown, or `unknown_reason` changes (also back to null).
+"Changes" compares with the last observation sent.
 
 | Field | Values |
 |---|---|
@@ -324,7 +330,18 @@ evidence or an output becomes unknown.
 | `motion` | `detected` · `clear` · `unknown` · null |
 | `looming` | `risk` · `clear` · `unknown` · null (stretch) |
 | `alert` | `motion_detected` · `count_changed` · null |
+| `unknown_reason` | an error code from section 11, or null — why outputs are unknown |
 
+- `unknown_reason` is set when any configured output is unknown, or when
+  `privacy` is not `approved` (even if no output is configured). Otherwise it is
+  null. `lost`, `clear` and a known 0 are measurements and need no reason; an old
+  `gapped` coverage alone doesn't need one either.
+- It names the actual cause: `FRAME_STALE`, `OVERLOADED`, the privacy gate's code,
+  `BLUR_UNAVAILABLE`, `INTERNAL_ERROR` and so on. A stale frame before the first
+  privacy check is `FRAME_STALE`, not `PRIVACY_UNAVAILABLE`.
+- One cause per observation: every unknown Count in it has the same `reason`.
+  Different causes for different outputs at the same time can't be expressed yet;
+  that would need a later contract change.
 - Counters reset between evaluation rounds. In normal running they start at 0
   after the job passes and don't reset.
 - `coverage` becomes `gapped` after any stale or missing stretch and stays so
@@ -338,11 +355,24 @@ evidence or an output becomes unknown.
  "job_id":"22222222222222222222222222222222","trial_id":"33333333333333333333333333333333",
  "revision":1,"minute":29800000,
  "data":{"round":1,"privacy":"approved","occupancy":null,"entered":null,"exited":null,
-         "coverage":"complete","target":"right","motion":null,"looming":null,"alert":null}}
+         "coverage":"complete","target":"right","motion":null,"looming":null,"alert":null,
+         "unknown_reason":null}}
 ```
 
-Web: show configured counts and labels. Show unknown as "Unknown", never 0;
-null as "Not configured". Show coverage gaps next to totals. Alerts come from
+The same output a moment later, when a frame arrived too late:
+
+```json
+{"v":1,"type":"observation","session_id":"11111111111111111111111111111111","seq":11,
+ "job_id":"22222222222222222222222222222222","trial_id":"33333333333333333333333333333333",
+ "revision":1,"minute":29800000,
+ "data":{"round":1,"privacy":"approved","occupancy":null,"entered":null,"exited":null,
+         "coverage":"gapped","target":"unknown","motion":null,"looming":null,"alert":null,
+         "unknown_reason":"FRAME_STALE"}}
+```
+
+Web: show configured counts and labels. Show unknown as "Unknown", never 0, with the
+fixed message for `unknown_reason` (for example "Camera data is stale. Outputs
+stopped."); null as "Not configured". Show coverage gaps next to totals. Alerts come from
 the fixed template list only. Never sum `occupancy`. Store 7 days.
 
 ### 8.4 decision

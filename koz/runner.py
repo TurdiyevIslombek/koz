@@ -55,7 +55,7 @@ class Runner:
         self.coverage = "complete"  # becomes "gapped" after any stale or slow frame, and stays so
         self.preview = None         # the latest fresh, masked, blurred frame, for a local window only
         self._was_running = False
-        self._last_target = None
+        self._last_reason_sent = None
         self._last_observation_t = None
         self._last_status_t = None
 
@@ -89,8 +89,8 @@ class Runner:
         if frame is None:   # the recording ended
             self._stop("idle")
             return False
-        if self._clock() - frame.t > policy.MAX_FRAME_AGE_S:   # FRAME_STALE
-            self._unknown()
+        if self._clock() - frame.t > policy.MAX_FRAME_AGE_S:
+            self._unknown("FRAME_STALE")
             return True
 
         image = cv2.resize(frame.image, self.size, interpolation=cv2.INTER_AREA)
@@ -110,8 +110,8 @@ class Runner:
         self._blur.process(ctx)   # raises BLUR_UNAVAILABLE if it can't blur
         for block in self._blocks:
             block.process(ctx)
-        if self._clock() - frame.t > policy.MAX_FRAME_AGE_S:   # OVERLOADED: processing took too long
-            self._unknown()
+        if self._clock() - frame.t > policy.MAX_FRAME_AGE_S:   # processing took too long
+            self._unknown("OVERLOADED")
             return True
         self.preview = ctx.image
         target = ctx.results["color_finder"].label if self._has_target else None
@@ -121,33 +121,37 @@ class Runner:
 
     # --- events -------------------------------------------------------------
 
-    def _unknown(self):
-        """A frame we can't trust: outputs become unknown and coverage has a gap.
-        The target label has no field for the reason; Count outputs (later) will carry it."""
+    def _unknown(self, code):
+        """A frame we can't trust (FRAME_STALE or OVERLOADED): outputs become unknown with
+        that reason, and coverage has a gap."""
         self.coverage = "gapped"
         self.preview = None
-        self._observe(self._privacy_state(), "unknown" if self._has_target else None)
+        self._observe(self._privacy_state(), "unknown" if self._has_target else None, code)
         self._heartbeat()
 
-    def _observe(self, privacy, target):
-        """At most one observation per second, except at once when an output turns unknown."""
+    def _observe(self, privacy, target, cause=None):
+        """At most one observation per second, and at once when unknown_reason changes
+        (an output turning unknown always changes it, and so does recovering).
+
+        `cause` is why outputs can't be trusted. It becomes unknown_reason only when the
+        contract asks for one: an output is unknown, or privacy isn't approved."""
+        reason = cause if (target == "unknown" or privacy != APPROVED) else None
         now = self._clock()
-        turned_unknown = target == "unknown" and self._last_target != "unknown"
         due = self._last_observation_t is None or now - self._last_observation_t >= policy.OBSERVATION_INTERVAL_S
-        self._last_target = target
-        if not (due or turned_unknown):
+        if not (due or reason != self._last_reason_sent):
             return
-        self._last_observation_t = now
+        self._last_observation_t, self._last_reason_sent = now, reason
         self.events.emit("observation", {
             "round": None,   # set by the agent loop during evaluation rounds (next task)
             "privacy": privacy, "occupancy": None, "entered": None, "exited": None,
             "coverage": self.coverage, "target": target, "motion": None, "looming": None, "alert": None,
+            "unknown_reason": reason,
         }, revision=self.revision)
 
     def _fault(self, code, privacy=None):
         """Stop the job. Outputs become unknown first. "off" if it never ran, "held" if it was running."""
         self.preview = None
-        self._observe(privacy or self._privacy_state(), "unknown" if self._has_target else None)
+        self._observe(privacy or self._privacy_state(), "unknown" if self._has_target else None, code)
         self.events.emit("fault", {"code": code, "effect": "held" if self._was_running else "off"},
                          revision=self.revision)
         self._stop("held" if self._was_running else "refused")

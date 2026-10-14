@@ -83,6 +83,7 @@ FIELDS = {
         "motion": _words("detected", "clear", "unknown", nullable=True),
         "looming": _words("risk", "clear", "unknown", nullable=True),
         "alert": _words("motion_detected", "count_changed", nullable=True),
+        "unknown_reason": _words(*CODES, nullable=True),
     },
     "fault": {
         "code": _words(*CODES),
@@ -91,14 +92,22 @@ FIELDS = {
 }
 
 
-def _closed_gate_hides_outputs(data):
-    """When privacy isn't approved, every configured output must be unknown and no alert may fire."""
-    if data["privacy"] == "approved":
-        return True
-    labels_unknown = all(data[k] in (None, "unknown") for k in ("target", "motion", "looming"))
-    counts_unknown = all(data[k] is None or data[k]["state"] == "unknown"
-                         for k in ("occupancy", "entered", "exited"))
-    return labels_unknown and counts_unknown and data["alert"] is None
+def _observation_is_consistent(data):
+    """The rules across fields in contracts/events.md 8.3:
+    - when privacy isn't approved, every configured output is unknown and no alert fires;
+    - unknown_reason is set exactly when an output is unknown or privacy isn't approved;
+    - every unknown Count gives the same reason as unknown_reason."""
+    labels = [data[k] for k in ("target", "motion", "looming")]
+    counts = [data[k] for k in ("occupancy", "entered", "exited") if data[k] is not None]
+    unknown_counts = [c for c in counts if c["state"] == "unknown"]
+    closed = data["privacy"] != "approved"
+    if closed and (any(v not in (None, "unknown") for v in labels) or len(unknown_counts) != len(counts)
+                   or data["alert"] is not None):
+        return False
+    needs_reason = closed or "unknown" in labels or bool(unknown_counts)
+    if (data["unknown_reason"] is not None) != needs_reason:
+        return False
+    return all(c["reason"] == data["unknown_reason"] for c in unknown_counts)
 
 
 class EventLog:
@@ -119,7 +128,7 @@ class EventLog:
         if (spec is None or type(data) is not dict or set(data) != set(spec)
                 or not all(spec[name](data[name]) for name in spec)
                 or not _whole(1, 3, nullable=True)(revision)
-                or (event_type == "observation" and not _closed_gate_hides_outputs(data))):
+                or (event_type == "observation" and not _observation_is_consistent(data))):
             raise KozError("INVALID_EVENT", f"{event_type} does not match the contract")
         event = {"v": 1, "type": event_type, "session_id": self.session_id, "seq": self._seq + 1,
                  "job_id": self.job_id, "trial_id": self.trial_id, "revision": revision,

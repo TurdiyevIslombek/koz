@@ -1,5 +1,6 @@
 """The runner on the recorded test video: fixed order, privacy fails closed, unknown is not 0."""
 import threading
+from dataclasses import replace
 
 import numpy as np
 import pytest
@@ -102,6 +103,7 @@ def test_recheck_stops_a_running_job(test_video):
     assert runner.run() == "held"   # frame 3 is 120 s after the first check
     assert of_type(sent, "fault") == [{"code": "PRIVATE_BEDROOM", "effect": "held"}]
     assert [o["target"] for o in of_type(sent, "observation")] == ["left", "left", "unknown"]
+    assert of_type(sent, "observation")[-1]["unknown_reason"] == "PRIVATE_BEDROOM"
     assert states(sent) == ["checking", "running", "checking", "held"]   # the recheck is visible
 
 
@@ -112,6 +114,7 @@ def test_stale_frames_are_unknown_not_lost(test_video):
     observations = of_type(sent, "observation")
     assert observations[0]["target"] == "left" and observations[0]["coverage"] == "complete"
     assert observations[1]["target"] == "unknown" and observations[1]["coverage"] == "gapped"
+    assert [o["unknown_reason"] for o in observations[:3]] == [None, "FRAME_STALE", None]
     assert all(o["coverage"] == "gapped" for o in observations[1:])   # the gap stays recorded
 
 
@@ -121,12 +124,14 @@ def test_slow_processing_is_unknown(test_video):
                            face_detector=FakeFaces(clock=clock, seconds=0.6))
     runner.run()
     assert {o["target"] for o in of_type(sent, "observation")} == {"unknown"}
+    assert {o["unknown_reason"] for o in of_type(sent, "observation")} == {"OVERLOADED"}
 
 
 def test_blur_failure_stops_the_job(test_video):
     runner, sent, _ = make(test_video, scene_checker=Approve(), face_detector=BrokenFaces())
     assert runner.run() == "held"
     assert of_type(sent, "fault") == [{"code": "BLUR_UNAVAILABLE", "effect": "held"}]
+    assert of_type(sent, "observation")[-1]["unknown_reason"] == "BLUR_UNAVAILABLE"
 
 
 def test_outside_the_allowed_area_is_black(test_video):
@@ -186,6 +191,7 @@ def test_unexpected_error_stops_the_job(test_video):
     assert of_type(sent, "fault") == [{"code": "INTERNAL_ERROR", "effect": "held"}]
     assert runner.camera.is_open is False and runner.preview is None
     assert of_type(sent, "observation")[-1]["target"] == "unknown"
+    assert of_type(sent, "observation")[-1]["unknown_reason"] == "INTERNAL_ERROR"
 
 
 def test_malformed_privacy_answer_fails_closed(test_video):
@@ -234,3 +240,26 @@ def test_a_changed_checked_recipe_is_checked_again(test_video):
         Runner(checked, LocalSetup(True, FULL_FRAME), FileCamera(test_video), EventLog(list().append),
                scene_checker=Approve(), face_detector=FakeFaces())
     assert caught.value.code == "INVALID_RECIPE"
+
+
+def test_reason_changes_are_sent_at_once(test_video):
+    """Every frame flips between stale and fresh, so every frame is sent, even at 10 fps."""
+    runner, sent, _ = make(test_video, seconds_per_frame=0.1, camera_cls=StaleEveryOther,
+                           scene_checker=Approve(), face_detector=FakeFaces())
+    runner.run()
+    reasons = [o["unknown_reason"] for o in of_type(sent, "observation")]
+    assert reasons == [None, "FRAME_STALE"] * 9
+
+
+class StaleFirstFrame(TickingCamera):
+    def read(self):
+        frame = super().read()
+        return replace(frame, t=frame.t - 1.0) if frame is not None and frame.index == 0 else frame
+
+
+def test_stale_before_the_first_privacy_check_says_frame_stale(test_video):
+    runner, sent, _ = make(test_video, camera_cls=StaleFirstFrame, scene_checker=Approve(),
+                           face_detector=FakeFaces())
+    runner.step()
+    first = of_type(sent, "observation")[0]
+    assert (first["privacy"], first["target"], first["unknown_reason"]) == ("unknown", "unknown", "FRAME_STALE")
