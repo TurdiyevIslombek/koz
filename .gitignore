@@ -5,3 +5,6 @@
 __pycache__/
 *.pyc
 .DS_Store
+
+# Real face or people videos for local tests stay on this computer only (CLAUDE.md rule 8)
+tests/fixtures/private/
