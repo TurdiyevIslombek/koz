@@ -1,6 +1,6 @@
 # Ko'z status
 
-Updated Oct 14, after fixing live test #1 (a bathroom was approved). 150 tests pass, 1 skipped (it needs your face clip):
+Updated Oct 14, after the allowlist review and the owner-confirmed workspace. 169 tests pass, 1 skipped (it needs your face clip):
 `.venv/bin/python -m pytest -q`
 
 ## What works
@@ -8,7 +8,7 @@ Updated Oct 14, after fixing live test #1 (a bathroom was approved). 150 tests p
 | Part | State |
 |---|---|
 | Recipe checks (`koz/recipe.py`) | Strict parsing → contract schema → extra checks → "is it built?". Tested. |
-| Privacy guard (`koz/privacy.py`, `koz/scene.py`) | Places365 on OpenCV 5. **Allowlist** since live test #1: approves only listed public/work places (≥ 0.30); blocks 16 private rooms (top guess, any in the top 5 above 0.10, or 15 % together); dark or flat frames are never approved; checks every 10 s. On 46 real photos: no bathroom or bedroom approved, 9/11 classrooms and 7/12 shops approved. **Your own rooms: re-test pending.** |
+| Privacy guard (`koz/privacy.py`, `koz/scene.py`) | Places365 on OpenCV 5. **Allowlist**: approves only listed public/work places (≥ 0.30; corridors and lobbies ≥ 0.50); blocks 16 private rooms (top guess, any in the top 5 above 0.10, or 15 % together); dark or flat frames are never approved; checks every 10 s. On 46 real photos: no bathroom or bedroom approved, 9/11 classrooms and 7/12 shops approved. **Owner-confirmed workspace** (local setup, `--owner-workspace`): approves your own room unless a private room or darkness is seen; shown on screen; would miss 2 of 23 private photos. **Your own rooms: re-test pending.** |
 | Face blur (`koz/blocks/face_blur.py`) | YuNet on OpenCV 5, heavy pixelation, fails closed. **No real-face test yet** (waiting for your clip in `tests/fixtures/private/face.mp4`). |
 | Colour finder (`koz/blocks/color_finder.py`) | Biggest patch of one colour → left / center / right / lost. Tested on the recorded test video. |
 | Person detector (`koz/blocks/person_detector.py`) | NanoDet-Plus on OpenCV 5, "person" class only; boxes stay local, only the number of people is sent. Decoding tested with exact fake outputs. **Not yet measured on real people.** |
@@ -33,20 +33,24 @@ python3.13 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
 .venv/bin/python -m pytest -q
 .venv/bin/python scripts/live_demo.py --i-own-this-camera
 .venv/bin/python scripts/live_demo.py --i-own-this-camera --job counter --school
+.venv/bin/python scripts/live_demo.py --i-own-this-camera --owner-workspace   # your desk / robot arena
 ```
 
 ## What's next
 
-1. You: re-run live test #1 with `demo-blur.command` (bathroom, your room, your desk); record the face clip; sign the Places365 form.
-2. Fly-brain block (from the copied stage 2–3 code) + `firmware/motor_listener/` (car demo).
-3. Agent loop: words → recipe → check on live frames → adjust (max 3 tries).
-4. Web app (Codex's lane) and AWS in eu-central-1 on Oct 19–20.
-5. Trials: `docs/TRIALS.md` (privacy list drafted; car and classroom lists to write).
+1. You: the privacy trials in `docs/TRIALS.md` (1–10 with the workspace off, W1–W4 with it on); record the face clip.
+2. Contract: `owner_workspace` in `status` and `trial_result`, to agree with Codex after 22:11 (quota), so the dashboard and trial reports show it.
+3. Fly-brain block (from the copied stage 2–3 code) + `firmware/motor_listener/` (car demo).
+4. Agent loop: words → recipe → check on live frames → adjust (max 3 tries).
+5. Web app (Codex's lane) and AWS in eu-central-1 on Oct 19–20.
+6. Trials: car and classroom lists to write in `docs/TRIALS.md`.
 
 ## Known limits
 
 - Privacy limits were set on 46 Places365 photos, not yet on your rooms; face-blur and tracker settings are still proposals.
-- Living room and kitchen aren't on the allowlist, so home demos say "uncertain" unless you add them.
+- Living room and kitchen aren't on the allowlist; use the owner-confirmed workspace for your own desk or arena.
+- The owner-confirmed workspace trusts you: on 2 of 23 private photos the model sees no private room at all, so it would approve them (trial W3 checks your bathroom).
+- Until the contract change, the workspace shows only in the live window and terminal, not in events.
 - The stricter guard stops more often by mistake ("uncertain"); the trials measure how often.
 - Places365 has no toilet class; a toilet stall is trial #3.
 - Which crossing direction counts as "in" (right-to-left of the line A→B) is defined in `koz/blocks/line_counter.py` but not yet in the contract; to agree with Codex in one short question.

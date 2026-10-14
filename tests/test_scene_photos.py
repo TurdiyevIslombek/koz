@@ -50,7 +50,10 @@ def test_no_bathroom_or_bedroom_is_ever_approved(checker, group):
 
 
 @pytest.mark.parametrize("group", ["bathroom", "bedroom", "classroom", "shop"])
-def test_dark_first_frames_are_never_approved(checker, group):
+@pytest.mark.parametrize("workspace", [False, True])
+def test_dark_first_frames_are_never_approved(group, workspace):
+    """Even in an owner-confirmed workspace, a dark frame is never approved."""
+    checker = PlacesSceneChecker(owner_workspace=workspace)
     approved = [name for name, state in answers(checker, group, first_frame).items() if state == "approved"]
     assert approved == []
 

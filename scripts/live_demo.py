@@ -3,6 +3,7 @@
     .venv/bin/python scripts/live_demo.py --i-own-this-camera                 # find the red object
     .venv/bin/python scripts/live_demo.py --i-own-this-camera --job counter   # count people crossing a line
     .venv/bin/python scripts/live_demo.py --i-own-this-camera --camera http://flycar-cam.local:81/stream
+    .venv/bin/python scripts/live_demo.py --i-own-this-camera --owner-workspace   # your desk / robot arena
 
 The window shows only what Ko'z itself sees: the allowed area, with faces blurred, a ring
 around the red object (or people's boxes and the counting line), plus the status line. Nothing is saved or sent anywhere.
@@ -26,7 +27,6 @@ from koz.events import EventLog  # noqa: E402
 from koz.local_setup import LocalSetup  # noqa: E402
 from koz.recipe import check_recipe  # noqa: E402
 from koz.runner import Runner  # noqa: E402
-from koz.scene import PlacesSceneChecker  # noqa: E402
 
 WINDOW = "Ko'z live demo (q to quit)"
 GREEN, AMBER, RED, WHITE = (60, 180, 75), (0, 170, 255), (60, 60, 230), (255, 255, 255)
@@ -88,18 +88,24 @@ def draw(runner, latest, messages, fps, scene_line, line):
     fault = latest.get("fault")
     state = status.get("state", "starting")
     colour = GREEN if state == "running" else AMBER if state == "checking" else RED
+    privacy = status.get("privacy", "-")
+    if runner.owner_workspace and privacy == "approved":
+        privacy = "approved (owner-confirmed)"
     if line is not None:
         job = (f"people: {count_text(observation.get('occupancy'))}   in: {count_text(observation.get('entered'))}"
                f"   out: {count_text(observation.get('exited'))}")
     else:
         job = f"target: {observation.get('target', '-')}"
-    lines = [f"state: {state}   privacy: {status.get('privacy', '-')}   {job}   {fps:4.1f} fps", scene_line]
+    lines = [f"state: {state}   privacy: {privacy}   {job}   {fps:4.1f} fps", scene_line]
     reason = fault["code"] if fault else observation.get("unknown_reason")
     if reason:
         lines.append(f"{reason}: {messages.get(reason, '')}")
+    if runner.owner_workspace:
+        lines.append("OWNER-CONFIRMED WORKSPACE: approved on your word unless a private room or darkness is seen")
     cv2.rectangle(view, (0, 0), (width, 28 * len(lines) + 8), (0, 0, 0), -1)
     for i, line in enumerate(lines):
-        cv2.putText(view, line, (10, 24 + 28 * i), cv2.FONT_HERSHEY_SIMPLEX, 0.6, colour if i == 0 else WHITE, 1)
+        tint = colour if i == 0 else AMBER if line.startswith("OWNER-CONFIRMED") else WHITE
+        cv2.putText(view, line, (10, 24 + 28 * i), cv2.FONT_HERSHEY_SIMPLEX, 0.6 if i < 2 else 0.45, tint, 1)
     return view
 
 
@@ -123,6 +129,9 @@ def main():
     parser.add_argument("--line", default="0.5,0,0.5,1",
                         help="counting line ax,ay,bx,by, 0..1; crossing right-to-left of A->B counts as 'in'")
     parser.add_argument("--school", action="store_true", help="school mode: counts only")
+    parser.add_argument("--owner-workspace", action="store_true",
+                        help="confirm this room is your own workspace (desk, robot arena): the guard approves "
+                             "it unless a private room or darkness is seen; shown as 'owner-confirmed'")
     parser.add_argument("--no-window", action="store_true", help="print the status instead of showing a window")
     parser.add_argument("--frames", type=int, help="stop after this many frames")
     args = parser.parse_args()
@@ -131,7 +140,7 @@ def main():
     left, top, right, bottom = (float(v) for v in args.allowed_area.split(","))
     setup = LocalSetup(owner_confirmed=args.i_own_this_camera,
                        allowed_area=(((left, top), (right, top), (right, bottom), (left, bottom)),),
-                       school=args.school)
+                       school=args.school, owner_workspace=args.owner_workspace)
     line = tuple(float(v) for v in args.line.split(",")) if args.job == "counter" else None
     latest = {}
 
@@ -143,19 +152,20 @@ def main():
     camera = None
     try:
         setup.check()
-        checker = PlacesSceneChecker()
         if args.video:
             camera = FileCamera(args.video)
         else:
             camera = LiveCamera(int(args.camera) if args.camera.isdigit() else args.camera)
-        runner = Runner(demo_recipe(args.job, args.hue, line, args.school), setup, camera,
-                        EventLog(keep_latest), scene_checker=checker)
+        runner = Runner(demo_recipe(args.job, args.hue, line, args.school), setup, camera, EventLog(keep_latest))
     except KozError as error:
         print(f"Ko'z did not start: {error.code}: {messages.get(error.code, '')}")
         if camera is not None:
             camera.close()
         return 1
 
+    checker = runner.scene_checker
+    if runner.owner_workspace:
+        print("Owner-confirmed workspace: ON (the guard approves this room unless a private room or darkness is seen)")
     frames, started, alive = 0, time.monotonic(), True
     try:
         while alive and (args.frames is None or frames < args.frames):
@@ -176,7 +186,8 @@ def main():
         cv2.destroyAllWindows()
     print(top_places(checker, names))
     fault = latest.get("fault")
-    print(f"final state: {runner.state}" + (f" ({fault['code']}: {messages.get(fault['code'], '')})" if fault else ""))
+    print(f"final state: {runner.state}" + (f" ({fault['code']}: {messages.get(fault['code'], '')})" if fault else "")
+          + ("   [owner-confirmed workspace]" if runner.owner_workspace else ""))
     return 0
 
 

@@ -7,7 +7,9 @@ Results go in the trial dashboard; failures are kept, not hidden.
 ## Privacy guard (demo 3) — draft
 
 Point the camera at each scene, start a job, and record: result (pass/fail), the error
-code shown, and how long until it stopped. Use your own home or a place you have
+code shown, how long until it stopped, and **whether the owner-confirmed workspace was on**
+(`--owner-workspace`; the window says "OWNER-CONFIRMED WORKSPACE"). A trial report without
+that is incomplete. Trials 1–10 are run with it **off**. Use your own home or a place you have
 permission to film, with nobody undressed or asleep in view. Ko'z saves no frames.
 
 | # | Scene | Expected |
@@ -22,6 +24,20 @@ permission to film, with nobody undressed or asleep in view. Ko'z saves no frame
 | 8 | Lens covered, or a very dark room | Not approved (`PRIVACY_UNCERTAIN`) |
 | 9 | Control: classroom | Approved, job runs |
 | 10 | Control: shop or office | Approved, job runs (a kitchen or living room is "uncertain": not on the allowlist) |
+
+### Owner-confirmed workspace (your desk and the robot arena)
+
+With `--owner-workspace` the guard approves the room on your word, unless a private room is
+likely or the frame is too dark. Measured limit: on 2 of 23 real bathroom and bedroom photos
+the model gives private rooms almost nothing (a bathroom read as "bank_vault 0.69"), so a
+workspace would approve them. W3 checks that on your own bathroom.
+
+| # | Scene (workspace **on**) | Expected |
+|---|---|---|
+| W1 | Your desk | Approved, window says "OWNER-CONFIRMED WORKSPACE" |
+| W2 | The robot arena, car camera | Approved, same label |
+| W3 | Start at your desk, then turn the camera to the bathroom | Stopped at the next check (within 10 s); record what the scene line said |
+| W4 | Lens covered | Not approved (`PRIVACY_UNCERTAIN`) |
 
 The guard's limits in `koz/policy.py` (`ALLOWED_SCENES`, `SCENE_PRIVATE_TOP5_BLOCKS`,
 `SCENE_PRIVATE_SUM_BLOCKS`, `SCENE_MIN_TOP_PROB`, `SCENE_MIN_BRIGHTNESS`, `SCENE_MIN_CONTRAST`)
@@ -70,12 +86,17 @@ any bathroom or bedroom, or any dark frame, is approved. Put back the old rule a
 rest are "uncertain", a safe stop). The photos' copyright belongs to their owners, so they
 aren't in git: `scripts/fetch_test_photos.py` downloads exactly the listed files. The
 Places team asks users of the original Places365 data to sign a form on
-http://places2.csail.mit.edu/download.html; Islombek: please sign it.
+http://places2.csail.mit.edu/download.html; Islombek signed it on Oct 14.
 
 **Still open.**
 - Re-run this live test (bathroom, your room, your desk). The scene line now updates every 10 s.
-- Living room and kitchen are not on the allowlist, so a home demo will say "uncertain"
-  unless you add them (your decision).
+- Living room and kitchen stay off the allowlist (Islombek's decision); his desk and the
+  robot arena use the owner-confirmed workspace instead (above).
+
+**Security review, same day.** Private rooms get mistaken for places on the allowlist (a
+dark bedroom: "staircase 0.36"; a real bathroom: "corridor 0.11"). Removed staircase,
+entrance hall and home office; corridor, lobby and elevator lobby now need 0.50. The photo
+test still passes, with the same approvals (classrooms 9/11, shops 7/12).
 - The stricter guard will stop more often by mistake ("uncertain"); the trials measure how often.
 
 ## Fly-brain car (demo 1) and classroom counter (demo 2)

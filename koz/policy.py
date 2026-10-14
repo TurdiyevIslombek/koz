@@ -42,7 +42,10 @@ PRIVATE_SCENES = {
 
 # The guard approves only these public and work places (Places365 names). Anything else,
 # even something harmless like "catacomb", is "uncertain" and stops the job. Home rooms
-# such as living_room and kitchen are NOT on the list (Islombek's decision).
+# such as living_room and kitchen are NOT on the list (Islombek's decision); for his own
+# desk or robot arena there is the owner-confirmed workspace in local setup instead.
+# Removed after the security review of Oct 14, because private rooms get mistaken for
+# them (a dark bedroom came out as "staircase 0.36"): staircase, entrance_hall, home_office.
 ALLOWED_SCENES = (
     # schools
     "classroom", "kindergarden_classroom", "lecture_room", "computer_room", "library/indoor",
@@ -55,9 +58,9 @@ ALLOWED_SCENES = (
     "shopping_mall/indoor", "flea_market/indoor", "delicatessen", "repair_shop", "coffee_shop",
     "fastfood_restaurant", "restaurant", "cafeteria", "food_court",
     # offices and work rooms
-    "office", "office_cubicles", "home_office", "conference_room", "reception", "waiting_room",
-    # corridors and entrances
-    "corridor", "lobby", "elevator_lobby", "entrance_hall", "staircase",
+    "office", "office_cubicles", "conference_room", "reception", "waiting_room",
+    # corridors and lobbies (only with SCENE_MIN_TOP_PROB_CAUTIOUS, see below)
+    "corridor", "lobby", "elevator_lobby",
     # outside
     "street", "alley", "crosswalk", "parking_lot", "plaza", "courtyard", "yard", "driveway",
     "playground", "park",
@@ -68,6 +71,10 @@ ALLOWED_SCENES = (
 SCENE_PRIVATE_TOP5_BLOCKS = 0.10  # any private room in the top 5 above this -> blocked
 SCENE_PRIVATE_SUM_BLOCKS = 0.15   # private rooms together this likely -> blocked
 SCENE_MIN_TOP_PROB = 0.30         # the allowed top guess must be at least this sure
+# Places that bathrooms and bedrooms are most often mistaken for (real bathroom: "corridor
+# 0.11", "elevator_lobby 0.09"), so they must be much surer to be approved.
+CAUTIOUS_SCENES = ("corridor", "lobby", "elevator_lobby")
+SCENE_MIN_TOP_PROB_CAUTIOUS = 0.50
 SCENE_MIN_BRIGHTNESS = 40         # 0..255 grey, over the allowed area: darker -> uncertain
 SCENE_MIN_CONTRAST = 20           # standard deviation of that grey: flatter -> uncertain
 CAMERA_WARMUP_S = 1.0             # a live camera's first frames are dark while exposure settles

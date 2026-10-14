@@ -33,3 +33,10 @@ def test_counter_demo_runs_on_a_recorded_video(test_video):
                  "--no-window", "--frames", "5")
     assert result.returncode == 0, result.stdout + result.stderr
     assert "final state:" in result.stdout
+
+
+@pytest.mark.skipif(not MODEL_PATH.exists(), reason="run scripts/fetch_models.py first")
+def test_demo_says_when_the_owner_workspace_is_on(test_video):
+    result = run("--i-own-this-camera", "--owner-workspace", "--video", str(test_video), "--no-window", "--frames", "5")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Owner-confirmed workspace: ON" in result.stdout and "[owner-confirmed workspace]" in result.stdout

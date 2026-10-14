@@ -56,3 +56,9 @@ GitHub Release asset (not in git) and fetched by `scripts/fetch_models.py`.
 The category list `koz/models/categories_places365.txt` comes from the same repository
 (MIT License, copyright (c) 2017 Bolei Zhou and MIT CSAIL Computer Vision; see
 `koz/models/PLACES365_LICENSE`).
+
+**Places365 test photos.** The privacy guard's regression test uses 46 photos from the
+Places365 validation set; their copyright belongs to their owners, so they are not in this
+repo (`scripts/fetch_test_photos.py` downloads them). Islombek Turdiyev signed the Places
+team's request form for the original Places365 data on Oct 14, 2026
+(http://places2.csail.mit.edu/download.html).

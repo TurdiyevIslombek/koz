@@ -11,8 +11,13 @@ It is an allowlist: a place is approved only if it is on policy.ALLOWED_SCENES.
   1. the top guess is a private room                     -> BLOCKED (that room's code)
   2. a private room in the top 5 is above SCENE_PRIVATE_TOP5_BLOCKS -> BLOCKED
   3. private rooms together reach SCENE_PRIVATE_SUM_BLOCKS          -> BLOCKED
-  4. the top guess is an allowed place, at least SCENE_MIN_TOP_PROB -> APPROVED
+  4. the top guess is an allowed place, at least SCENE_MIN_TOP_PROB
+     (SCENE_MIN_TOP_PROB_CAUTIOUS for corridors and lobbies)        -> APPROVED
   5. anything else                                        -> UNKNOWN (PRIVACY_UNCERTAIN)
+In an owner-confirmed workspace (local setup only) rules 0-3 still apply, but 4 and 5
+become "approved": the owner vouches for the room. Measured limit: on 2 of 23 real
+bathroom and bedroom photos the model gives private rooms almost nothing (a bathroom read
+as "bank_vault 0.69"), and a workspace would approve them.
 Rule 4 replaced "approve anything that isn't private" after live test #1, where a dark
 first frame looked like a "catacomb" and a bathroom was approved (docs/TRIALS.md).
 This is an alarm, not proof that a room is safe."""
@@ -35,12 +40,14 @@ NAMES = [line.split()[0].split("/", 2)[2] for line in
          (MODELS / "categories_places365.txt").read_text(encoding="utf-8").splitlines()]
 _GROUP_OF = {index: code for code, scenes in policy.PRIVATE_SCENES.items() for index, _ in scenes}
 _ALLOWED = frozenset(NAMES.index(name) for name in policy.ALLOWED_SCENES)   # a typo fails at import
+_CAUTIOUS = frozenset(NAMES.index(name) for name in policy.CAUTIOUS_SCENES)
 
 
 class PlacesSceneChecker:
     """check(image) -> PrivacyResult, for koz.privacy.PrivacyGate."""
 
-    def __init__(self, model_path=None):
+    def __init__(self, model_path=None, owner_workspace=False):
+        self.owner_workspace = owner_workspace   # from local setup only, see koz/local_setup.py
         model_path = model_path or MODEL_PATH
         require_pinned(model_path, MODEL_SHA256, "PRIVACY_UNAVAILABLE")
         try:
@@ -59,7 +66,7 @@ class PlacesSceneChecker:
         self.last_probabilities = self.probabilities(image)
         if too_dark_or_flat(image):
             return PrivacyResult(UNKNOWN, "PRIVACY_UNCERTAIN")
-        return decide(self.last_probabilities)
+        return decide(self.last_probabilities, self.owner_workspace)
 
 
 def too_dark_or_flat(image):
@@ -72,8 +79,9 @@ def too_dark_or_flat(image):
     return visible.mean() < policy.SCENE_MIN_BRIGHTNESS or visible.std() < policy.SCENE_MIN_CONTRAST
 
 
-def decide(probabilities):
-    """365 probabilities -> PrivacyResult. Anything malformed counts as a failed check."""
+def decide(probabilities, owner_workspace=False):
+    """365 probabilities -> PrivacyResult. Anything malformed counts as a failed check.
+    In an owner-confirmed workspace, rule 4 approves any place; rules 1-3 still block."""
     p = np.asarray(probabilities, dtype=np.float64).reshape(-1)
     if p.size != CLASSES or not np.all(np.isfinite(p)) or p.min() < 0 or not math.isclose(p.sum(), 1, abs_tol=1e-3):
         return FAILED
@@ -86,6 +94,9 @@ def decide(probabilities):
     group_sums = {code: sum(p[i] for i, _ in scenes) for code, scenes in policy.PRIVATE_SCENES.items()}
     if sum(group_sums.values()) >= policy.SCENE_PRIVATE_SUM_BLOCKS:
         return PrivacyResult(BLOCKED, max(group_sums, key=group_sums.get))
-    if top5[0] in _ALLOWED and p[top5[0]] >= policy.SCENE_MIN_TOP_PROB:
+    if owner_workspace:
+        return PrivacyResult(APPROVED)
+    needed = policy.SCENE_MIN_TOP_PROB_CAUTIOUS if top5[0] in _CAUTIOUS else policy.SCENE_MIN_TOP_PROB
+    if top5[0] in _ALLOWED and p[top5[0]] >= needed:
         return PrivacyResult(APPROVED)
     return PrivacyResult(UNKNOWN, "PRIVACY_UNCERTAIN")

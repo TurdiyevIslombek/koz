@@ -47,7 +47,10 @@ class Runner:
         width, height = (int(n) for n in recipe.data["camera"]["size"].split("x"))
         self.size = (width, height)
         self._mask = setup.mask(width, height)
-        self._gate = PrivacyGate(scene_checker if scene_checker is not None else PlacesSceneChecker(), clock)
+        self.owner_workspace = setup.owner_workspace
+        self.scene_checker = (scene_checker if scene_checker is not None
+                              else PlacesSceneChecker(owner_workspace=setup.owner_workspace))
+        self._gate = PrivacyGate(self.scene_checker, clock)
         self._blur = FaceBlur({}, detector=face_detector)
         self._blocks = [PersonDetector(b["settings"], detector=person_detector) if b["type"] == "person_detector"
                         else TASK_BLOCKS[b["type"]](b["settings"]) for b in recipe.data["blocks"][2:]]
