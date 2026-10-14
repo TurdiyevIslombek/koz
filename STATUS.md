@@ -20,6 +20,12 @@ Updated Oct 14, after the classroom blocks. 136 tests pass, 1 skipped (it needs 
 
 ## How to run
 
+Double-click in Finder (uses the MacBook camera; q quits):
+- `demo-blur.command`: privacy guard + face blur + colour finder (red object)
+- `demo-counter.command`: people counter in school mode
+
+Or in Terminal:
+
 ```bash
 python3.13 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
 .venv/bin/python scripts/fetch_models.py
