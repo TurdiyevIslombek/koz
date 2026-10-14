@@ -69,8 +69,10 @@ class LiveCamera:
     runner reports FRAME_STALE. That is what happens when Wi-Fi drops."""
     capabilities = ()
 
-    def __init__(self, source=0, clock=time.monotonic, first_frame_timeout_s=5.0):
+    def __init__(self, source=0, clock=time.monotonic, first_frame_timeout_s=5.0,
+                 warmup_s=policy.CAMERA_WARMUP_S):
         self._clock = clock
+        self._warmup_s = warmup_s   # frames from the first second are dropped: still too dark
         self._cap = cv2.VideoCapture(source)
         if not self._cap.isOpened():
             raise KozError("UNSUPPORTED_CAPABILITY", "camera cannot be opened")
@@ -84,18 +86,20 @@ class LiveCamera:
         self._thread = threading.Thread(target=self._keep_reading, name="koz-camera", daemon=True)
         self._thread.start()
         with self._new_frame:
-            self._new_frame.wait_for(lambda: self._latest is not None, timeout=first_frame_timeout_s)
+            self._new_frame.wait_for(lambda: self._latest is not None, timeout=warmup_s + first_frame_timeout_s)
         if self._latest is None:
             self.close()
             raise KozError("UNSUPPORTED_CAPABILITY", "camera sent no picture")
 
     def _keep_reading(self):
-        index = 0
+        index, opened = 0, time.monotonic()
         while self.is_open:
             ok, image = self._cap.read()
             if not ok:
                 time.sleep(0.01)   # no picture right now; the waiting frame just gets older
                 continue
+            if time.monotonic() - opened < self._warmup_s:
+                continue           # exposure is still settling (see policy.CAMERA_WARMUP_S)
             with self._new_frame:
                 self._latest = Frame(image, self._clock(), index)
                 self._new_frame.notify_all()

@@ -8,7 +8,7 @@ from koz.errors import KozError
 from koz.privacy import FAILED, PrivacyResult
 from koz.scene import CLASSES, MODEL_PATH, PlacesSceneChecker, decide
 
-KITCHEN, CLASSROOM = 203, 92   # two ordinary places, for the "not private" cases
+KITCHEN, CLASSROOM, CATACOMB, STAIRCASE = 203, 92, 85, 317   # ordinary places, none private
 
 
 def probs(**weights):
@@ -41,6 +41,12 @@ def test_private_names_match_the_category_list():
     ({f"i{KITCHEN}": 0.5, "i52": 0.08, "i51": 0.04, "i182": 0.04}, PrivacyResult("blocked", "PRIVATE_BEDROOM")),
     ({f"i{KITCHEN}": 0.12}, PrivacyResult("unknown", "PRIVACY_UNCERTAIN")),   # nothing is clear
     ({f"i{CLASSROOM}": 0.7}, PrivacyResult("approved")),
+    # Allowlist (after live test #1): a confident place that isn't on the list is not approved.
+    ({f"i{CATACOMB}": 0.6}, PrivacyResult("unknown", "PRIVACY_UNCERTAIN")),   # the live bug
+    ({f"i{KITCHEN}": 0.7}, PrivacyResult("unknown", "PRIVACY_UNCERTAIN")),    # home rooms aren't listed
+    ({f"i{CLASSROOM}": 0.25}, PrivacyResult("unknown", "PRIVACY_UNCERTAIN")),  # allowed, but not sure enough
+    # A private room anywhere in the top 5 above 0.10 stops it, even under a confident classroom.
+    ({f"i{CLASSROOM}": 0.7, "i52": 0.12}, PrivacyResult("blocked", "PRIVATE_BEDROOM")),
 ])
 def test_decision_rule(weights, expected):
     assert decide(probs(**weights)) == expected
@@ -50,6 +56,29 @@ def test_decision_rule(weights, expected):
                                  np.r_[-0.5, np.full(CLASSES - 1, 1.5 / (CLASSES - 1))]])
 def test_malformed_output_is_a_failed_check(bad):
     assert decide(bad) == FAILED
+
+
+def test_category_names_used_by_the_guard_exist():
+    from koz.scene import NAMES
+    assert (NAMES[CATACOMB], NAMES[STAIRCASE], NAMES[KITCHEN], NAMES[CLASSROOM]) == \
+        ("catacomb", "staircase", "kitchen", "classroom")
+    assert all(name in NAMES for name in policy.ALLOWED_SCENES)
+    private = {name for scenes in policy.PRIVATE_SCENES.values() for _, name in scenes}
+    assert not private & set(policy.ALLOWED_SCENES)
+
+
+def test_dark_flat_or_hidden_frames_cannot_be_judged():
+    from koz.scene import too_dark_or_flat
+    rng = np.random.default_rng(1)
+    bright = rng.integers(40, 220, (240, 320, 3), dtype=np.uint8)          # a lit, detailed frame
+    assert not too_dark_or_flat(bright)
+    assert too_dark_or_flat((bright * 0.12).astype(np.uint8))              # a camera's first frames
+    assert too_dark_or_flat(np.full((240, 320, 3), 128, np.uint8))         # flat grey, e.g. a covered lens
+    masked = bright.copy()
+    masked[:, 160:] = 0                                                    # half blacked out by the mask
+    assert not too_dark_or_flat(masked)                                    # judged on the visible half only
+    masked[:, 20:] = 0
+    assert too_dark_or_flat(masked)                                        # almost nothing left to judge
 
 
 def test_missing_or_changed_model_is_refused(tmp_path):

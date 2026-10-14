@@ -12,10 +12,13 @@ Work in progress for the OpenCV AI Competition 2026.
 python3.13 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 .venv/bin/python scripts/fetch_models.py
+.venv/bin/python scripts/fetch_test_photos.py
 .venv/bin/python -m pytest -q
 ```
 
 `fetch_models.py` downloads the scene model (below) and refuses it unless its SHA-256 matches.
+`fetch_test_photos.py` downloads 46 real Places365 photos for the privacy guard's
+regression test (not in git: their copyright belongs to their owners).
 
 ## Live demo (your camera)
 

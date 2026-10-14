@@ -8,6 +8,7 @@ import pytest
 from helpers import (LABELS, FULL_FRAME, LEFT_THIRD, Approve, BrokenFaces, Explode, FakeClock,
                      FakeFaces, Refuse, Sequence, SlowApprove, StaleEveryOther, TickingCamera,
                      color_recipe)
+from koz import policy
 from koz.capture import FileCamera
 from koz.errors import KozError
 from koz.events import EventLog
@@ -46,7 +47,7 @@ def test_runs_the_recipe_on_recorded_video(test_video):
     runner, sent, _ = make(test_video, scene_checker=Approve())
     assert runner.run() == "idle"
     assert [o["target"] for o in of_type(sent, "observation")] == LABELS
-    assert states(sent) == ["checking", "running", "idle"]
+    assert states(sent)[:2] == ["checking", "running"] and states(sent)[-1] == "idle"
     assert all(set(e) == ENVELOPE and e["revision"] == 1 for e in sent)
     assert [e["seq"] for e in sent] == list(range(1, len(sent) + 1))
     assert all(o["coverage"] == "complete" and o["privacy"] == "approved" for o in of_type(sent, "observation"))
@@ -99,8 +100,9 @@ def test_slow_scene_check_counts_as_failed(test_video):
 
 def test_recheck_stops_a_running_job(test_video):
     checker = Sequence(PrivacyResult("approved"), PrivacyResult("blocked", "PRIVATE_BEDROOM"))
-    runner, sent, _ = make(test_video, seconds_per_frame=60.0, scene_checker=checker, face_detector=FakeFaces())
-    assert runner.run() == "held"   # frame 3 is 120 s after the first check
+    half = policy.PRIVACY_RECHECK_S / 2
+    runner, sent, _ = make(test_video, seconds_per_frame=half, scene_checker=checker, face_detector=FakeFaces())
+    assert runner.run() == "held"   # frame 3 is one recheck interval after the first check
     assert of_type(sent, "fault") == [{"code": "PRIVATE_BEDROOM", "effect": "held"}]
     assert [o["target"] for o in of_type(sent, "observation")] == ["left", "left", "unknown"]
     assert of_type(sent, "observation")[-1]["unknown_reason"] == "PRIVATE_BEDROOM"

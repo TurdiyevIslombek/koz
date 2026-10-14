@@ -22,7 +22,7 @@ MAX_RECIPE_DEPTH = 12
 
 # Runtime limits (proposed).
 MAX_FRAME_AGE_S = 0.5          # older than this when used -> outputs "unknown"
-PRIVACY_RECHECK_S = 120.0      # scene check at start, then at least this often
+PRIVACY_RECHECK_S = 10.0       # scene check at start, then this often (one check takes ~10 ms)
 PRIVACY_TIMEOUT_S = 5.0        # a slower scene check counts as failed
 OBSERVATION_INTERVAL_S = 1.0   # at most one observation event per second
 STATUS_INTERVAL_S = 1.0        # a status heartbeat at least this often while running
@@ -39,8 +39,38 @@ PRIVATE_SCENES = {
     "PRIVATE_CHANGING_ROOM": ((126, "dressing_room"), (219, "locker_room")),
 }
 # Places365 has no toilet class; a toilet stall is a trial case (docs/TRIALS.md).
-SCENE_PRIVATE_SUM_BLOCKS = 0.15   # proposed: private classes together this likely -> blocked
-SCENE_MIN_TOP_PROB = 0.20         # proposed: below this, the scene is "uncertain" -> not approved
+
+# The guard approves only these public and work places (Places365 names). Anything else,
+# even something harmless like "catacomb", is "uncertain" and stops the job. Home rooms
+# such as living_room and kitchen are NOT on the list (Islombek's decision).
+ALLOWED_SCENES = (
+    # schools
+    "classroom", "kindergarden_classroom", "lecture_room", "computer_room", "library/indoor",
+    "art_school", "science_museum",
+    # shops, markets, cafes
+    "general_store/indoor", "general_store/outdoor", "supermarket", "market/indoor", "market/outdoor",
+    "bazaar/indoor", "bazaar/outdoor", "department_store", "clothing_store", "shoe_shop", "bookstore",
+    "candy_store", "drugstore", "fabric_store", "florist_shop/indoor", "gift_shop", "hardware_store",
+    "jewelry_shop", "pet_shop", "toyshop", "bakery/shop", "butchers_shop", "shopfront",
+    "shopping_mall/indoor", "flea_market/indoor", "delicatessen", "repair_shop", "coffee_shop",
+    "fastfood_restaurant", "restaurant", "cafeteria", "food_court",
+    # offices and work rooms
+    "office", "office_cubicles", "home_office", "conference_room", "reception", "waiting_room",
+    # corridors and entrances
+    "corridor", "lobby", "elevator_lobby", "entrance_hall", "staircase",
+    # outside
+    "street", "alley", "crosswalk", "parking_lot", "plaza", "courtyard", "yard", "driveway",
+    "playground", "park",
+    # farms
+    "farm", "barn", "stable", "corral", "pasture", "field/cultivated", "orchard", "vegetable_garden",
+)
+# Measured on 46 Places365 validation photos plus darkened copies (docs/TRIALS.md, live test #1):
+SCENE_PRIVATE_TOP5_BLOCKS = 0.10  # any private room in the top 5 above this -> blocked
+SCENE_PRIVATE_SUM_BLOCKS = 0.15   # private rooms together this likely -> blocked
+SCENE_MIN_TOP_PROB = 0.30         # the allowed top guess must be at least this sure
+SCENE_MIN_BRIGHTNESS = 40         # 0..255 grey, over the allowed area: darker -> uncertain
+SCENE_MIN_CONTRAST = 20           # standard deviation of that grey: flatter -> uncertain
+CAMERA_WARMUP_S = 1.0             # a live camera's first frames are dark while exposure settles
 
 # line_counter (proposed). A followed person's number is forgotten this long after they
 # were last seen (the contract allows at most 5 s), and a box must overlap its previous

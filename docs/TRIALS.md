@@ -18,13 +18,65 @@ permission to film, with nobody undressed or asleep in view. Ko'z saves no frame
 | 4 | Bedroom, bed visible | Refused, `PRIVATE_BEDROOM` |
 | 5 | Child's room or a bed in a corner | Refused, `PRIVATE_BEDROOM` |
 | 6 | Wardrobe / changing area | Refused, `PRIVATE_CHANGING_ROOM` |
-| 7 | Start in an allowed room, then turn the camera to the bathroom door | Stopped at the next check (within 120 s); record the seconds |
+| 7 | Start in an allowed room, then turn the camera to the bathroom door | Stopped at the next check (within 10 s); record the seconds |
 | 8 | Lens covered, or a very dark room | Not approved (`PRIVACY_UNCERTAIN`) |
 | 9 | Control: classroom | Approved, job runs |
-| 10 | Control: shop, kitchen or living room | Approved, job runs |
+| 10 | Control: shop or office | Approved, job runs (a kitchen or living room is "uncertain": not on the allowlist) |
 
-The two thresholds in `koz/policy.py` (`SCENE_PRIVATE_SUM_BLOCKS`, `SCENE_MIN_TOP_PROB`)
-are proposals; these trials are where they get measured and, if needed, changed.
+The guard's limits in `koz/policy.py` (`ALLOWED_SCENES`, `SCENE_PRIVATE_TOP5_BLOCKS`,
+`SCENE_PRIVATE_SUM_BLOCKS`, `SCENE_MIN_TOP_PROB`, `SCENE_MIN_BRIGHTNESS`, `SCENE_MIN_CONTRAST`)
+were set on 46 real photos (below); these trials check them on your own rooms.
+
+## Failure found in live test #1 and how it was fixed (Oct 14)
+
+**What happened.** First live run of `demo-blur.command`: the privacy guard **approved a
+bathroom with the toilet clearly visible**. The scene line said "catacomb 0.5–0.6" for
+every scene (own room: catacomb 0.50; bathroom: catacomb 0.61, privacy approved).
+
+**What was checked.**
+- *Weights.* All 102 weights loaded strictly (the `module.` prefix stripped; nothing missing
+  or extra); the BatchNorm statistics are real numbers. The model is not partly random.
+- *Pipeline.* On 5 real Places365 photos, Ko'z's ONNX in OpenCV 5 gave the same top 3 as
+  the original PyTorch model with the authors' own preprocessing (PIL resize to 224, /255,
+  ImageNet mean and standard deviation, RGB); largest difference 0.026. Colour order is
+  right: feeding BGR instead visibly changes the answers.
+- *Dark frames.* The same photos made very dark came out as catacomb, jail cell, burial
+  chamber and attic (a shop: catacomb 0.93), which is the live pattern.
+
+**Cause** (most likely; the next live run confirms it):
+1. The guard judged only the first frame, and a MacBook camera's first frames are dark
+   while its exposure settles, so it saw a "catacomb".
+2. The rule approved any place that wasn't on the private list, and "catacomb" isn't.
+3. The next check was 120 s away, so the approval held while the camera saw the bathroom.
+
+Real photos showed the same weakness without darkness: the old rule also approved a
+bathroom read as "bank_vault 0.69" and a bedroom read as "kennel/outdoor 0.37".
+
+**Fix** (`koz/scene.py`, `koz/policy.py`, `koz/capture.py`):
+- **Allowlist.** Approve only when the top guess is a listed public or work place
+  (classroom, shop, market, office, corridor, lobby, street, yard, farm...) at 0.30 or more.
+  Everything else is "uncertain" and stops the job.
+- **Block** when any private room is in the top 5 above 0.10, and (as before) when the top
+  guess is private or private rooms together reach 15 %.
+- **Too dark or too flat is never approved:** brightness below 40 or contrast below 20
+  (0–255 grey, over the allowed area only).
+- **Camera warm-up:** a live camera's first second of frames is dropped.
+- **Check every 10 s** instead of every 120 s (one check takes about 10 ms).
+
+**Regression test.** `tests/test_scene_photos.py` uses 46 real Places365 validation photos
+(12 bathrooms, 11 bedrooms, 11 classrooms, 12 shops) and a dark copy of each. It fails if
+any bathroom or bedroom, or any dark frame, is approved. Put back the old rule and it fails
+6 of its 7 checks; with the fix it passes. Classrooms approved: 9 of 11; shops: 7 of 12 (the
+rest are "uncertain", a safe stop). The photos' copyright belongs to their owners, so they
+aren't in git: `scripts/fetch_test_photos.py` downloads exactly the listed files. The
+Places team asks users of the original Places365 data to sign a form on
+http://places2.csail.mit.edu/download.html; Islombek: please sign it.
+
+**Still open.**
+- Re-run this live test (bathroom, your room, your desk). The scene line now updates every 10 s.
+- Living room and kitchen are not on the allowlist, so a home demo will say "uncertain"
+  unless you add them (your decision).
+- The stricter guard will stop more often by mistake ("uncertain"); the trials measure how often.
 
 ## Fly-brain car (demo 1) and classroom counter (demo 2)
 

@@ -11,3 +11,6 @@ tests/fixtures/private/
 
 # Places365 scene model: published as a GitHub Release asset, fetched by scripts/fetch_models.py
 koz/models/places365_resnet18.onnx
+
+# Places365 validation photos for the guard regression test (copyright: their owners)
+tests/fixtures/places365/
