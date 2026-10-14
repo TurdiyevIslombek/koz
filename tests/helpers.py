@@ -156,3 +156,31 @@ class FakeFaces:
 class BrokenFaces:
     def detect(self, image):
         raise RuntimeError("detector crashed")
+
+
+def classroom_recipe(line=((0.5, 0.0), (0.5, 1.0)), school=True):
+    return {"version": 1, "language": "ru",
+            "camera": {"source": "device_camera", "size": f"{WIDTH}x{HEIGHT}", "fps": FPS},
+            "blocks": copy.deepcopy(LOCKED) + [
+                {"type": "person_detector", "settings": {"min_confidence": 0.5}},
+                {"type": "line_counter", "settings": {"line": [list(line[0]), list(line[1])]}}],
+            "brain": {"type": "none"}, "actions": [{"type": "dashboard"}], "privacy": {"school": school}}
+
+
+def walker(start_x, end_x, frames, y=120, size=60):
+    """Boxes (x0, y0, x1, y1) for one person walking in a straight line across `frames` frames."""
+    step = (end_x - start_x) / (frames - 1)
+    return [(start_x + i * step - size / 2, y - size, start_x + i * step + size / 2, y + size) for i in range(frames)]
+
+
+class ScriptedPeople:
+    """A person detector that 'finds' scripted boxes: frame n gets script[n] (a list of boxes)."""
+
+    def __init__(self, script):
+        self.script, self.calls = script, 0
+
+    def detect(self, image, min_confidence):
+        from koz.blocks import Person
+        boxes = self.script[self.calls] if self.calls < len(self.script) else []
+        self.calls += 1
+        return [Person(tuple(map(float, b)), 0.9) for b in boxes]

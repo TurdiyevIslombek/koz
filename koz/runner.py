@@ -7,16 +7,17 @@ When something can't be trusted (frame too old, processing too slow), outputs sa
 "unknown", never 0 or an old value. When privacy or blur fails, or anything
 unexpected goes wrong, the job stops.
 
-Built so far: the privacy guard, face blur, color_finder, and the dashboard action
-(= the observation events). The fly brain, motors and the other blocks come later; recipes
+Built so far: the privacy guard, face blur, color_finder, person_detector,
+line_counter, and the dashboard action (= the observation events). The fly brain, motors and the other blocks come later; recipes
 that need them are refused in koz.recipe with UNSUPPORTED_CAPABILITY."""
 import time
 
 import cv2
 
 from . import policy
-from .blocks import TASK_BLOCKS, FaceBlur, FrameContext
+from .blocks import TASK_BLOCKS, FaceBlur, FrameContext, PersonDetector
 from .errors import KozError
+from .events import count_known, count_unknown
 from .privacy import APPROVED, UNKNOWN, PrivacyGate
 from .recipe import CheckedRecipe, check_recipe
 from .scene import PlacesSceneChecker
@@ -27,12 +28,12 @@ OPENCV_MAJOR = int(cv2.__version__.split(".")[0])
 class Runner:
     """Runs one checked recipe on one camera and sends events to `events` (a koz.events.EventLog).
 
-    `scene_checker` and `face_detector` are only replaced in tests. By default the
-    privacy guard uses the pinned Places365 model and face blur the pinned YuNet model;
-    if either file is missing or changed, the runner refuses to start."""
+    `scene_checker`, `face_detector` and `person_detector` are only replaced in tests.
+    By default they use the pinned Places365, YuNet and NanoDet models; if a needed
+    model file is missing or changed, the runner refuses to start."""
 
     def __init__(self, recipe, setup, camera, events, scene_checker=None, face_detector=None,
-                 revision=1, clock=time.monotonic):
+                 person_detector=None, revision=1, clock=time.monotonic):
         if not isinstance(recipe, CheckedRecipe):
             raise TypeError("Runner needs a CheckedRecipe from koz.recipe")
         if OPENCV_MAJOR != 5:
@@ -48,12 +49,14 @@ class Runner:
         self._mask = setup.mask(width, height)
         self._gate = PrivacyGate(scene_checker if scene_checker is not None else PlacesSceneChecker(), clock)
         self._blur = FaceBlur({}, detector=face_detector)
-        self._blocks = [TASK_BLOCKS[b["type"]](b["settings"]) for b in recipe.data["blocks"][2:]]
-        self._has_target = any(b["type"] == "color_finder" for b in recipe.data["blocks"])
+        self._blocks = [PersonDetector(b["settings"], detector=person_detector) if b["type"] == "person_detector"
+                        else TASK_BLOCKS[b["type"]](b["settings"]) for b in recipe.data["blocks"][2:]]
+        self._configured = {b["type"] for b in recipe.data["blocks"][2:]}
 
         self.state = None           # set to "checking" on the first step
         self.coverage = "complete"  # becomes "gapped" after any stale or slow frame, and stays so
         self.preview = None         # the latest fresh, masked, blurred frame, for a local window only
+        self.local_results = {}     # that frame's block results (e.g. where the target is); local only
         self._was_running = False
         self._last_reason_sent = None
         self._last_observation_t = None
@@ -79,7 +82,7 @@ class Runner:
             try:
                 self._fault(code)
             except Exception:        # even reporting failed: still stop
-                self.preview = None
+                self._drop_preview()
                 self.camera.close()
                 self.state = "held" if self._was_running else "refused"
             return False
@@ -96,7 +99,7 @@ class Runner:
         image = cv2.resize(frame.image, self.size, interpolation=cv2.INTER_AREA)
         image = cv2.bitwise_and(image, image, mask=self._mask)   # black outside the allowed area
         if self._gate.due():
-            self.preview = None
+            self._drop_preview()
             self._set_state("checking")
         privacy = self._gate.admit(image)
         if privacy.state != APPROVED:
@@ -106,16 +109,15 @@ class Runner:
             self._was_running = True
             self._set_state("running")
 
-        ctx = FrameContext(image)
+        ctx = FrameContext(image, t=frame.t)
         self._blur.process(ctx)   # raises BLUR_UNAVAILABLE if it can't blur
         for block in self._blocks:
             block.process(ctx)
         if self._clock() - frame.t > policy.MAX_FRAME_AGE_S:   # processing took too long
             self._unknown("OVERLOADED")
             return True
-        self.preview = ctx.image
-        target = ctx.results["color_finder"].label if self._has_target else None
-        self._observe(APPROVED, target)
+        self.preview, self.local_results = ctx.image, ctx.results
+        self._observe(APPROVED, ctx.results)
         self._heartbeat()
         return True
 
@@ -125,17 +127,30 @@ class Runner:
         """A frame we can't trust (FRAME_STALE or OVERLOADED): outputs become unknown with
         that reason, and coverage has a gap."""
         self.coverage = "gapped"
-        self.preview = None
-        self._observe(self._privacy_state(), "unknown" if self._has_target else None, code)
+        self._drop_preview()
+        self._observe(self._privacy_state(), None, code)
         self._heartbeat()
 
-    def _observe(self, privacy, target, cause=None):
-        """At most one observation per second, and at once when unknown_reason changes
-        (an output turning unknown always changes it, and so does recovering).
+    def _observe(self, privacy, results, cause=None):
+        """Send this frame's outputs: at most one observation per second, and at once when
+        unknown_reason changes (an output turning unknown always changes it, and so does
+        recovering).
 
-        `cause` is why outputs can't be trusted. It becomes unknown_reason only when the
-        contract asks for one: an output is unknown, or privacy isn't approved."""
-        reason = cause if (target == "unknown" or privacy != APPROVED) else None
+        `results` are the frame's block results, or None when its outputs can't be trusted;
+        then every configured output is unknown and `cause` says why. The cause becomes
+        unknown_reason only when the contract asks for one: an output is unknown, or
+        privacy isn't approved."""
+        trusted = results is not None and privacy == APPROVED
+        reason = None if trusted or not (self._configured or privacy != APPROVED) else cause
+        outputs = {"occupancy": None, "entered": None, "exited": None, "target": None}
+        if "color_finder" in self._configured:
+            outputs["target"] = results["color_finder"].label if trusted else "unknown"
+        if "person_detector" in self._configured:
+            outputs["occupancy"] = count_known(len(results["person_detector"])) if trusted else count_unknown(reason)
+        if "line_counter" in self._configured:
+            crossings = results["line_counter"] if trusted else None
+            outputs["entered"] = count_known(crossings.entered) if trusted else count_unknown(reason)
+            outputs["exited"] = count_known(crossings.exited) if trusted else count_unknown(reason)
         now = self._clock()
         due = self._last_observation_t is None or now - self._last_observation_t >= policy.OBSERVATION_INTERVAL_S
         if not (due or reason != self._last_reason_sent):
@@ -143,23 +158,25 @@ class Runner:
         self._last_observation_t, self._last_reason_sent = now, reason
         self.events.emit("observation", {
             "round": None,   # set by the agent loop during evaluation rounds (next task)
-            "privacy": privacy, "occupancy": None, "entered": None, "exited": None,
-            "coverage": self.coverage, "target": target, "motion": None, "looming": None, "alert": None,
-            "unknown_reason": reason,
+            "privacy": privacy, **outputs, "coverage": self.coverage,
+            "motion": None, "looming": None, "alert": None, "unknown_reason": reason,
         }, revision=self.revision)
 
     def _fault(self, code, privacy=None):
         """Stop the job. Outputs become unknown first. "off" if it never ran, "held" if it was running."""
-        self.preview = None
-        self._observe(privacy or self._privacy_state(), "unknown" if self._has_target else None, code)
+        self._drop_preview()
+        self._observe(privacy or self._privacy_state(), None, code)
         self.events.emit("fault", {"code": code, "effect": "held" if self._was_running else "off"},
                          revision=self.revision)
         self._stop("held" if self._was_running else "refused")
 
     def _stop(self, state):
         self.camera.close()
-        self.preview = None
+        self._drop_preview()
         self._set_state(state)
+
+    def _drop_preview(self):
+        self.preview, self.local_results = None, {}
 
     def _privacy_state(self):
         return self._gate.last.state if self._gate.last else UNKNOWN

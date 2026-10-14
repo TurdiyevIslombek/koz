@@ -9,6 +9,7 @@ class FrameContext:
     """Everything the blocks share for one frame. Never sent anywhere as a whole:
     only the fixed labels in contracts/events.md leave this computer."""
     image: np.ndarray                             # BGR; already masked, then blurred by face_blur
+    t: float = 0.0                                # when the frame arrived (time.monotonic())
     results: dict = field(default_factory=dict)   # block type -> that block's local result
 
 

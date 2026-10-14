@@ -39,6 +39,7 @@ class PlacesSceneChecker:
             self._net = cv2.dnn.readNetFromONNX(str(model_path))
         except cv2.error:
             raise KozError("PRIVACY_UNAVAILABLE", "scene model failed to load") from None
+        self.last_probabilities = None   # from the latest check, for a local display only; never sent
 
     def probabilities(self, image):
         """365 probabilities for a BGR frame. The model itself normalises colours and
@@ -47,7 +48,8 @@ class PlacesSceneChecker:
         return self._net.forward().reshape(-1).astype(np.float64)
 
     def check(self, image):
-        return decide(self.probabilities(image))
+        self.last_probabilities = self.probabilities(image)
+        return decide(self.last_probabilities)
 
 
 def decide(probabilities):

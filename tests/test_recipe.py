@@ -101,8 +101,9 @@ def test_unbuilt_parts_are_refused_not_skipped():
     farm = changed(color_recipe(), lambda r: r.update(
         blocks=copy.deepcopy(LOCKED) + [copy.deepcopy(MOTION)],
         actions=[{"type": "dashboard"}, {"type": "alert", "template": "motion_detected"}]))
-    for recipe in (car, classroom, farm):
+    for recipe in (car, farm):
         assert code_of(check_recipe, recipe) == "UNSUPPORTED_CAPABILITY"
+    assert check_recipe(classroom).school is True   # person_detector + line_counter are built now
 
 
 def test_errors_never_repeat_the_input():

@@ -12,7 +12,7 @@ LOCKED_BLOCKS = ("privacy_guard", "face_blur")
 
 # What is built so far. Anything else is refused with UNSUPPORTED_CAPABILITY
 # instead of being silently skipped.
-BUILT_BLOCKS = frozenset({"privacy_guard", "face_blur", "color_finder"})
+BUILT_BLOCKS = frozenset({"privacy_guard", "face_blur", "color_finder", "person_detector", "line_counter"})
 BUILT_BRAINS = frozenset({"none"})
 BUILT_ACTIONS = frozenset({"dashboard"})
 
@@ -41,6 +41,12 @@ PRIVATE_SCENES = {
 # Places365 has no toilet class; a toilet stall is a trial case (docs/TRIALS.md).
 SCENE_PRIVATE_SUM_BLOCKS = 0.15   # proposed: private classes together this likely -> blocked
 SCENE_MIN_TOP_PROB = 0.20         # proposed: below this, the scene is "uncertain" -> not approved
+
+# line_counter (proposed). A followed person's number is forgotten this long after they
+# were last seen (the contract allows at most 5 s), and a box must overlap its previous
+# position at least this much (IoU) to count as the same person.
+TRACK_FORGET_S = 2.0
+TRACK_MIN_IOU = 0.2
 
 # face_blur (proposed). A low score threshold blurs more: a false blur is safe, a missed face is not.
 FACE_SCORE_THRESHOLD = 0.5

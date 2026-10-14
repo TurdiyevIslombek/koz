@@ -263,3 +263,36 @@ def test_stale_before_the_first_privacy_check_says_frame_stale(test_video):
     runner.step()
     first = of_type(sent, "observation")[0]
     assert (first["privacy"], first["target"], first["unknown_reason"]) == ("unknown", "unknown", "FRAME_STALE")
+
+
+def test_classroom_counter_on_recorded_video(test_video):
+    """School mode: one person walks right to left across the door line, another stays."""
+    from helpers import ScriptedPeople, classroom_recipe, walker
+    path = walker(260, 60, 18)
+    stays = [(20, 60, 60, 180)] * 18
+    clock = FakeClock()
+    sent = []
+    camera = TickingCamera(FileCamera(test_video, clock=clock), clock, 1.0)
+    runner = Runner(check_recipe(classroom_recipe()), LocalSetup(True, FULL_FRAME, school=True), camera,
+                    EventLog(sent.append), scene_checker=Approve(), face_detector=FakeFaces(),
+                    person_detector=ScriptedPeople([[p, s] for p, s in zip(path, stays)]), clock=clock)
+    assert runner.run() == "idle"
+    last = of_type(sent, "observation")[-1]
+    assert last["entered"] == {"state": "known", "value": 1, "reason": None}
+    assert last["exited"]["value"] == 0 and last["occupancy"]["value"] == 2
+    assert last["target"] is None   # no colour finder in this recipe
+    assert all(s["school"] for s in of_type(sent, "status"))
+
+
+def test_counts_become_unknown_with_the_reason(test_video):
+    from helpers import ScriptedPeople, classroom_recipe
+    clock = FakeClock()
+    sent = []
+    camera = StaleEveryOther(FileCamera(test_video, clock=clock), clock, 1.0)
+    runner = Runner(check_recipe(classroom_recipe()), LocalSetup(True, FULL_FRAME), camera, EventLog(sent.append),
+                    scene_checker=Approve(), face_detector=FakeFaces(), person_detector=ScriptedPeople([]),
+                    clock=clock)
+    runner.run()
+    stale = of_type(sent, "observation")[1]
+    assert stale["occupancy"] == stale["entered"] == {"state": "unknown", "value": None, "reason": "FRAME_STALE"}
+    assert stale["unknown_reason"] == "FRAME_STALE"

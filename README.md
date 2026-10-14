@@ -17,11 +17,25 @@ python3.13 -m venv .venv
 
 `fetch_models.py` downloads the scene model (below) and refuses it unless its SHA-256 matches.
 
+## Live demo (your camera)
+
+```bash
+.venv/bin/python scripts/live_demo.py --i-own-this-camera
+```
+A window shows what Ko'z sees: faces blurred, a ring on the red object, and a private room
+(bathroom, bedroom...) stops it with the reason. q quits; macOS asks for camera access the first time.
+Add `--job counter` to count people crossing a line instead (`--school` for school mode).
+
 ## Models and credits
 
 **Face detection: YuNet**, from OpenCV Zoo (`models/face_detection_yunet`).
 MIT License, copyright (c) 2020 Shiqi Yu. In this repo as
 `koz/models/face_detection_yunet_2023mar.onnx`, with its license in `koz/models/YUNET_LICENSE`.
+
+**Person detection (classroom counter): NanoDet-Plus**, from OpenCV Zoo
+(`models/object_detection_nanodet`), trained on COCO by RangiLyu (https://github.com/RangiLyu/nanodet).
+Apache License 2.0. In this repo, unchanged, as `koz/models/object_detection_nanodet_2022nov.onnx`,
+with its license in `koz/models/NANODET_LICENSE`. Ko'z uses only its "person" class.
 
 **Scene classification (privacy guard): ResNet18 trained on Places365**, by the MIT CSAIL
 Places team. The pretrained Places365 models are released under the Creative Commons
