@@ -2,7 +2,7 @@
 
 These values exist only on this computer. They never come from a recipe, an import or
 the cloud. For now this holds the simple version: "I own this camera" and the allowed
-area, plus the owner-confirmed workspace. The setup screen that fills them in comes later."""
+area, plus strict mode. The setup screen that fills them in comes later."""
 import math
 from dataclasses import dataclass
 
@@ -18,16 +18,16 @@ class LocalSetup:
     allowed_area: tuple      # polygons; each is a list of (x, y) points, 0..1 across the frame
     school: bool = False     # asked explicitly during setup
     mount: str = "fixed"     # "fixed" or "moving" (the car)
-    # The owner confirmed this room is their own workspace (a desk, a robot arena). Then the
-    # privacy guard approves any scene except a likely private room or a dark frame
-    # (koz/scene.py). Local only: never in a recipe, so it can't be imported or sent.
-    owner_workspace: bool = False
+    # Strict mode (--strict, for schools and public cameras): the privacy guard approves only
+    # listed public places (policy.ALLOWED_SCENES). Default: run anywhere, stop on what it
+    # sees (koz/privacy.py). Local only: never in a recipe, so it can't be imported or sent.
+    strict: bool = False
 
     def check(self):
         if self.owner_confirmed is not True:
             raise KozError("OWNERSHIP_REQUIRED")
         if self.mount not in ("fixed", "moving") or type(self.school) is not bool \
-                or type(self.owner_workspace) is not bool:
+                or type(self.strict) is not bool:
             raise KozError("INVALID_COMMAND", "bad local setup")
         if not self.allowed_area or not all(_good_polygon(p) for p in self.allowed_area):
             raise KozError("ALLOWED_AREA_REQUIRED")

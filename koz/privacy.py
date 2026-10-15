@@ -11,11 +11,12 @@ GuardCheck is what the gate runs on a frame, for every job:
      seen once in the last 2 checks                                 -> CONFIRMING: hold every frame
                                                                        and check the next ones first
   2. a sink, while the room check has bathroom or shower in its top 3 -> BLOCKED (bathroom)
-  3. the room check (koz/scene.py): the strict allowlist, or in an owner-confirmed
-     workspace only a confident private room                        -> BLOCKED / UNKNOWN / APPROVED
+  3. the room check (koz/scene.py): by default only a confident private room stops it;
+     with --strict, the allowlist of public places                  -> BLOCKED / UNKNOWN / APPROVED
 The object check came from live test #2: a desk in a bedroom is not a bedroom, but a bed in
 view is. Its limit: a bed mostly out of view can be missed, so the room check stays as a
-backup (docs/TRIALS.md)."""
+backup (docs/TRIALS.md). Since live test #3 this is the default for every job: run
+everywhere, stop on what you see."""
 import threading
 import time
 from collections import deque
@@ -64,8 +65,8 @@ class GuardCheck:
     `objects` a PrivateObjects. The latest room guesses, objects and result are kept for a
     local display (`line`); they are never sent."""
 
-    def __init__(self, scene, objects, owner_workspace=False):
-        self.scene, self.objects, self.owner_workspace = scene, objects, owner_workspace
+    def __init__(self, scene, objects, strict=False):
+        self.scene, self.objects, self.strict = scene, objects, strict
         self._history = deque(maxlen=policy.OBJECT_CHECK_WINDOW)   # objects seen in each recent check
         self.checks = 0
         self.last_probabilities, self.last_found, self.last_result = None, {}, None
@@ -93,7 +94,7 @@ class GuardCheck:
                 return PrivacyResult(UNKNOWN, "PRIVACY_UNCERTAIN", seen=name, confirming=True)
         if "sink" in found and any(room in policy.SINK_ROOMS for room, _ in self.scene.top(probabilities, 3)):
             return PrivacyResult(BLOCKED, "PRIVATE_BATHROOM", seen="sink")
-        return self.scene.judge(probabilities, self.owner_workspace)
+        return self.scene.judge(probabilities, self.strict)
 
     @property
     def line(self):

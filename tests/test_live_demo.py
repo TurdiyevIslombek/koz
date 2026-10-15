@@ -36,10 +36,10 @@ def test_counter_demo_runs_on_a_recorded_video(test_video):
 
 
 @pytest.mark.skipif(not MODEL_PATH.exists(), reason="run scripts/fetch_models.py first")
-def test_demo_says_when_the_owner_workspace_is_on(test_video):
-    result = run("--i-own-this-camera", "--owner-workspace", "--video", str(test_video), "--no-window", "--frames", "5")
+def test_demo_says_when_strict_mode_is_on(test_video):
+    result = run("--i-own-this-camera", "--strict", "--video", str(test_video), "--no-window", "--frames", "5")
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "Owner-confirmed workspace: ON" in result.stdout and "[owner-confirmed workspace]" in result.stdout
+    assert "Strict mode: ON" in result.stdout and "[strict mode]" in result.stdout
 
 
 def load_demo():
@@ -50,19 +50,25 @@ def load_demo():
     return module
 
 
-def test_stop_banner_says_why_and_what_to_do():
+def test_stop_banner_is_short_by_default():
     demo = load_demo()
     messages = demo.english_messages()
-    title, lines = demo.stop_banner("PRIVATE_BEDROOM", messages, owner_workspace=False)
-    assert title == "STOPPED" and "bedroom?" in lines[0] and "demo-desk.command" in lines[1]
-    _, lines = demo.stop_banner("PRIVATE_BATHROOM", messages, owner_workspace=False)
-    assert "bathroom?" in lines[0] and "demo-desk" not in " ".join(lines)   # never suggest a way round a bathroom
-    _, lines = demo.stop_banner("PRIVATE_BEDROOM", messages, owner_workspace=True)
-    assert "never overrides" in lines[1]
-    _, lines = demo.stop_banner("PRIVACY_UNCERTAIN", messages, owner_workspace=True)
-    assert "too dark" in lines[0]
-    _, lines = demo.stop_banner("BLUR_UNAVAILABLE", messages, owner_workspace=False)
-    assert lines == ["Face blur is unavailable.", "(BLUR_UNAVAILABLE)"]
+    assert demo.stop_banner("PRIVATE_BATHROOM", messages, strict=False, seen="toilet") == ("STOPPED", ["a toilet is in view."])
+    assert demo.stop_banner("PRIVATE_BEDROOM", messages, strict=False, seen="bed") == ("STOPPED", ["a bed is in view."])
+    assert demo.stop_banner("PRIVACY_UNCERTAIN", messages, strict=False) == ("STOPPED", ["camera is covered or too dark."])
+    assert demo.stop_banner("PRIVATE_BEDROOM", messages, strict=False) == ("STOPPED", ["this looks like a bedroom."])
+    for code in ("PRIVATE_BATHROOM", "PRIVATE_BEDROOM", "PRIVACY_UNCERTAIN"):   # allowed places: --strict only
+        assert "classroom" not in " ".join(demo.stop_banner(code, messages, strict=False)[1])
+    assert demo.stop_banner("BLUR_UNAVAILABLE", messages, strict=False)[1] == ["Face blur is unavailable.", "(BLUR_UNAVAILABLE)"]
+
+
+def test_stop_banner_in_strict_mode_names_the_allowed_places():
+    demo = load_demo()
+    messages = demo.english_messages()
+    _, lines = demo.stop_banner("PRIVACY_UNCERTAIN", messages, strict=True)
+    assert "strict mode" in lines[0] and "classroom, shop or office" in lines[1]
+    _, lines = demo.stop_banner("PRIVATE_BEDROOM", messages, strict=True)
+    assert "bedroom?" in lines[0]
     title, lines = demo.startup_banner("UNSUPPORTED_CAPABILITY", messages, camera_problem=True)
     assert title == "CAMERA NOT ALLOWED" and "Privacy & Security > Camera" in lines[1]
 
@@ -72,17 +78,16 @@ def test_banner_is_a_full_width_red_band():
     demo = load_demo()
     view = demo.draw_banner(np.zeros((480, 640, 3), np.uint8), "STOPPED",
                             ["this room isn't allowed (bedroom?)",
-                             "If this is your desk, use demo-desk.command and keep the bed out of view."])
+                             "a long second line to check that the text still fits the width of the window"])
     middle = view[240]
     assert (middle[:, 2] > 150).mean() > 0.6           # mostly red across the whole width
     assert tuple(view[5, 5]) == (0, 0, 0)              # the top of the window is left alone
 
 
-def test_launchers_keep_the_strict_and_desk_demos_apart():
+def test_one_launcher_per_job_both_using_the_default_guard():
     root = DEMO.parent.parent
+    assert sorted(p.name for p in root.glob("demo-*.command")) == ["demo-blur.command", "demo-counter.command"]
     args = {name: next(line for line in (root / name).read_text().splitlines() if "live_demo.py" in line)
-            for name in ("demo-blur.command", "demo-counter.command", "demo-desk.command",
-                         "demo-desk-counter.command")}
-    assert "--owner-workspace" not in args["demo-blur.command"] + args["demo-counter.command"]
-    assert all("--owner-workspace" in args[n] for n in ("demo-desk.command", "demo-desk-counter.command"))
-    assert "--job counter" in args["demo-desk-counter.command"] and "--job counter" not in args["demo-desk.command"]
+            for name in ("demo-blur.command", "demo-counter.command")}
+    assert all("--strict" not in a and "--owner-workspace" not in a for a in args.values())
+    assert "--job counter" in args["demo-counter.command"] and "--job counter" not in args["demo-blur.command"]

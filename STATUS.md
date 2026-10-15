@@ -1,6 +1,6 @@
 # Ko'z status
 
-Updated Oct 15, after live test #2 (object check in the privacy guard). 197 tests pass, 1 skipped (it needs your face clip):
+Updated Oct 15, after live test #3 (new default guard). 203 tests pass, 1 skipped (it needs your face clip):
 `.venv/bin/python -m pytest -q`
 
 ## What works
@@ -8,7 +8,7 @@ Updated Oct 15, after live test #2 (object check in the privacy guard). 197 test
 | Part | State |
 |---|---|
 | Recipe checks (`koz/recipe.py`) | Strict parsing → contract schema → extra checks → "is it built?". Tested. |
-| Privacy guard (`koz/privacy.py`, `koz/scene.py`) | Every check: darkness, then an **object check** (NanoDet: a bed or toilet at ≥ 0.40 in 2 of 3 checks stops it; a sink only with a bathroom-like room), then the room check (Places365). **Strict**: allowlist (≥ 0.30; corridors/lobbies ≥ 0.50), private room in the top 5 above 0.10 stops. **Workspace** (`demo-desk*.command`): room check stops only when confident (private top guess ≥ 0.50, or ≥ 0.40 together). Checks every 10 s; one line per check on screen and in the terminal. On 71 real photos: strict stops all 23 bathrooms/bedrooms; workspace runs 10/12 desks and all kitchens but approves 3 of 23 private photos (limit). **Your rooms: live test #3 pending.** |
+| Privacy guard (`koz/privacy.py`, `koz/scene.py`) | **Default (every job): run anywhere, stop on what it sees**: darkness or a covered lens, a bed or toilet (NanoDet ≥ 0.40 in 2 of 3 checks), a sink in what looks like a bathroom, or a confident private room (top guess ≥ 0.50, or ≥ 0.40 together). **`--strict`** (schools, public cameras): only listed public places run. Checks every 10 s; one line per check on screen and in the terminal. On 71 real photos: default runs every desk without a bed, kitchen, classroom and shop, and lets 3 of 23 bathroom/bedroom photos through (limit); strict stops all 23. **Your rooms: live test #4 pending.** |
 | Face blur (`koz/blocks/face_blur.py`) | YuNet on OpenCV 5, heavy pixelation, fails closed. **No real-face test yet** (waiting for your clip in `tests/fixtures/private/face.mp4`). |
 | Colour finder (`koz/blocks/color_finder.py`) | Biggest patch of one colour → left / center / right / lost. Tested on the recorded test video. |
 | Person detector (`koz/blocks/person_detector.py`) | NanoDet-Plus on OpenCV 5, "person" class only; boxes stay local, only the number of people is sent. Decoding tested with exact fake outputs. **Not yet measured on real people.** |
@@ -21,10 +21,8 @@ Updated Oct 15, after live test #2 (object check in the privacy guard). 197 test
 ## How to run
 
 Double-click in Finder (uses the MacBook camera; q quits; if Ko'z stops, a red banner says why):
-- `demo-blur.command`: privacy guard + face blur + colour finder, **strict** (to check a bathroom or bedroom is refused)
-- `demo-counter.command`: people counter in school mode, **strict** (runs only in an allowed place, e.g. a classroom)
-- `demo-desk.command`: colour finder + face blur with the **owner-confirmed workspace** (your desk, the robot arena)
-- `demo-desk-counter.command`: people counter (school mode) with the **owner-confirmed workspace**
+- `demo-blur.command`: privacy guard + face blur + colour finder (red object)
+- `demo-counter.command`: people counter in school mode
 
 Or in Terminal:
 
@@ -35,13 +33,13 @@ python3.13 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
 .venv/bin/python -m pytest -q
 .venv/bin/python scripts/live_demo.py --i-own-this-camera
 .venv/bin/python scripts/live_demo.py --i-own-this-camera --job counter --school
-.venv/bin/python scripts/live_demo.py --i-own-this-camera --owner-workspace   # your desk / robot arena
+.venv/bin/python scripts/live_demo.py --i-own-this-camera --strict   # schools, public cameras
 ```
 
 ## What's next
 
-1. You: live test #3 (`demo-desk.command` at your desk, bed out of view; then with the bed in view; `demo-blur.command` in the bathroom); the privacy trials in `docs/TRIALS.md`; the face clip.
-2. Contract: `owner_workspace` in `status` and `trial_result`, to agree with Codex after 22:11 (quota), so the dashboard and trial reports show it.
+1. You: live test #4 with `demo-blur.command` (desk, bed, bathroom, covered lens); then the privacy trials in `docs/TRIALS.md`; the face clip.
+2. Contract (maybe): a `strict` flag in `status` and `trial_result`, so the dashboard and trial reports can show the mode; to agree with Codex.
 3. Fly-brain block (from the copied stage 2–3 code) + `firmware/motor_listener/` (car demo).
 4. Agent loop: words → recipe → check on live frames → adjust (max 3 tries).
 5. Web app (Codex's lane) and AWS in eu-central-1 on Oct 19–20.
@@ -50,9 +48,8 @@ python3.13 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
 ## Known limits
 
 - Privacy limits were set on 46 Places365 photos, not yet on your rooms; face-blur and tracker settings are still proposals.
-- Living room and kitchen aren't on the allowlist; use the owner-confirmed workspace for your own desk or arena.
-- The owner-confirmed workspace trusts you: on 3 of 23 private photos it sees no bed or toilet and isn't sure of the room, so it approves them (trial W3 checks your bathroom). A bed mostly out of view can be missed.
-- Until the contract change, the workspace shows only in the live window and terminal, not in events.
+- The default guard lets 3 of 23 private photos through: it sees no bed or toilet and isn't sure of the room, so it runs (trial 7 checks your bathroom). A bed mostly out of view can be missed. `--strict` stops all 23.
+- Strict mode shows only in the live window and terminal, not in events (no contract field yet).
 - The stricter guard stops more often by mistake ("uncertain"); the trials measure how often.
 - Places365 has no toilet class; a toilet stall is trial #3.
 - Which crossing direction counts as "in" (right-to-left of the line A→B) is defined in `koz/blocks/line_counter.py` but not yet in the contract; to agree with Codex in one short question.

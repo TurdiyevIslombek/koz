@@ -5,22 +5,23 @@ CC BY, converted to ONNX by scripts/convert_places365.py and run here with OpenC
 The file isn't in git: scripts/fetch_models.py downloads it and checks its SHA-256.
 
 check() first refuses frames it can't judge, then decide() reads the 365 probabilities.
-It is an allowlist: a place is approved only if it is on policy.ALLOWED_SCENES.
   0. the allowed area is too dark or too flat (e.g. a camera's first frames, a covered lens)
                                                           -> UNKNOWN (PRIVACY_UNCERTAIN)
+Default mode (live test #3: run everywhere, stop on what you see; the object check in
+koz/privacy.py does most of the work):
+  1. a private room is the top guess at DEFAULT_PRIVATE_TOP_BLOCKS or more -> BLOCKED
+  2. private rooms together reach DEFAULT_PRIVATE_SUM_BLOCKS              -> BLOCKED
+  3. anything else, even "unknown room"                                   -> APPROVED
+Strict mode (--strict, for schools and public cameras): an allowlist.
   1. the top guess is a private room                     -> BLOCKED (that room's code)
   2. a private room in the top 5 is above SCENE_PRIVATE_TOP5_BLOCKS -> BLOCKED
   3. private rooms together reach SCENE_PRIVATE_SUM_BLOCKS          -> BLOCKED
   4. the top guess is an allowed place, at least SCENE_MIN_TOP_PROB
      (SCENE_MIN_TOP_PROB_CAUTIOUS for corridors and lobbies)        -> APPROVED
   5. anything else                                        -> UNKNOWN (PRIVACY_UNCERTAIN)
-In an owner-confirmed workspace (local setup only, after live test #2) the room check stops
-only when it is confident: a private room is the top guess at WORKSPACE_PRIVATE_TOP_BLOCKS
-or more, or private rooms together reach WORKSPACE_PRIVATE_SUM_BLOCKS; otherwise the owner
-vouches for the room. Rule 0 (darkness) and the object check (koz/privacy.py: a bed or a
-toilet in view) apply in both modes.
-Rule 4 replaced "approve anything that isn't private" after live test #1, where a dark
-first frame looked like a "catacomb" and a bathroom was approved (docs/TRIALS.md).
+The allowlist came from live test #1 (a dark first frame looked like a "catacomb" and a
+bathroom was approved); the default moved to "stop on what you see" after live test #3,
+because in real homes the room model guessed "airplane_cabin" (docs/TRIALS.md).
 This is an alarm, not proof that a room is safe."""
 import math
 
@@ -47,8 +48,8 @@ _CAUTIOUS = frozenset(NAMES.index(name) for name in policy.CAUTIOUS_SCENES)
 class PlacesSceneChecker:
     """check(image) -> PrivacyResult, for koz.privacy.PrivacyGate."""
 
-    def __init__(self, model_path=None, owner_workspace=False):
-        self.owner_workspace = owner_workspace   # from local setup only, see koz/local_setup.py
+    def __init__(self, model_path=None, strict=False):
+        self.strict = strict   # from local setup only, see koz/local_setup.py
         model_path = model_path or MODEL_PATH
         require_pinned(model_path, MODEL_SHA256, "PRIVACY_UNAVAILABLE")
         try:
@@ -69,7 +70,7 @@ class PlacesSceneChecker:
         self.last_probabilities = self.probabilities(image)
         if too_dark_or_flat(image):
             return PrivacyResult(UNKNOWN, "PRIVACY_UNCERTAIN")
-        return decide(self.last_probabilities, self.owner_workspace)
+        return decide(self.last_probabilities, self.strict)
 
     # Used by koz.privacy.GuardCheck:
     @staticmethod
@@ -77,8 +78,8 @@ class PlacesSceneChecker:
         return too_dark_or_flat(image)
 
     @staticmethod
-    def judge(probabilities, owner_workspace):
-        return decide(probabilities, owner_workspace)
+    def judge(probabilities, strict):
+        return decide(probabilities, strict)
 
     @staticmethod
     def top(probabilities, n=3):
@@ -96,19 +97,18 @@ def too_dark_or_flat(image):
     return visible.mean() < policy.SCENE_MIN_BRIGHTNESS or visible.std() < policy.SCENE_MIN_CONTRAST
 
 
-def decide(probabilities, owner_workspace=False):
+def decide(probabilities, strict=False):
     """365 probabilities -> PrivacyResult. Anything malformed counts as a failed check.
-    In an owner-confirmed workspace the room check only stops when it is confident (see
-    the module docstring); the object check in koz/privacy.py does the rest."""
+    Default: stop only on a confident private room. Strict: the allowlist (module docstring)."""
     p = np.asarray(probabilities, dtype=np.float64).reshape(-1)
     if p.size != CLASSES or not np.all(np.isfinite(p)) or p.min() < 0 or not math.isclose(p.sum(), 1, abs_tol=1e-3):
         return FAILED
     top5 = [int(i) for i in np.argsort(p)[::-1][:5]]
-    if owner_workspace:
+    if not strict:
         group_sums = {code: sum(p[i] for i, _ in scenes) for code, scenes in policy.PRIVATE_SCENES.items()}
-        if top5[0] in _GROUP_OF and p[top5[0]] >= policy.WORKSPACE_PRIVATE_TOP_BLOCKS:
+        if top5[0] in _GROUP_OF and p[top5[0]] >= policy.DEFAULT_PRIVATE_TOP_BLOCKS:
             return PrivacyResult(BLOCKED, _GROUP_OF[top5[0]])
-        if sum(group_sums.values()) >= policy.WORKSPACE_PRIVATE_SUM_BLOCKS:
+        if sum(group_sums.values()) >= policy.DEFAULT_PRIVATE_SUM_BLOCKS:
             return PrivacyResult(BLOCKED, max(group_sums, key=group_sums.get))
         return PrivacyResult(APPROVED)
     if top5[0] in _GROUP_OF:

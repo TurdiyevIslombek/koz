@@ -49,8 +49,8 @@ def test_private_names_match_the_category_list():
     # A private room anywhere in the top 5 above 0.10 stops it, even under a confident classroom.
     ({f"i{CLASSROOM}": 0.7, "i52": 0.12}, PrivacyResult("blocked", "PRIVATE_BEDROOM")),
 ])
-def test_decision_rule(weights, expected):
-    assert decide(probs(**weights)) == expected
+def test_strict_decision_rule(weights, expected):
+    assert decide(probs(**weights), strict=True) == expected
 
 
 @pytest.mark.parametrize("weights, expected", [
@@ -63,15 +63,15 @@ def test_decision_rule(weights, expected):
     ({f"i{LOBBY}": 0.45}, PrivacyResult("unknown", "PRIVACY_UNCERTAIN")),
     ({f"i{CORRIDOR}": 0.55}, PrivacyResult("approved")),
 ])
-def test_cautious_and_removed_places(weights, expected):
-    assert decide(probs(**weights)) == expected
+def test_strict_cautious_and_removed_places(weights, expected):
+    assert decide(probs(**weights), strict=True) == expected
 
 
 @pytest.mark.parametrize("weights, expected", [
     ({f"i{KITCHEN}": 0.7}, PrivacyResult("approved")),            # not on the allowlist, but vouched for
     ({f"i{CATACOMB}": 0.6}, PrivacyResult("approved")),
     ({f"i{KITCHEN}": 0.12}, PrivacyResult("approved")),           # unclear is fine too
-    # After live test #2 only a confident room check stops a workspace (the object check
+    # Default mode (live test #3): only a confident room check stops it (the object check
     # in koz/privacy.py does the rest): a desk in a bedroom may look a bit like a bedroom.
     ({f"i{KITCHEN}": 0.7, "i52": 0.12}, PrivacyResult("approved")),
     ({f"i{KITCHEN}": 0.5, "i52": 0.08, "i51": 0.04, "i182": 0.04}, PrivacyResult("approved")),
@@ -79,8 +79,8 @@ def test_cautious_and_removed_places(weights, expected):
     ({"i45": 0.6}, PrivacyResult("blocked", "PRIVATE_BATHROOM")),                       # top guess >= 0.50
     ({f"i{KITCHEN}": 0.3, "i52": 0.2, "i51": 0.12, "i182": 0.1}, PrivacyResult("blocked", "PRIVATE_BEDROOM")),  # >= 0.40 together
 ])
-def test_owner_confirmed_workspace(weights, expected):
-    assert decide(probs(**weights), owner_workspace=True) == expected
+def test_default_mode_stops_only_on_a_confident_private_room(weights, expected):
+    assert decide(probs(**weights)) == expected
 
 
 @pytest.mark.parametrize("bad", [np.ones(10) / 10, np.full(CLASSES, np.nan), np.full(CLASSES, 2 / CLASSES),

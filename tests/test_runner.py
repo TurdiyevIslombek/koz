@@ -300,19 +300,22 @@ def test_counts_become_unknown_with_the_reason(test_video):
     assert stale["unknown_reason"] == "FRAME_STALE"
 
 
-def test_owner_workspace_comes_from_local_setup(test_video):
-    runner = Runner(check_recipe(color_recipe()), LocalSetup(True, FULL_FRAME, owner_workspace=True),
+def test_strict_mode_comes_from_local_setup(test_video):
+    runner = Runner(check_recipe(color_recipe()), LocalSetup(True, FULL_FRAME, strict=True),
                     FileCamera(test_video), EventLog(list().append), scene_checker=Approve(), face_detector=FakeFaces())
-    assert runner.owner_workspace is True
+    assert runner.strict is True
     with pytest.raises(KozError) as caught:
-        Runner(check_recipe(color_recipe()), LocalSetup(True, FULL_FRAME, owner_workspace="yes"),
+        Runner(check_recipe(color_recipe()), LocalSetup(True, FULL_FRAME, strict="yes"),
                FileCamera(test_video), EventLog(list().append), scene_checker=Approve(), face_detector=FakeFaces())
     assert caught.value.code == "INVALID_COMMAND"
 
 
 @pytest.mark.skipif(not __import__("koz.scene", fromlist=["MODEL_PATH"]).MODEL_PATH.exists(),
                     reason="run scripts/fetch_models.py first")
-def test_the_default_guard_gets_the_workspace_setting(test_video):
-    runner = Runner(check_recipe(color_recipe()), LocalSetup(True, FULL_FRAME, owner_workspace=True),
+def test_the_default_guard_gets_the_strict_setting(test_video):
+    runner = Runner(check_recipe(color_recipe()), LocalSetup(True, FULL_FRAME, strict=True),
                     FileCamera(test_video), EventLog(list().append), face_detector=FakeFaces())
-    assert runner.guard.owner_workspace is True
+    assert runner.guard.strict is True
+    default = Runner(check_recipe(color_recipe()), LocalSetup(True, FULL_FRAME), FileCamera(test_video),
+                     EventLog(list().append), face_detector=FakeFaces())
+    assert default.guard.strict is False   # live test #3: run anywhere, stop on what you see

@@ -53,10 +53,10 @@ def results(guard, n):
     return [guard.check(FRAME) for _ in range(n)]
 
 
-@pytest.mark.parametrize("workspace", [False, True])
+@pytest.mark.parametrize("strict", [False, True])
 @pytest.mark.parametrize("name, code", [("bed", "PRIVATE_BEDROOM"), ("toilet", "PRIVATE_BATHROOM")])
-def test_bed_or_toilet_seen_twice_stops_in_both_modes(workspace, name, code):
-    guard = GuardCheck(FakeScene(room(CLASSROOM)), FakeObjects({name: 0.8}), owner_workspace=workspace)
+def test_bed_or_toilet_seen_twice_stops_in_both_modes(strict, name, code):
+    guard = GuardCheck(FakeScene(room(CLASSROOM)), FakeObjects({name: 0.8}), strict=strict)
     first, second = results(guard, 2)
     assert first == PrivacyResult("unknown", "PRIVACY_UNCERTAIN", seen=name, confirming=True)
     assert second == PrivacyResult("blocked", code, seen=name)
@@ -87,9 +87,9 @@ def test_a_broken_object_check_is_a_failed_check_not_nothing_seen():
 def test_sink_stops_only_with_a_bathroom_like_room():
     bathroomish = room(BATHROOM, 0.35)
     bathroomish[KITCHEN] = 0.4   # top: kitchen, then bathroom
-    guard = GuardCheck(FakeScene(bathroomish / bathroomish.sum()), FakeObjects({"sink": 0.6}), owner_workspace=True)
+    guard = GuardCheck(FakeScene(bathroomish / bathroomish.sum()), FakeObjects({"sink": 0.6}))
     assert guard.check(FRAME) == PrivacyResult("blocked", "PRIVATE_BATHROOM", seen="sink")
-    kitchen = GuardCheck(FakeScene(room(KITCHEN)), FakeObjects({"sink": 0.6}), owner_workspace=True)
+    kitchen = GuardCheck(FakeScene(room(KITCHEN)), FakeObjects({"sink": 0.6}))
     assert kitchen.check(FRAME) == PrivacyResult("approved")
 
 
@@ -98,12 +98,12 @@ def test_darkness_comes_first():
     assert guard.check(FRAME) == PrivacyResult("unknown", "PRIVACY_UNCERTAIN")
 
 
-def test_workspace_relies_on_objects_not_on_a_vague_room_guess():
+def test_default_relies_on_objects_not_on_a_vague_room_guess():
     vague_bedroom = room(KITCHEN, 0.5)
     vague_bedroom[NAMES.index("bedroom")] = 0.15   # would stop the strict guard (top 5 above 0.10)
     vague_bedroom /= vague_bedroom.sum()
-    strict = GuardCheck(FakeScene(vague_bedroom), FakeObjects({}))
-    desk = GuardCheck(FakeScene(vague_bedroom), FakeObjects({}), owner_workspace=True)
+    strict = GuardCheck(FakeScene(vague_bedroom), FakeObjects({}), strict=True)
+    desk = GuardCheck(FakeScene(vague_bedroom), FakeObjects({}))
     assert strict.check(FRAME).state == "blocked" and desk.check(FRAME).state == "approved"
 
 

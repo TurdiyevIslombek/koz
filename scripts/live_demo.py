@@ -3,12 +3,13 @@
     .venv/bin/python scripts/live_demo.py --i-own-this-camera                 # find the red object
     .venv/bin/python scripts/live_demo.py --i-own-this-camera --job counter   # count people crossing a line
     .venv/bin/python scripts/live_demo.py --i-own-this-camera --camera http://flycar-cam.local:81/stream
-    .venv/bin/python scripts/live_demo.py --i-own-this-camera --owner-workspace   # your desk / robot arena
+    .venv/bin/python scripts/live_demo.py --i-own-this-camera --strict   # schools, public cameras: listed places only
 
 The window shows only what Ko'z itself sees: the allowed area, with faces blurred, a ring
 around the red object (or people's boxes and the counting line), plus the status line. Nothing is saved or sent anywhere.
 Press q to quit. The first time, macOS asks whether this terminal may use the camera.
-If the privacy guard refuses the room, the window says why and Ko'z stops."""
+By default Ko'z runs anywhere and stops on what the privacy guard sees (a bed, a toilet, a
+covered lens...); the window says why. --strict is for schools and public cameras."""
 import argparse
 import re
 import sys
@@ -90,8 +91,8 @@ def draw(runner, latest, messages, fps, line):
     state = status.get("state", "starting")
     colour = GREEN if state == "running" else AMBER if state == "checking" else RED
     privacy = status.get("privacy", "-")
-    if runner.owner_workspace and privacy == "approved":
-        privacy = "approved (owner-confirmed)"
+    if runner.strict and privacy == "approved":
+        privacy = "approved (strict)"
     if line is not None:
         job = (f"people: {count_text(observation.get('occupancy'))}   in: {count_text(observation.get('entered'))}"
                f"   out: {count_text(observation.get('exited'))}")
@@ -101,44 +102,39 @@ def draw(runner, latest, messages, fps, line):
     reason = fault["code"] if fault else observation.get("unknown_reason")
     if reason:
         lines.append(f"{reason}: {messages.get(reason, '')}")
-    if runner.owner_workspace:
-        lines.append("OWNER-CONFIRMED WORKSPACE: approved on your word unless a private room or darkness is seen")
+    if runner.strict:
+        lines.append("STRICT MODE: runs only in listed public places (classroom, shop, office...)")
     cv2.rectangle(view, (0, 0), (width, 28 * len(lines) + 8), (0, 0, 0), -1)
     for i, line in enumerate(lines):
-        tint = colour if i == 0 else AMBER if line.startswith("OWNER-CONFIRMED") else WHITE
+        tint = colour if i == 0 else AMBER if line.startswith("STRICT MODE") else WHITE
         cv2.putText(view, line, (10, 24 + 28 * i), cv2.FONT_HERSHEY_SIMPLEX, 0.6 if i < 2 else 0.45, tint, 1)
     if fault:
         last = getattr(runner.guard, "last_result", None)
-        title, banner = stop_banner(fault["code"], messages, runner.owner_workspace, getattr(last, "seen", None))
+        title, banner = stop_banner(fault["code"], messages, runner.strict, getattr(last, "seen", None))
         draw_banner(view, title, banner, check_line(runner))
     return view
 
 
-OBJECT_STOP = {"bed": ["a bed is in view.", "Ko'z does not run in bedrooms."],
-               "toilet": ["a toilet is in view.", "Ko'z does not run in bathrooms."],
-               "sink": ["a sink, in a room that looks like a bathroom.", "Ko'z does not run in bathrooms."]}
+OBJECT_STOP = {"bed": "a bed is in view.", "toilet": "a toilet is in view.",
+               "sink": "a sink, in what looks like a bathroom."}
 
 
-def stop_banner(code, messages, owner_workspace, seen=None):
+def stop_banner(code, messages, strict, seen=None):
     """What the big banner says when Ko'z stops: (title, lines). `seen` is the object the
-    privacy guard saw (bed, toilet, sink), if that is what stopped it."""
+    privacy guard saw (bed, toilet, sink), if that is what stopped it. Short by default;
+    only strict mode talks about allowed places."""
     if seen in OBJECT_STOP and code in ROOM_GUESS:
-        return "STOPPED", OBJECT_STOP[seen]
+        return "STOPPED", [OBJECT_STOP[seen]]
     if code in ROOM_GUESS:
         room = ROOM_GUESS[code]
-        if owner_workspace:
-            return "STOPPED", [f"this looks like a private room ({room}?)",
-                               "The workspace option never overrides a private room.",
-                               "Point the camera away from it and start again."]
-        hint = ("If this is your desk, use demo-desk.command and keep the bed out of view."
-                if room == "bedroom" else "Private rooms always stop Ko'z.")
-        return "STOPPED", [f"this room isn't allowed ({room}?)", hint]
+        if strict:
+            return "STOPPED", [f"this room isn't allowed ({room}?)", "Private rooms always stop Ko'z."]
+        return "STOPPED", [f"this looks like a {room}."]
     if code == "PRIVACY_UNCERTAIN":
-        if owner_workspace:   # in a workspace only darkness makes the guard unsure
-            return "STOPPED", ["too dark to check the room", "Turn on a light or uncover the lens, then start again."]
-        return "STOPPED", ["Ko'z can't tell this is an allowed place",
-                           "Too dark, or not a classroom, shop or office.",
-                           "For your desk use demo-desk.command."]
+        if strict:
+            return "STOPPED", ["not a listed public place (strict mode)",
+                               "Too dark, or not a classroom, shop or office."]
+        return "STOPPED", ["camera is covered or too dark."]   # by default only darkness makes it unsure
     return "STOPPED", [messages.get(code, code), f"({code})"]
 
 
@@ -193,9 +189,9 @@ def main():
     parser.add_argument("--line", default="0.5,0,0.5,1",
                         help="counting line ax,ay,bx,by, 0..1; crossing right-to-left of A->B counts as 'in'")
     parser.add_argument("--school", action="store_true", help="school mode: counts only")
-    parser.add_argument("--owner-workspace", action="store_true",
-                        help="confirm this room is your own workspace (desk, robot arena): the guard approves "
-                             "it unless a private room or darkness is seen; shown as 'owner-confirmed'")
+    parser.add_argument("--strict", action="store_true",
+                        help="strict mode for schools and public cameras: run only in listed public places "
+                             "(classroom, shop, office...). Default: run anywhere, stop on what the guard sees")
     parser.add_argument("--no-window", action="store_true", help="print the status instead of showing a window")
     parser.add_argument("--frames", type=int, help="stop after this many frames")
     args = parser.parse_args()
@@ -204,7 +200,7 @@ def main():
     left, top, right, bottom = (float(v) for v in args.allowed_area.split(","))
     setup = LocalSetup(owner_confirmed=args.i_own_this_camera,
                        allowed_area=(((left, top), (right, top), (right, bottom), (left, bottom)),),
-                       school=args.school, owner_workspace=args.owner_workspace)
+                       school=args.school, strict=args.strict)
     line = tuple(float(v) for v in args.line.split(",")) if args.job == "counter" else None
     latest = {}
 
@@ -238,8 +234,8 @@ def main():
             cv2.destroyAllWindows()
         return 1
 
-    if runner.owner_workspace:
-        print("Owner-confirmed workspace: ON (the guard approves this room unless a private room or darkness is seen)")
+    if runner.strict:
+        print("Strict mode: ON (runs only in listed public places: classroom, shop, office...)")
     frames, started, alive, printed = 0, time.monotonic(), True, 0
     try:
         while alive and (args.frames is None or frames < args.frames):
@@ -263,7 +259,7 @@ def main():
         cv2.destroyAllWindows()
     fault = latest.get("fault")
     print(f"final state: {runner.state}" + (f" ({fault['code']}: {messages.get(fault['code'], '')})" if fault else "")
-          + ("   [owner-confirmed workspace]" if runner.owner_workspace else ""))
+          + ("   [strict mode]" if runner.strict else ""))
     return 0
 
 

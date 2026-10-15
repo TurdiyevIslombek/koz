@@ -6,45 +6,37 @@ Results go in the trial dashboard; failures are kept, not hidden.
 
 ## Privacy guard (demo 3) — draft
 
-Point the camera at each scene, start a job, and record: result (pass/fail), the error
-code shown, how long until it stopped, and **whether the owner-confirmed workspace was on**
-(`--owner-workspace`; the window says "OWNER-CONFIRMED WORKSPACE"). A trial report without
-that is incomplete. Trials 1–10 are run with it **off**.
+Since live test #3 the guard's default is **run anywhere, stop on what you see**: a bed or a
+toilet in view, a sink in what looks like a bathroom, a covered lens or dark frame, or a room
+the model is confident is private. `--strict` (for schools and public cameras) runs only in
+listed public places. Double-click `demo-blur.command` for trials 1–10; strict trials use the
+Terminal command with `--strict`. When Ko'z stops, a red banner says why, and the window and
+the terminal print one line per check (top 3 room guesses, objects seen, result).
 
-Which file to double-click: trials 1–10 → `demo-blur.command` (strict); W1, W3, W4 →
-`demo-desk.command` (workspace on). When Ko'z stops, a red banner says why. Use your own home or a place you have
-permission to film, with nobody undressed or asleep in view. Ko'z saves no frames.
+Record for each trial: result (pass/fail), the banner text, the check line, how long until it
+stopped, and **whether `--strict` was on**. A trial report without that is incomplete. Use
+your own home or a place you have permission to film, with nobody undressed or asleep in
+view. Ko'z saves no frames.
 
-| # | Scene | Expected |
+| # | Scene (default) | Expected |
 |---|---|---|
-| 1 | Home bathroom: sink and mirror | Refused, `PRIVATE_BATHROOM` |
-| 2 | Bathroom: shower or bath visible | Refused, `PRIVATE_BATHROOM` |
-| 3 | **Toilet stall** (only the stall walls and the toilet visible) | Refused. Places365 has no toilet class, so this is the hardest case; record what it says |
-| 4 | Bedroom, bed visible | Refused, `PRIVATE_BEDROOM` |
-| 5 | Child's room or a bed in a corner | Refused, `PRIVATE_BEDROOM` |
-| 6 | Wardrobe / changing area | Refused, `PRIVATE_CHANGING_ROOM` |
-| 7 | Start in an allowed room, then turn the camera to the bathroom door | Stopped at the next check (within 10 s); record the seconds |
-| 8 | Lens covered, or a very dark room | Not approved (`PRIVACY_UNCERTAIN`) |
-| 9 | Control: classroom | Approved, job runs |
-| 10 | Control: shop or office | Approved, job runs (a kitchen or living room is "uncertain": not on the allowlist) |
+| 1 | Bathroom, toilet visible | Stopped: "a toilet is in view." |
+| 2 | Bathroom, only sink and mirror | Stopped: "a sink, in what looks like a bathroom.", or the room check; if it runs, record it (known limit) |
+| 3 | **Toilet stall** (only the stall walls and the toilet) | Stopped: "a toilet is in view."; the hardest case, record the check line |
+| 4 | Bedroom, bed visible | Stopped: "a bed is in view." |
+| 5 | Your desk, bed out of view | Runs |
+| 6 | Your desk, then turn the camera to the bed | Stopped within about 10 s; record the seconds |
+| 7 | Start at your desk, then turn the camera to the bathroom | Stopped within about 10 s; record the seconds and the check line |
+| 8 | Lens covered, or a very dark room | Stopped: "camera is covered or too dark." |
+| 9 | Robot arena, car camera | Runs |
+| 10 | Kitchen or living room | Runs |
 
-### Owner-confirmed workspace (your desk and the robot arena)
-
-With `--owner-workspace` the guard approves the room on your word, unless a private room is
-likely or the frame is too dark. Measured limit: on 2 of 23 real bathroom and bedroom photos
-the model gives private rooms almost nothing (a bathroom read as "bank_vault 0.69"), so a
-workspace would approve them. W3 checks that on your own bathroom.
-
-| # | Scene (workspace **on**) | Expected |
+| # | Scene (`--strict`) | Expected |
 |---|---|---|
-| W1 | Your desk | Approved, window says "OWNER-CONFIRMED WORKSPACE" |
-| W2 | The robot arena, car camera | Approved, same label |
-| W3 | Start at your desk, then turn the camera to the bathroom | Stopped at the next check (within 10 s); record what the scene line said |
-| W4 | Lens covered | Not approved (`PRIVACY_UNCERTAIN`) |
+| S1 | Classroom, shop or office | Runs |
+| S2 | Your desk at home | Stopped: "not a listed public place (strict mode)" |
 
-The guard's limits in `koz/policy.py` (`ALLOWED_SCENES`, `SCENE_PRIVATE_TOP5_BLOCKS`,
-`SCENE_PRIVATE_SUM_BLOCKS`, `SCENE_MIN_TOP_PROB`, `SCENE_MIN_BRIGHTNESS`, `SCENE_MIN_CONTRAST`)
-were set on 46 real photos (below); these trials check them on your own rooms.
+The guard's limits are in `koz/policy.py` and were measured on 71 real photos (below).
 
 ## Failure found in live test #1 and how it was fixed (Oct 14)
 
@@ -94,7 +86,7 @@ http://places2.csail.mit.edu/download.html; Islombek signed it on Oct 14.
 **Still open.**
 - Re-run this live test (bathroom, your room, your desk). The scene line now updates every 10 s.
 - Living room and kitchen stay off the allowlist (Islombek's decision); his desk and the
-  robot arena use the owner-confirmed workspace instead (above).
+  robot arena used the owner-confirmed workspace instead (since live test #3 that is the default).
 
 **Security review, same day.** Private rooms get mistaken for places on the allowlist (a
 dark bedroom: "staircase 0.36"; a real bathroom: "corridor 0.11"). Removed staircase,
@@ -145,6 +137,43 @@ fixed and tested: after "bed seen, then not seen" the guard resumed before its 3
 was done (it now keeps checking every frame until a stop is no longer possible); a broken
 NanoDet answer was read as "nothing seen" (it is now a failed check, which stops Ko'z); and a
 detection at exactly 0.40 was dropped by OpenCV's box merging (now kept).
+
+## Live test #3: the default guard (Oct 15)
+
+**What happened.** `demo-blur.command` and `demo-counter.command` still never started at
+home. They used the strict allowlist, which needs a classroom, shop or office, and the room
+model called Islombek's room "airplane_cabin 0.37", once "bathroom?" with shower at only
+0.06. A room model that unsure can't be what decides whether Ko'z starts.
+
+**Decision (Islombek).** The default for every job is **run everywhere, stop on what you
+see**: the rules that were the owner-confirmed workspace become the default for everyone,
+and the allowlist moves behind `--strict` (for schools and public cameras). The two desk
+launchers are gone; there is one launcher per job.
+
+**Measured on 71 real Places365 photos, new default vs `--strict`:**
+
+| Photos | Default | `--strict` |
+|---|---|---|
+| Bathrooms (12) | 10 stopped (7 toilet, 1 sink, 2 room), **2 run** | all stopped |
+| Bedrooms (11) | 10 stopped (7 bed, 3 room), **1 runs** | all stopped |
+| Desks / home offices (12) | 10 run; the 2 with a bed in view stopped | 3 run |
+| Kitchens (13) | all run | none run |
+| Classrooms (11) / shops (12) | all run | 9 / 7 run |
+
+**Honest limit.** By default Ko'z lets **3 of 23** private photos through: when it sees no
+bed or toilet and the room model isn't confident, it runs (a bathroom read as "closet 0.35",
+one as "bank_vault 0.69", a bedroom as "kennel/outdoor 0.37"). A test fails if that number
+grows.
+
+**Why we chose it anyway.**
+- It works in real homes. The strict allowlist refused every room in Islombek's home,
+  including the desk where he works, because the room model doesn't know rooms like his.
+  A privacy guard that never lets anything run doesn't get used.
+- What it stops on is what it can actually see, and the banner says so ("a toilet is in
+  view"), which a person can check.
+- Faces are blurred in every frame anyway, frames never leave the computer and nothing is
+  saved, so a missed room is a local mistake, not a leak.
+- `--strict` exists for schools and public cameras, and stops all 23.
 
 ## Fly-brain car (demo 1) and classroom counter (demo 2)
 

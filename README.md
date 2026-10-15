@@ -25,9 +25,10 @@ regression test (not in git: their copyright belongs to their owners).
 ```bash
 .venv/bin/python scripts/live_demo.py --i-own-this-camera
 ```
-A window shows what Ko'z sees: faces blurred, a ring on the red object, and a private room
-(bathroom, bedroom...) stops it with the reason. q quits; macOS asks for camera access the first time.
-Add `--job counter` to count people crossing a line instead (`--school` for school mode).
+A window shows what Ko'z sees: faces blurred, a ring on the red object. It runs anywhere and
+stops on what it sees (a bed, a toilet, a covered lens...), with the reason. q quits; macOS asks
+for camera access the first time. Add `--job counter` to count people crossing a line instead
+(`--school` for school mode), and `--strict` for schools and public cameras (listed places only).
 
 ## Models and credits
 

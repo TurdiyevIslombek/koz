@@ -40,10 +40,10 @@ PRIVATE_SCENES = {
 }
 # Places365 has no toilet class; a toilet stall is a trial case (docs/TRIALS.md).
 
-# The guard approves only these public and work places (Places365 names). Anything else,
-# even something harmless like "catacomb", is "uncertain" and stops the job. Home rooms
-# such as living_room and kitchen are NOT on the list (Islombek's decision); for his own
-# desk or robot arena there is the owner-confirmed workspace in local setup instead.
+# STRICT MODE ONLY (--strict, for schools and public cameras): the guard approves only these
+# public and work places (Places365 names). Anything else, even something harmless like
+# "catacomb", is "uncertain" and stops the job. The default mode (live test #3) runs anywhere
+# and stops on what it sees; see DEFAULT_PRIVATE_* below and koz/privacy.py.
 # Removed after the security review of Oct 14, because private rooms get mistaken for
 # them (a dark bedroom came out as "staircase 0.36"): staircase, entrance_hall, home_office.
 ALLOWED_SCENES = (
@@ -87,9 +87,10 @@ SINK_ROOMS = ("bathroom", "shower")   # ...in the room check's top 3
 OBJECT_MIN_CONFIDENCE = 0.40
 OBJECT_CHECKS_TO_STOP = 2             # seen in 2 of the last 3 checks -> stopped
 OBJECT_CHECK_WINDOW = 3
-# In an owner-confirmed workspace the room check stops only when it is confident:
-WORKSPACE_PRIVATE_TOP_BLOCKS = 0.50   # a private room is the top guess at least this sure
-WORKSPACE_PRIVATE_SUM_BLOCKS = 0.40   # or private rooms together reach this
+# Default mode (no --strict): the room check stops only when it is confident; the object
+# check and darkness do the rest. Measured on 71 real photos (docs/TRIALS.md, live test #3).
+DEFAULT_PRIVATE_TOP_BLOCKS = 0.50   # a private room is the top guess at least this sure
+DEFAULT_PRIVATE_SUM_BLOCKS = 0.40   # or private rooms together reach this
 
 # line_counter (proposed). A followed person's number is forgotten this long after they
 # were last seen (the contract allows at most 5 s), and a box must overlap its previous
