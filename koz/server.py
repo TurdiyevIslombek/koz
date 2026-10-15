@@ -493,8 +493,8 @@ def main(argv=None):
     parser.add_argument("--school", action="store_true", help="school mode: counts only, and always strict")
     parser.add_argument("--strict", action="store_true", help="strict mode for schools and public cameras")
     parser.add_argument("--planner", choices=CHOICES, default="auto",
-                        help="auto: Nemotron on Nebius if NEBIUS_API_KEY is in .env, else Gemma 4 on this Mac "
-                             "if Ollama runs, else the rule planner")
+                        help="auto: Nemotron on Nebius if NEBIUS_API_KEY is in .env, else the rule planner; "
+                             "ollama: Gemma 4 on this Mac (14/20 on Oct 15, see docs/TRIALS.md)")
     parser.add_argument("--window", action="store_true", help="show the camera view (faces blurred) of each job")
     parser.add_argument("--report-planner", action="store_true",
                         help="send status.planner (contract 8.1); only once the web app accepts it")

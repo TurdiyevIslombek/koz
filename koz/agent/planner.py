@@ -105,10 +105,35 @@ def normalise(text):
     return re.sub(r"[ʻʼ’‘`´]", "'", text.lower())
 
 
+# Uzbek is written in two alphabets (CLAUDE.md rule 1). The Uzbek word lists below are Latin, so
+# Cyrillic text is also read as Uzbek Latin: "Яширин камера" -> "yashirin kamera" (found, Oct 15:
+# "Сариқ коптокни қидир" and a Cyrillic hidden-camera request slipped past the word lists).
+# Reading Russian this way only adds matches, and an extra refusal is the safe side.
+CYRILLIC_TO_LATIN = str.maketrans({
+    "а": "a", "б": "b", "в": "v", "г": "g", "ғ": "g'", "д": "d", "е": "e", "ё": "yo", "ж": "j", "з": "z",
+    "и": "i", "й": "y", "к": "k", "қ": "q", "л": "l", "м": "m", "н": "n", "о": "o", "п": "p", "р": "r",
+    "с": "s", "т": "t", "у": "u", "ў": "o'", "ф": "f", "х": "x", "ҳ": "h", "ц": "ts", "ч": "ch", "ш": "sh",
+    "щ": "sh", "ъ": "'", "ы": "i", "ь": "", "э": "e", "ю": "yu", "я": "ya"})
+
+
+def readable(text):
+    """The text the word lists look at: normalised, plus its Uzbek Latin reading if it has Cyrillic."""
+    t = normalise(text)
+    return t + "\n" + t.translate(CYRILLIC_TO_LATIN) if re.search(r"[а-яёўқғҳ]", t) else t
+
+
+# Distinctly Uzbek words, looked for in the Latin reading of Cyrillic text (not words Russian
+# shares, such as "kamera").
+UZBEK_IN_CYRILLIC = (r"\b(sana\w*|koptok\w*|to'p\w*|topib|toping|top|narsa\w*|rang\w*|kirgan\w*|odam\w*|"
+                     r"mijoz\w*|yashirin\w*|kim|mening|uchun|sinf\w*|o'quvchi\w*|sariq|yashil|binafsha\w*|ber|"
+                     r"izla\w*|qidir\w*|tani\w*|va)\b")
+
+
 def language_of(text):
     t = normalise(text)
     if re.search(r"[а-яёўқғҳ]", t):
-        return "uz" if re.search(r"[ўқғҳ]|\b(сана|ўқувчи|қизил|кўк|топ)", t) else "ru"
+        return "uz" if (re.search(r"[ўқғҳ]", t)
+                        or re.search(UZBEK_IN_CYRILLIC, t.translate(CYRILLIC_TO_LATIN))) else "ru"
     uzbek = (r"o'|g'|\b(sana\w*|qizil|koptok\w*|top|topib|toping|sinf\w*|yuz\w*|xiralashtir\w*|kirgan\w*|"
              r"o'quvchi\w*|odam\w*|mijoz\w*|narsa\w*|rang\w*|yashirin\w*|kim\w*|va|uchun|mening|kamera\w*|"
              r"sariq|yashil|ko'k|qil\w*|ber\w*)\b")
@@ -178,7 +203,7 @@ def refusal_for(text):
     """The error code if Ko'z refuses this request, else None (the same for every planner)."""
     if len(text) > MAX_TEXT:
         return "INVALID_COMMAND"
-    t = normalise(text)
+    t = readable(text)
     for code, patterns in REFUSALS:
         if _any(patterns, t):
             return code
@@ -202,7 +227,7 @@ class FakePlanner:
         code = refusal_for(text)
         if code:
             return refused(text, code)
-        language, t = language_of(text), normalise(text)
+        language, t = language_of(text), readable(text)
         if _any(COUNT_WORDS, t):
             school = _any(SCHOOL_WORDS, t)
             return Plan(language, "count_people", counter_recipe(school, language), None,

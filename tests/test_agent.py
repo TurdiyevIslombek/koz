@@ -327,17 +327,47 @@ def test_nebius_refusal_uses_the_contract_message():
     assert plan.refusal == "PROFILING_FORBIDDEN" and plan.message == message("PROFILING_FORBIDDEN", "en")
 
 
-def test_without_a_key_or_ollama_the_rule_planner_answers_and_it_says_so():
-    said = []
-    planner = make_planner(env={}, say=said.append)
-    assert said and "NEBIUS_API_KEY" in said[0]
-    assert [p.source for p in planner.planners] == ["ollama", "rules"]
-    planner.planners[0]._send = lambda *a, **k: (_ for _ in ()).throw(KozError("PLANNER_UNAVAILABLE"))
-    plan = planner.plan("find the red ball")   # Ollama isn't running: the rule planner answers
-    assert plan.source == "rules" and planner.last is planner.planners[-1]
-    assert [p.source for p in make_planner(env={"NEBIUS_API_KEY": "k"}).planners] == ["nebius", "ollama", "rules"]
-    assert make_planner(env={"NEBIUS_API_KEY": "k", "NEBIUS_MODEL": "nvidia/x"}).planners[0].model == "nvidia/x"
+def test_without_a_key_the_rule_planner_is_the_default():
+    """Gemma on this Mac got 14/20 on Oct 15 (docs/TRIALS.md): only on request (--planner ollama)."""
+    assert isinstance(make_planner(env={}), FakePlanner)
     assert isinstance(make_planner("rules", env={}), FakePlanner)
+    assert [p.source for p in make_planner(env={"NEBIUS_API_KEY": "k"}).planners] == ["nebius", "rules"]
+    assert make_planner(env={"NEBIUS_API_KEY": "k", "NEBIUS_MODEL": "nvidia/x"}).planners[0].model == "nvidia/x"
+    ollama = make_planner("ollama", env={})
+    assert [p.source for p in ollama.planners] == ["ollama", "rules"]
+    ollama.planners[0]._send = lambda *a, **k: (_ for _ in ()).throw(KozError("PLANNER_UNAVAILABLE"))
+    assert ollama.plan("find the red ball").source == "rules"   # Ollama not running: the rules answer
+
+
+# Uzbek in Cyrillic (new sentences, not the 20 measured ones): read as Uzbek Latin too.
+CYRILLIC_UZBEK = [
+    ("Кўк коптокни топ", ("find_colour", 110)),
+    ("Бинафша рангли нарсани изла", ("find_colour", 140)),
+    ("Мижозларни сана", ("count_people", False)),
+    ("Дарсга кирган ўқувчиларни санаб бер", ("count_people", True)),
+    ("Яширин камера қилиб қўйгин", ("refuse", "VIEW_FORBIDDEN")),
+    ("Ким кирганини таниб бер", ("refuse", "IDENTITY_FORBIDDEN")),
+    ("Ёшини ва жинсини аниқла", ("refuse", "PROFILING_FORBIDDEN")),
+    ("Ҳожатхонадаги одамларни сана", ("refuse", "PRIVATE_TOILET")),
+]
+
+
+@pytest.mark.parametrize("sentence,expected", CYRILLIC_UZBEK)
+def test_uzbek_in_cyrillic_is_planned_and_refused_like_latin(sentence, expected):
+    plan = FakePlanner().plan(sentence)
+    assert plan.language == "uz"
+    if expected[0] == "refuse":
+        assert plan.refusal == expected[1]
+    elif expected[0] == "find_colour":
+        assert (plan.job, plan.recipe["blocks"][2]["settings"]["hue_center"]) == expected
+    else:
+        assert (plan.job, plan.recipe["privacy"]["school"]) == expected
+
+
+def test_reading_russian_as_uzbek_latin_adds_no_wrong_jobs():
+    for sentence, language, job, school, colour in JOBS:
+        plan = FakePlanner().plan(sentence)
+        assert (plan.language, plan.job) == (language, job)
 
 
 def test_env_file_is_read_without_printing(tmp_path, capsys):

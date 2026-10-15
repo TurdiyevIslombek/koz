@@ -41,8 +41,8 @@ def main(argv=None):
     parser.add_argument("--camera", default="0", help="0 = this computer's camera, or a stream URL")
     parser.add_argument("--video", help="play a recorded video file instead of a camera")
     parser.add_argument("--planner", choices=CHOICES, default="auto",
-                        help="auto: Nemotron on Nebius if NEBIUS_API_KEY is in .env, else Gemma 4 on this Mac "
-                             "if Ollama runs, else the rule planner")
+                        help="auto: Nemotron on Nebius if NEBIUS_API_KEY is in .env, else the rule planner; "
+                             "ollama: Gemma 4 on this Mac (14/20 on Oct 15, see docs/TRIALS.md)")
     parser.add_argument("--strict", action="store_true", help="strict mode for schools and public cameras")
     parser.add_argument("--seconds", type=float, help="stop this many seconds after the job starts running")
     parser.add_argument("--no-window", action="store_true", help="terminal only")

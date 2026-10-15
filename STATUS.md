@@ -1,6 +1,6 @@
 # Ko'z status
 
-Updated Oct 15, after Ollama, round targets and start-koz. 326 tests pass, 1 skipped (it needs your face clip):
+Updated Oct 15, after measuring Gemma on this Mac. 335 tests pass, 1 skipped (it needs your face clip):
 `.venv/bin/python -m pytest -q`
 
 ## What works
@@ -16,7 +16,7 @@ Updated Oct 15, after Ollama, round targets and start-koz. 326 tests pass, 1 ski
 | Runner (`koz/runner.py`) | mask → privacy → blur → blocks → events; stale or slow frames → `unknown` with a reason. School mode allows the counter only. |
 | Events (`koz/events.py`) | All 7 types (status, recipe, observation, decision, command_result, fault, trial_result), checked against `contracts/events.md` before sending. |
 | Agent loop (`koz/agent/`) | Words → plan → try 3 s → check the OpenCV numbers → change one setting → try again (3 tries at most) → run. Each step is an event (observation → decision → new revision → result) and one printed line. Refusals stop before the camera opens. On recorded clips: red asked, ball looks orange-red → hue 0 → 13, found; with the real models, green asked for a teal ball → hue 60 → 77, found. **Not yet tried on your camera.** |
-| Planners (`koz/agent/`) | Asked in order for every job: Nemotron on Nebius (if a key) → Gemma 4 on this Mac via Ollama (if running) → rule planner. The AI only picks job / colour / school / refusal (`menu.py`); recipe and plan text from templates; any refusal wins; a failing planner falls back. **Nebius: blocked (Uzbekistan isn't in its sign-up list). Ollama: not installed yet, so Gemma is untested.** The rule planner is used for now. |
+| Planners (`koz/agent/`) | **Default: the rule planner** (Nebius first if a key exists). Uzbek is read in both alphabets. The AI only picks job / colour / school / refusal (`menu.py`); recipe and plan text from templates; any refusal wins. **Gemma 4 on this Mac (Ollama, `--planner ollama`): 14/20 with the camera running, 5.5 s median / 10.9 s max per plan; it refused every counting job. Rule planner: 18/20 (Cyrillic-Uzbek yellow and green missed, fixed after; not re-measured fairly).** Nebius blocked (Uzbekistan not in its sign-up list). |
 | Runner WebSocket (`koz/server.py`) | `ws://127.0.0.1:8765` for the web app: every event as JSON, the 4 commands, trials → `trial_result` with the agent's changes. Refuses browser connections. `--window` shows each job's blurred camera view. |
 | One launcher (`start-koz.command`) | Runner + web app, opens Setup. Tested on a recorded clip: typed "Yashil koptokni top" in Setup → trying → running; the Trials tab showed the chain (not found → hue 60 → 77 → left). Closing Terminal (HUP) or TERM stops both, nothing left running. |
 | Texts (`docs/TEXTS.md`) | Every Uzbek and Russian plan, refusal and stop text, made from the code and the contract (a test keeps it up to date). **Waiting for your check.** |
@@ -47,12 +47,11 @@ python3.13 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
 
 ## What's next
 
-1. You: say yes to installing Ollama (207 MB) + `gemma4:e2b-it-qat` (4.3 GB); then Claude measures planning time and memory next to the camera.
-2. You: try `start-koz.command` with a red ball on the camera; live test #5 with `demo-blur.command`; the privacy trials in `docs/TRIALS.md`; the face clip; check `docs/TEXTS.md`.
-3. Codex: `.collab/specs/web-planner-and-live.md` (show `status.planner`, the Setup privacy line, the colour job's Live view). Then Claude turns on `--report-planner` in `start-koz.command`.
+1. You: try `start-koz.command` with a red ball on the camera; live test #5 with `demo-blur.command`; the privacy trials in `docs/TRIALS.md`; the face clip; check `docs/TEXTS.md`.
+2. Codex: `.collab/specs/web-planner-and-live.md` (show `status.planner`, the Setup privacy line, the colour job's Live view). Then Claude turns on `--report-planner` in `start-koz.command`.
+3. Oct 19–20 with the AWS work: the AI planner on AWS Bedrock (same fixed menu), measured on the same 20 sentences plus a fresh set.
 4. Fly-brain block (from the copied stage 2–3 code) + `firmware/motor_listener/` (car demo).
-5. AWS in eu-central-1 on Oct 19–20.
-6. Trials: car and classroom lists to write in `docs/TRIALS.md`.
+5. Trials: car and classroom lists to write in `docs/TRIALS.md`.
 
 ## Known limits
 
@@ -69,6 +68,7 @@ python3.13 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
 - "Target visible" now needs a round blob, but any round thing of that colour counts (a red plate, a red lamp). A ball more than half out of the frame, or stretched more than about 1.5 : 1 by motion blur, counts as lost.
 - The plan texts in Uzbek and Russian need your check (`koz/agent/planner.py`).
 - The web app talks to the runner on this computer (`ws://127.0.0.1:8765`, no login). The contract's cloud connection (runner → web with a runner token, section 5) comes with AWS.
-- This Mac has 8 GB of memory (Apple M3) and 13 GB of free disk. Only the smallest Gemma 4 (E2B, 4.3 GB) fits next to macOS, the browser and the camera models; it is unloaded after each plan.
+- This Mac (MacBook Air, M3, 8 GB) swapped while Gemma ran next to the camera (swap 2.3 → 3.7 GB). Ollama and the model stay installed (`/Applications/Ollama.app`, 4.3 GB) but aren't used by default; delete them to free the disk if not needed.
+- The rule planner's 20/20 after the Cyrillic fix is on the sentences that showed the gap: a fresh set of real sentences is needed before claiming a number.
 - Recorded clips (`--video`) now play at their own speed, like a camera.
 

@@ -12,7 +12,9 @@ Gemma 4 (4.3 GB download, ollama.com/library/gemma4, checked Oct 15 2026). This 
 of memory shared by macOS, the browser, the camera models and the planner; E4B (6.1 GB and up)
 would not fit next to them. KEEP_ALIVE = "0" unloads the model right after it answers: the
 planner is needed once per job, before the camera opens, and the memory then goes back to the
-camera models. Each job pays a few seconds to load it again (to measure).
+camera models. Each job pays to load it again: 5.5 s median, 10.9 s at most with the camera
+running (Oct 15). Accuracy on the 20 test sentences: 14/20, so it is not the default planner
+(docs/TRIALS.md, "Planner on this Mac").
 
     ollama pull gemma4:e2b-it-qat
     .venv/bin/python -m koz.agent.ollama "find the red ball"     # try one sentence"""
@@ -35,8 +37,9 @@ LOOPBACK = ("127.0.0.1", "localhost", "::1")
 class OllamaPlanner:
     source = "ollama"
 
-    def __init__(self, model=None, base_url=BASE_URL, send=None, timeout=120):
+    def __init__(self, model=None, base_url=BASE_URL, send=None, timeout=120, keep_alive=KEEP_ALIVE):
         self.model, self.base_url, self.timeout = model or DEFAULT_MODEL, base_url.rstrip("/"), timeout
+        self.keep_alive = keep_alive
         self.name = f"Gemma 4 on this Mac (Ollama, {self.model})"
         self._send = send or self._http   # replaced in tests: no Ollama there
 
@@ -53,15 +56,20 @@ class OllamaPlanner:
         code = refusal_for(text)
         if code:
             return refused(text, code)   # never sent to the model
+        return plan_from_choice(text, self.ask(text), self.source)
+
+    def ask(self, text):
+        """The model's own choice for `text` (no rule check first: plan() always runs that).
+        Used alone only to measure the model (scripts/measure_planner.py)."""
         reply = self._send("POST", "/api/chat", {
-            "model": self.model, "stream": False, "format": CHOICE_SCHEMA, "keep_alive": KEEP_ALIVE,
+            "model": self.model, "stream": False, "format": CHOICE_SCHEMA, "keep_alive": self.keep_alive,
+            "think": False,   # no reasoning text first: 1-2 s instead of 12-19 s on this Mac (Oct 15)
             "options": {"temperature": 0, "num_ctx": 2048},   # a small context: less memory
             "messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": text}]})
         try:
-            choice = parse_choice(reply["message"]["content"])
+            return parse_choice(reply["message"]["content"])
         except (KeyError, TypeError, ValueError):
             raise KozError("PLANNER_UNAVAILABLE", "the planner's answer was not a valid choice") from None
-        return plan_from_choice(text, choice, self.source)
 
     def _http(self, method, path, body, timeout=None):
         """One request to Ollama on this computer. Any failure is PLANNER_UNAVAILABLE."""

@@ -49,6 +49,7 @@ def test_ollama_picks_from_the_menu_and_ko_z_builds_the_recipe():
     assert (method, path, body["model"], body["stream"]) == ("POST", "/api/chat", "gemma4:e2b-it-qat", False)
     assert body["format"] == CHOICE_SCHEMA            # Ollama holds the model to the menu
     assert body["keep_alive"] == "0"                  # memory goes back to the camera models
+    assert body["think"] is False                     # no reasoning text: 1-2 s instead of 12-19 s
     assert body["messages"][1] == {"role": "user", "content": "Sinfga kirgan o'quvchilarni sana, yuzlarni xiralashtir"}
     assert len(body["messages"]) == 2                 # only the sentence: no recipe, frames or numbers
 

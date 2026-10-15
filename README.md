@@ -44,13 +44,12 @@ fails (at most 3 tries) and runs. Every step is printed as one line: observation
 new setting → result. Requests Ko'z refuses (who is this person, a hidden camera, age or gender)
 stop before the camera opens. `--video clip.mp4` uses a recording instead of the camera.
 
-Which planner reads the sentence, asked again for every job:
-1. NVIDIA Nemotron on Nebius Token Factory, if `NEBIUS_API_KEY=...` is in `.env` (only the
-   sentence is sent; `NEBIUS_MODEL` picks the model);
-2. else Gemma 4 on this Mac through [Ollama](https://ollama.com), if it is running with the
-   model (`ollama pull gemma4:e2b-it-qat`, 4.3 GB; `OLLAMA_MODEL` picks another). Nothing leaves the Mac;
-3. else the rule planner (fixed word lists).
-If an AI planner fails, the next one answers. Whichever it is, the AI only picks the job, colour
+Which planner reads the sentence: NVIDIA Nemotron on Nebius Token Factory if `NEBIUS_API_KEY=...`
+is in `.env` (only the sentence is sent; `NEBIUS_MODEL` picks the model), else the rule planner
+(fixed word lists, Uzbek in both alphabets, Russian, English). `--planner ollama` tries Gemma 4 on
+this Mac through [Ollama](https://ollama.com) (`gemma4:e2b-it-qat`, 4.3 GB; nothing leaves the Mac),
+but on Oct 15 it got 14 of 20 test sentences right with the camera running, against 18 for the
+rule planner, so it isn't the default (`docs/TRIALS.md`). If an AI planner fails, the rules answer. Whichever it is, the AI only picks the job, colour
 and refusal: the recipe and the plan text come from fixed templates, and any refusal wins. The
 terminal prints which planner made each plan.
 

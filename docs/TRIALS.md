@@ -225,6 +225,62 @@ apart from two home-office photos at 0.45 and 0.58 that may show a real bed. Rai
 limit from 0.40 to 0.45 would keep all 7 detected beds and drop those false ones (Islombek's
 decision).
 
+## Planner on this Mac: Gemma 4 vs the rule planner (Oct 15)
+
+**Question.** Can a local AI planner (Gemma 4 through Ollama) replace the rule planner while the
+camera runs? Islombek's bar: at least 18 of 20 test sentences right and at most 15 s per plan;
+otherwise keep the rule planner as default and move the AI planner to AWS Bedrock (Oct 19–20).
+
+**Setup.** MacBook Air, Apple M3, 8 GB memory (not an M5). Ollama 0.40.4 (ollama.com, notarized,
+SHA-256 matched GitHub's), model `gemma4:e2b-it-qat` (4.3 GB, Apache 2.0), reasoning off
+(`think: false`), the same fixed menu and JSON schema as in `koz/agent/menu.py`. While it planned,
+a real colour job ran on the MacBook camera (privacy guard, face blur, colour finder).
+`scripts/measure_planner.py` (run from Terminal: the Claude app has no camera permission).
+20 sentences written before the run: 5 English, 5 Russian, 5 Uzbek Latin, 5 Uzbek Cyrillic, with
+3 refusals (identity, profiling, hidden camera). Right = the same job, colour / school mode or
+refusal code, and the plan in the sentence's language.
+
+Before the run, 3 probe sentences (2 of them in the 20) showed that with reasoning on, Gemma
+took 12–19 s per answer even when loaded (24.6 s from cold) and read "Qizil koptokni izla" as a
+toilet refusal; with reasoning off, 1.2–2.0 s. So reasoning was turned off before the 20 were run.
+
+**Results** (the camera job ran at 23.2 fps before planning):
+
+| Run | Right | Time per plan (median / max) | Camera while planning |
+|---|---|---|---|
+| Ko'z with Gemma as shipped (rule refusal check first; model unloaded after each plan) | **14/20** | 5.5 s / 10.9 s | 18.8 fps |
+| The same, model kept loaded | 14/20 | 1.2 s / 1.4 s | 19.6 fps |
+| Gemma alone (no rule check) | 13/20 | 1.4 s / 1.6 s | 22.9 fps |
+| Rule planner | **18/20** | under 0.1 s | — |
+
+Memory: Ollama used up to 4.3 GB; swap grew from 2.3 GB to 3.7 GB during the run (the Mac was short
+of memory). The guard stopped the camera job 4 times during the run (the script restarts it; the
+reason wasn't logged), so the fps numbers include those pauses.
+
+**Where Gemma failed.** All 6 failures of "Ko'z with Gemma" are counting jobs, which it refused:
+"Count how many customers come into my shop" (unsupported), "Count the pupils entering the
+classroom and blur their faces" (audio!), "Сколько людей зашло в магазин?", "Do'konga kirgan
+mijozlarni sana", "Sinfga kirgan o'quvchilarni sana, yuzlarni xiralashtir" and "Дўконга кирган
+одамларни сана" (all "profiling"). It got every colour job right, including the two Uzbek ones
+Islombek asked for ("Qizil koptokni izla", "Қизил тўпни топ") and the Cyrillic Uzbek ones the
+rule planner missed. Alone, it also called the hidden-camera request an identity request (still a
+refusal). Its mistakes were all refusals, never a wrong job running.
+
+**Where the rule planner failed.** "Сариқ коптокни қидир" and "Яшил тўпни топиб бер" (Uzbek in
+Cyrillic, yellow and green): its Uzbek word lists were Latin only, so it refused both as
+unsupported. The same gap meant an Uzbek Cyrillic hidden-camera request ("Яширин камера…") was not
+caught by the refusal check before an AI planner saw it.
+
+**Decision** (Islombek's rule): Gemma is under 18/20, so the **rule planner stays the default**
+(`--planner ollama` still tries Gemma). The AI planner moves to AWS Bedrock with the AWS work on
+Oct 19–20. Time was within the bar (max 10.9 s from cold).
+
+**Fix after the run.** The rule planner now also reads Cyrillic text as Uzbek Latin
+(`koz/agent/planner.py`, `readable()`), for jobs and refusals. On the same 20 sentences it now
+gets 20/20, but that is **not a fair score**: the fix was made after seeing these failures. It was
+checked on 8 new Uzbek Cyrillic sentences (4 jobs, 4 refusals, `tests/test_agent.py`); a fresh set
+of real users' sentences is still needed.
+
 ## Fly-brain car (demo 1) and classroom counter (demo 2)
 
 To be written.

@@ -1,6 +1,7 @@
-"""Which planner makes the plan: Nemotron on Nebius if there is a key, else Gemma 4 on this Mac if
-Ollama is running with the model, else the rule planner. Asked again for every job, so starting
-or stopping Ollama takes effect at the next job. If an AI planner fails (PLANNER_UNAVAILABLE), the
+"""Which planner makes the plan: Nemotron on Nebius if there is a key, else the rule planner.
+Gemma 4 on this Mac (Ollama) only when asked for (--planner ollama): measured Oct 15 with the
+camera running, it got 14 of 20 test sentences right (the rule planner 18) and refused every
+people-counting job (docs/TRIALS.md, "Planner on this Mac"). Asked again for every job. If an AI planner fails (PLANNER_UNAVAILABLE), the
 next one in the list is asked, down to the rule planner, which always answers. The plan says
 which planner made it (Plan.source); the terminal prints it and status.planner carries it."""
 import os
@@ -57,9 +58,8 @@ class AutoPlanner:
 
 
 def make_planner(choice="auto", env=None, say=print):
-    """`auto`: Nebius (if NEBIUS_API_KEY) -> Ollama (if running with the model) -> rules.
-    `rules` / `ollama` / `nebius`: only that one (ollama and nebius still fall back to rules,
-    and say so)."""
+    """`auto`: Nebius (if NEBIUS_API_KEY) -> rules. `rules` / `ollama` / `nebius`: only that
+    one (ollama and nebius still fall back to rules, and say so)."""
     env = {**load_env(), **os.environ} if env is None else env
     rules = FakePlanner()
     nebius = NebiusPlanner(env["NEBIUS_API_KEY"], model=env.get("NEBIUS_MODEL") or None) \
@@ -74,8 +74,8 @@ def make_planner(choice="auto", env=None, say=print):
     if choice == "ollama":
         return AutoPlanner([ollama, rules], say)
     if nebius is None:
-        say("No NEBIUS_API_KEY in .env: Gemma 4 on this Mac (Ollama) if it's running, else the rule planner.")
-    return AutoPlanner([p for p in (nebius, ollama, rules) if p is not None], say)
+        return rules   # Gemma on this Mac fell short of 18/20 (Oct 15): use --planner ollama to try it
+    return AutoPlanner([nebius, rules], say)
 
 
 def planned_by(plan, planner):
