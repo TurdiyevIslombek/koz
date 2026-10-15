@@ -315,4 +315,4 @@ def test_owner_workspace_comes_from_local_setup(test_video):
 def test_the_default_guard_gets_the_workspace_setting(test_video):
     runner = Runner(check_recipe(color_recipe()), LocalSetup(True, FULL_FRAME, owner_workspace=True),
                     FileCamera(test_video), EventLog(list().append), face_detector=FakeFaces())
-    assert runner.scene_checker.owner_workspace is True
+    assert runner.guard.owner_workspace is True

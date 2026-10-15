@@ -17,7 +17,7 @@ python3.13 -m venv .venv
 ```
 
 `fetch_models.py` downloads the scene model (below) and refuses it unless its SHA-256 matches.
-`fetch_test_photos.py` downloads 46 real Places365 photos for the privacy guard's
+`fetch_test_photos.py` downloads 71 real Places365 photos for the privacy guard's
 regression test (not in git: their copyright belongs to their owners).
 
 ## Live demo (your camera)
@@ -57,7 +57,7 @@ The category list `koz/models/categories_places365.txt` comes from the same repo
 (MIT License, copyright (c) 2017 Bolei Zhou and MIT CSAIL Computer Vision; see
 `koz/models/PLACES365_LICENSE`).
 
-**Places365 test photos.** The privacy guard's regression test uses 46 photos from the
+**Places365 test photos.** The privacy guard's regression tests use 71 photos from the
 Places365 validation set; their copyright belongs to their owners, so they are not in this
 repo (`scripts/fetch_test_photos.py` downloads them). Islombek Turdiyev signed the Places
 team's request form for the original Places365 data on Oct 14, 2026

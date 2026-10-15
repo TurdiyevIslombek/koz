@@ -18,7 +18,7 @@ from . import policy
 from .blocks import TASK_BLOCKS, FaceBlur, FrameContext, PersonDetector
 from .errors import KozError
 from .events import count_known, count_unknown
-from .privacy import APPROVED, UNKNOWN, PrivacyGate
+from .privacy import APPROVED, UNKNOWN, GuardCheck, PrivacyGate, PrivateObjects
 from .recipe import CheckedRecipe, check_recipe
 from .scene import PlacesSceneChecker
 
@@ -28,9 +28,10 @@ OPENCV_MAJOR = int(cv2.__version__.split(".")[0])
 class Runner:
     """Runs one checked recipe on one camera and sends events to `events` (a koz.events.EventLog).
 
-    `scene_checker`, `face_detector` and `person_detector` are only replaced in tests.
-    By default they use the pinned Places365, YuNet and NanoDet models; if a needed
-    model file is missing or changed, the runner refuses to start."""
+    `scene_checker` (the privacy guard's check), `face_detector` and `person_detector` are
+    only replaced in tests. By default the guard is koz.privacy.GuardCheck (Places365 room
+    check + NanoDet object check), face blur uses YuNet and person_detector NanoDet; if a
+    needed model file is missing or changed, the runner refuses to start."""
 
     def __init__(self, recipe, setup, camera, events, scene_checker=None, face_detector=None,
                  person_detector=None, revision=1, clock=time.monotonic):
@@ -48,9 +49,9 @@ class Runner:
         self.size = (width, height)
         self._mask = setup.mask(width, height)
         self.owner_workspace = setup.owner_workspace
-        self.scene_checker = (scene_checker if scene_checker is not None
-                              else PlacesSceneChecker(owner_workspace=setup.owner_workspace))
-        self._gate = PrivacyGate(self.scene_checker, clock)
+        self.guard = (scene_checker if scene_checker is not None
+                      else GuardCheck(PlacesSceneChecker(), PrivateObjects(), setup.owner_workspace))
+        self._gate = PrivacyGate(self.guard, clock)
         self._blur = FaceBlur({}, detector=face_detector)
         self._blocks = [PersonDetector(b["settings"], detector=person_detector) if b["type"] == "person_detector"
                         else TASK_BLOCKS[b["type"]](b["settings"]) for b in recipe.data["blocks"][2:]]
@@ -105,6 +106,10 @@ class Runner:
             self._drop_preview()
             self._set_state("checking")
         privacy = self._gate.admit(image)
+        if privacy.confirming:   # an object seen once: hold this frame, check the next one first
+            self._drop_preview()
+            self._observe(UNKNOWN, None, privacy.code)
+            return True
         if privacy.state != APPROVED:
             self._fault(privacy.code, privacy.state)
             return False

@@ -102,6 +102,50 @@ entrance hall and home office; corridor, lobby and elevator lobby now need 0.50.
 test still passes, with the same approvals (classrooms 9/11, shops 7/12).
 - The stricter guard will stop more often by mistake ("uncertain"); the trials measure how often.
 
+## Live test #2: guard too sensitive at home (Oct 15)
+
+**What happened.** Every launcher, including `demo-desk.command`, stopped at home with
+"private room". Islombek's desk is in his bedroom: the room check put a bedroom class in
+its top 5 above 0.10, and that rule stopped even the owner-confirmed workspace.
+
+**Fix: stop on things the guard actually sees** (`koz/privacy.py`, every job, at start and
+on every recheck, before any block):
+- **Object check** with the NanoDet model Ko'z already has (COCO classes 59 bed, 61 toilet,
+  71 sink; checked on real photos). A bed or a toilet at 0.40 or more in 2 of the last 3
+  checks stops Ko'z, and the banner names it: "a bed is in view. Ko'z does not run in
+  bedrooms." Seen once, the guard holds every frame and checks the next frames first, so
+  nothing runs while it is unsure. A sink stops it only when the room check also has
+  bathroom or shower in its top 3.
+- **Workspace mode** relies on the object check plus darkness. The room check stops it only
+  when it is confident: a private room is the top guess at 0.50 or more, or private rooms
+  together reach 0.40. The "top 5 above 0.10" rule no longer applies there.
+- **Strict mode** keeps every rule it had and adds the object check.
+- **Debug line** on screen and in the terminal on every check: top 3 room guesses, the
+  objects seen, the result.
+
+**Measured on 71 real Places365 photos** (`tests/test_scene_photos.py`):
+
+| Photos | Strict | Workspace |
+|---|---|---|
+| Bathrooms (12) | all stopped (7 by a toilet, 1 by a sink) | 10 stopped, **2 approved** |
+| Bedrooms (11) | all stopped (7 by a bed) | 10 stopped, **1 approved** |
+| Desks / home offices (12) | 3 run | 10 run; the 2 with a bed in view stopped |
+| Kitchens (13) | 12 uncertain, 1 stopped | all run, including one with a sink |
+| Classrooms (11) / shops (12) | 9 / 7 run, as before | all run |
+
+**Honest limit.** The object check only works on what it can see: a bed mostly out of view,
+or a toilet behind a door, can be missed (NanoDet found a bed in 7 of 11 bedroom photos and a
+toilet in 7 of 12 bathrooms). So the room check stays as a backup. In workspace mode that
+backup is weaker on purpose: 3 of 23 private photos were approved (a bathroom read as
+"closet 0.35", one as "bank_vault 0.69", a bedroom as "kennel/outdoor 0.37"), up from 2
+before this change. A test fails if that number grows. The strict guard still stops all 23.
+
+**Codex review (same day)** found three ways the new check could let a frame through, all
+fixed and tested: after "bed seen, then not seen" the guard resumed before its 3-check window
+was done (it now keeps checking every frame until a stop is no longer possible); a broken
+NanoDet answer was read as "nothing seen" (it is now a failed check, which stops Ko'z); and a
+detection at exactly 0.40 was dropped by OpenCV's box merging (now kept).
+
 ## Fly-brain car (demo 1) and classroom counter (demo 2)
 
 To be written.

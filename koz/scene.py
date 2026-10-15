@@ -14,10 +14,11 @@ It is an allowlist: a place is approved only if it is on policy.ALLOWED_SCENES.
   4. the top guess is an allowed place, at least SCENE_MIN_TOP_PROB
      (SCENE_MIN_TOP_PROB_CAUTIOUS for corridors and lobbies)        -> APPROVED
   5. anything else                                        -> UNKNOWN (PRIVACY_UNCERTAIN)
-In an owner-confirmed workspace (local setup only) rules 0-3 still apply, but 4 and 5
-become "approved": the owner vouches for the room. Measured limit: on 2 of 23 real
-bathroom and bedroom photos the model gives private rooms almost nothing (a bathroom read
-as "bank_vault 0.69"), and a workspace would approve them.
+In an owner-confirmed workspace (local setup only, after live test #2) the room check stops
+only when it is confident: a private room is the top guess at WORKSPACE_PRIVATE_TOP_BLOCKS
+or more, or private rooms together reach WORKSPACE_PRIVATE_SUM_BLOCKS; otherwise the owner
+vouches for the room. Rule 0 (darkness) and the object check (koz/privacy.py: a bed or a
+toilet in view) apply in both modes.
 Rule 4 replaced "approve anything that isn't private" after live test #1, where a dark
 first frame looked like a "catacomb" and a bathroom was approved (docs/TRIALS.md).
 This is an alarm, not proof that a room is safe."""
@@ -63,10 +64,26 @@ class PlacesSceneChecker:
         return self._net.forward().reshape(-1).astype(np.float64)
 
     def check(self, image):
+        """The room check alone. The privacy guard uses koz.privacy.GuardCheck, which adds the
+        object check and calls the methods below."""
         self.last_probabilities = self.probabilities(image)
         if too_dark_or_flat(image):
             return PrivacyResult(UNKNOWN, "PRIVACY_UNCERTAIN")
         return decide(self.last_probabilities, self.owner_workspace)
+
+    # Used by koz.privacy.GuardCheck:
+    @staticmethod
+    def too_dark_or_flat(image):
+        return too_dark_or_flat(image)
+
+    @staticmethod
+    def judge(probabilities, owner_workspace):
+        return decide(probabilities, owner_workspace)
+
+    @staticmethod
+    def top(probabilities, n=3):
+        """[(name, probability)] of the n likeliest places."""
+        return [(NAMES[i], float(probabilities[i])) for i in np.argsort(probabilities)[::-1][:n]]
 
 
 def too_dark_or_flat(image):
@@ -81,11 +98,19 @@ def too_dark_or_flat(image):
 
 def decide(probabilities, owner_workspace=False):
     """365 probabilities -> PrivacyResult. Anything malformed counts as a failed check.
-    In an owner-confirmed workspace, rule 4 approves any place; rules 1-3 still block."""
+    In an owner-confirmed workspace the room check only stops when it is confident (see
+    the module docstring); the object check in koz/privacy.py does the rest."""
     p = np.asarray(probabilities, dtype=np.float64).reshape(-1)
     if p.size != CLASSES or not np.all(np.isfinite(p)) or p.min() < 0 or not math.isclose(p.sum(), 1, abs_tol=1e-3):
         return FAILED
     top5 = [int(i) for i in np.argsort(p)[::-1][:5]]
+    if owner_workspace:
+        group_sums = {code: sum(p[i] for i, _ in scenes) for code, scenes in policy.PRIVATE_SCENES.items()}
+        if top5[0] in _GROUP_OF and p[top5[0]] >= policy.WORKSPACE_PRIVATE_TOP_BLOCKS:
+            return PrivacyResult(BLOCKED, _GROUP_OF[top5[0]])
+        if sum(group_sums.values()) >= policy.WORKSPACE_PRIVATE_SUM_BLOCKS:
+            return PrivacyResult(BLOCKED, max(group_sums, key=group_sums.get))
+        return PrivacyResult(APPROVED)
     if top5[0] in _GROUP_OF:
         return PrivacyResult(BLOCKED, _GROUP_OF[top5[0]])
     private_in_top5 = [i for i in top5 if i in _GROUP_OF and p[i] > policy.SCENE_PRIVATE_TOP5_BLOCKS]
@@ -94,8 +119,6 @@ def decide(probabilities, owner_workspace=False):
     group_sums = {code: sum(p[i] for i, _ in scenes) for code, scenes in policy.PRIVATE_SCENES.items()}
     if sum(group_sums.values()) >= policy.SCENE_PRIVATE_SUM_BLOCKS:
         return PrivacyResult(BLOCKED, max(group_sums, key=group_sums.get))
-    if owner_workspace:
-        return PrivacyResult(APPROVED)
     needed = policy.SCENE_MIN_TOP_PROB_CAUTIOUS if top5[0] in _CAUTIOUS else policy.SCENE_MIN_TOP_PROB
     if top5[0] in _ALLOWED and p[top5[0]] >= needed:
         return PrivacyResult(APPROVED)

@@ -79,6 +79,18 @@ SCENE_MIN_BRIGHTNESS = 40         # 0..255 grey, over the allowed area: darker -
 SCENE_MIN_CONTRAST = 20           # standard deviation of that grey: flatter -> uncertain
 CAMERA_WARMUP_S = 1.0             # a live camera's first frames are dark while exposure settles
 
+# Object check (after live test #2: "a desk in a bedroom" is not "a bedroom"). The privacy
+# guard also looks for things it can actually see, with NanoDet (COCO classes):
+PRIVATE_OBJECTS = {"bed": (59, "PRIVATE_BEDROOM"), "toilet": (61, "PRIVATE_BATHROOM")}
+SINK_CLASS = 71                       # COCO; a sink stops only together with SINK_ROOMS below
+SINK_ROOMS = ("bathroom", "shower")   # ...in the room check's top 3
+OBJECT_MIN_CONFIDENCE = 0.40
+OBJECT_CHECKS_TO_STOP = 2             # seen in 2 of the last 3 checks -> stopped
+OBJECT_CHECK_WINDOW = 3
+# In an owner-confirmed workspace the room check stops only when it is confident:
+WORKSPACE_PRIVATE_TOP_BLOCKS = 0.50   # a private room is the top guess at least this sure
+WORKSPACE_PRIVATE_SUM_BLOCKS = 0.40   # or private rooms together reach this
+
 # line_counter (proposed). A followed person's number is forgotten this long after they
 # were last seen (the contract allows at most 5 s), and a box must overlap its previous
 # position at least this much (IoU) to count as the same person.

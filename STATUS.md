@@ -1,6 +1,6 @@
 # Ko'z status
 
-Updated Oct 15, after the desk launchers and the stop banner. 172 tests pass, 1 skipped (it needs your face clip):
+Updated Oct 15, after live test #2 (object check in the privacy guard). 197 tests pass, 1 skipped (it needs your face clip):
 `.venv/bin/python -m pytest -q`
 
 ## What works
@@ -8,7 +8,7 @@ Updated Oct 15, after the desk launchers and the stop banner. 172 tests pass, 1 
 | Part | State |
 |---|---|
 | Recipe checks (`koz/recipe.py`) | Strict parsing → contract schema → extra checks → "is it built?". Tested. |
-| Privacy guard (`koz/privacy.py`, `koz/scene.py`) | Places365 on OpenCV 5. **Allowlist**: approves only listed public/work places (≥ 0.30; corridors and lobbies ≥ 0.50); blocks 16 private rooms (top guess, any in the top 5 above 0.10, or 15 % together); dark or flat frames are never approved; checks every 10 s. On 46 real photos: no bathroom or bedroom approved, 9/11 classrooms and 7/12 shops approved. **Owner-confirmed workspace** (local setup, `--owner-workspace`): approves your own room unless a private room or darkness is seen; shown on screen; would miss 2 of 23 private photos. **Your own rooms: re-test pending.** |
+| Privacy guard (`koz/privacy.py`, `koz/scene.py`) | Every check: darkness, then an **object check** (NanoDet: a bed or toilet at ≥ 0.40 in 2 of 3 checks stops it; a sink only with a bathroom-like room), then the room check (Places365). **Strict**: allowlist (≥ 0.30; corridors/lobbies ≥ 0.50), private room in the top 5 above 0.10 stops. **Workspace** (`demo-desk*.command`): room check stops only when confident (private top guess ≥ 0.50, or ≥ 0.40 together). Checks every 10 s; one line per check on screen and in the terminal. On 71 real photos: strict stops all 23 bathrooms/bedrooms; workspace runs 10/12 desks and all kitchens but approves 3 of 23 private photos (limit). **Your rooms: live test #3 pending.** |
 | Face blur (`koz/blocks/face_blur.py`) | YuNet on OpenCV 5, heavy pixelation, fails closed. **No real-face test yet** (waiting for your clip in `tests/fixtures/private/face.mp4`). |
 | Colour finder (`koz/blocks/color_finder.py`) | Biggest patch of one colour → left / center / right / lost. Tested on the recorded test video. |
 | Person detector (`koz/blocks/person_detector.py`) | NanoDet-Plus on OpenCV 5, "person" class only; boxes stay local, only the number of people is sent. Decoding tested with exact fake outputs. **Not yet measured on real people.** |
@@ -40,7 +40,7 @@ python3.13 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
 
 ## What's next
 
-1. You: the privacy trials in `docs/TRIALS.md` (1–10 with the workspace off, W1–W4 with it on); record the face clip.
+1. You: live test #3 (`demo-desk.command` at your desk, bed out of view; then with the bed in view; `demo-blur.command` in the bathroom); the privacy trials in `docs/TRIALS.md`; the face clip.
 2. Contract: `owner_workspace` in `status` and `trial_result`, to agree with Codex after 22:11 (quota), so the dashboard and trial reports show it.
 3. Fly-brain block (from the copied stage 2–3 code) + `firmware/motor_listener/` (car demo).
 4. Agent loop: words → recipe → check on live frames → adjust (max 3 tries).
@@ -51,7 +51,7 @@ python3.13 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
 
 - Privacy limits were set on 46 Places365 photos, not yet on your rooms; face-blur and tracker settings are still proposals.
 - Living room and kitchen aren't on the allowlist; use the owner-confirmed workspace for your own desk or arena.
-- The owner-confirmed workspace trusts you: on 2 of 23 private photos the model sees no private room at all, so it would approve them (trial W3 checks your bathroom).
+- The owner-confirmed workspace trusts you: on 3 of 23 private photos it sees no bed or toilet and isn't sure of the room, so it approves them (trial W3 checks your bathroom). A bed mostly out of view can be missed.
 - Until the contract change, the workspace shows only in the live window and terminal, not in events.
 - The stricter guard stops more often by mistake ("uncertain"); the trials measure how often.
 - Places365 has no toilet class; a toilet stall is trial #3.

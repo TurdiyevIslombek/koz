@@ -42,6 +42,23 @@ def test_decode_places_the_box(order):
     assert people[0].score == pytest.approx(0.9)
 
 
+def test_decode_keeps_a_detection_at_exactly_the_threshold():
+    """Codex review: NMSBoxes' own cut-off is strict and dropped a score of exactly 0.40."""
+    people = decode(raw_outputs([(8, 10, 20, 0, 0.40, 2)]), 1.0, INPUT, INPUT, 0.40)
+    assert len(people) == 1 and people[0].score == pytest.approx(0.40)
+
+
+@pytest.mark.parametrize("broken", [
+    [],                                                           # no output at all
+    raw_outputs()[:3],                                            # scores but no box parts
+    [np.full_like(o, np.nan) if o.shape[-1] == CLASSES else o for o in raw_outputs()],   # NaN scores
+])
+def test_decode_refuses_malformed_output(broken):
+    """Codex review: for the privacy guard, a broken answer must not mean 'nothing seen'."""
+    with pytest.raises(ValueError):
+        decode(broken, 1.0, INPUT, INPUT, 0.4)
+
+
 def test_decode_ignores_weak_scores_and_other_classes():
     hits = [(8, 5, 5, 0, 0.3, 2),      # a person, but below min_confidence
             (16, 8, 8, 2, 0.95, 3)]    # class 2 (a car) with a high score

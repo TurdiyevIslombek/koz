@@ -62,15 +62,12 @@ def count_text(count):
     return "-" if count is None else "?" if count["state"] == "unknown" else str(count["value"])
 
 
-def top_places(checker, names, n=3):
-    """The scene classifier's top guesses from its latest check, e.g. "office 0.41"."""
-    p = checker.last_probabilities
-    if p is None:
-        return "scene: not checked yet"
-    return "scene: " + ", ".join(f"{names[i]} {p[i]:.2f}" for i in np.argsort(p)[::-1][:n])
+def check_line(runner):
+    """The privacy guard's latest check in one line (room guesses, objects seen, result)."""
+    return getattr(runner.guard, "line", "check: -")
 
 
-def draw(runner, latest, messages, fps, scene_line, line):
+def draw(runner, latest, messages, fps, line):
     width, height = runner.size
     view = runner.preview.copy() if runner.preview is not None else np.zeros((height, width, 3), np.uint8)
     for person in runner.local_results.get("person_detector", ()):
@@ -100,7 +97,7 @@ def draw(runner, latest, messages, fps, scene_line, line):
                f"   out: {count_text(observation.get('exited'))}")
     else:
         job = f"target: {observation.get('target', '-')}"
-    lines = [f"state: {state}   privacy: {privacy}   {job}   {fps:4.1f} fps", scene_line]
+    lines = [f"state: {state}   privacy: {privacy}   {job}   {fps:4.1f} fps", check_line(runner)]
     reason = fault["code"] if fault else observation.get("unknown_reason")
     if reason:
         lines.append(f"{reason}: {messages.get(reason, '')}")
@@ -111,12 +108,22 @@ def draw(runner, latest, messages, fps, scene_line, line):
         tint = colour if i == 0 else AMBER if line.startswith("OWNER-CONFIRMED") else WHITE
         cv2.putText(view, line, (10, 24 + 28 * i), cv2.FONT_HERSHEY_SIMPLEX, 0.6 if i < 2 else 0.45, tint, 1)
     if fault:
-        draw_banner(view, *stop_banner(fault["code"], messages, runner.owner_workspace))
+        last = getattr(runner.guard, "last_result", None)
+        title, banner = stop_banner(fault["code"], messages, runner.owner_workspace, getattr(last, "seen", None))
+        draw_banner(view, title, banner, check_line(runner))
     return view
 
 
-def stop_banner(code, messages, owner_workspace):
-    """What the big banner says when Ko'z stops: (title, lines)."""
+OBJECT_STOP = {"bed": ["a bed is in view.", "Ko'z does not run in bedrooms."],
+               "toilet": ["a toilet is in view.", "Ko'z does not run in bathrooms."],
+               "sink": ["a sink, in a room that looks like a bathroom.", "Ko'z does not run in bathrooms."]}
+
+
+def stop_banner(code, messages, owner_workspace, seen=None):
+    """What the big banner says when Ko'z stops: (title, lines). `seen` is the object the
+    privacy guard saw (bed, toilet, sink), if that is what stopped it."""
+    if seen in OBJECT_STOP and code in ROOM_GUESS:
+        return "STOPPED", OBJECT_STOP[seen]
     if code in ROOM_GUESS:
         room = ROOM_GUESS[code]
         if owner_workspace:
@@ -152,15 +159,17 @@ def put_centred(view, text, y, scale, thickness, colour):
     cv2.putText(view, text, ((view.shape[1] - width) // 2, y), FONT, scale, colour, thickness, cv2.LINE_AA)
 
 
-def draw_banner(view, title, lines):
-    """A full-width red band across the middle of the window."""
+def draw_banner(view, title, lines, check_line=None):
+    """A full-width red band across the middle of the window, with the last check under it."""
     height = view.shape[0]
     top = height // 2 - 70
-    bottom = top + 90 + 34 * len(lines)
+    bottom = top + 90 + 34 * len(lines) + (26 if check_line else 0)
     cv2.rectangle(view, (0, top), (view.shape[1], bottom), BANNER_RED, -1)
     put_centred(view, title, top + 60, 1.8, 4, WHITE)
     for i, text in enumerate(lines):
         put_centred(view, text, top + 100 + 34 * i, 0.75, 2, WHITE)
+    if check_line:
+        put_centred(view, check_line, bottom - 12, 0.45, 1, WHITE)
     return view
 
 
@@ -202,8 +211,6 @@ def main():
     def keep_latest(event):
         latest[event["type"]] = event["data"]
 
-    names = [line.split()[0].split("/", 2)[2] for line in
-             (ROOT / "koz" / "models" / "categories_places365.txt").read_text().splitlines()]
     camera = None
     try:
         setup.check()
@@ -231,28 +238,29 @@ def main():
             cv2.destroyAllWindows()
         return 1
 
-    checker = runner.scene_checker
     if runner.owner_workspace:
         print("Owner-confirmed workspace: ON (the guard approves this room unless a private room or darkness is seen)")
-    frames, started, alive = 0, time.monotonic(), True
+    frames, started, alive, printed = 0, time.monotonic(), True, 0
     try:
         while alive and (args.frames is None or frames < args.frames):
             alive = runner.step()
             frames += 1
+            if getattr(runner.guard, "checks", 0) != printed:   # one terminal line per privacy check
+                printed = runner.guard.checks
+                print(check_line(runner))
             fps = frames / max(time.monotonic() - started, 1e-6)
             if args.no_window:
                 continue
-            cv2.imshow(WINDOW, draw(runner, latest, messages, fps, top_places(checker, names), line))
+            cv2.imshow(WINDOW, draw(runner, latest, messages, fps, line))
             if quit_pressed(1):
                 break
         if not alive and not args.no_window:   # keep the reason on screen until q
-            cv2.imshow(WINDOW, draw(runner, latest, messages, 0.0, top_places(checker, names), line))
+            cv2.imshow(WINDOW, draw(runner, latest, messages, 0.0, line))
             while not quit_pressed(100):
                 pass
     finally:
         runner.camera.close()
         cv2.destroyAllWindows()
-    print(top_places(checker, names))
     fault = latest.get("fault")
     print(f"final state: {runner.state}" + (f" ({fault['code']}: {messages.get(fault['code'], '')})" if fault else "")
           + ("   [owner-confirmed workspace]" if runner.owner_workspace else ""))

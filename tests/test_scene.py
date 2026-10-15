@@ -71,10 +71,13 @@ def test_cautious_and_removed_places(weights, expected):
     ({f"i{KITCHEN}": 0.7}, PrivacyResult("approved")),            # not on the allowlist, but vouched for
     ({f"i{CATACOMB}": 0.6}, PrivacyResult("approved")),
     ({f"i{KITCHEN}": 0.12}, PrivacyResult("approved")),           # unclear is fine too
-    # ...but a likely private room still stops it.
-    ({f"i{KITCHEN}": 0.7, "i52": 0.12}, PrivacyResult("blocked", "PRIVATE_BEDROOM")),
-    ({"i45": 0.6}, PrivacyResult("blocked", "PRIVATE_BATHROOM")),
-    ({f"i{KITCHEN}": 0.5, "i52": 0.08, "i51": 0.04, "i182": 0.04}, PrivacyResult("blocked", "PRIVATE_BEDROOM")),
+    # After live test #2 only a confident room check stops a workspace (the object check
+    # in koz/privacy.py does the rest): a desk in a bedroom may look a bit like a bedroom.
+    ({f"i{KITCHEN}": 0.7, "i52": 0.12}, PrivacyResult("approved")),
+    ({f"i{KITCHEN}": 0.5, "i52": 0.08, "i51": 0.04, "i182": 0.04}, PrivacyResult("approved")),
+    ({"i52": 0.30}, PrivacyResult("approved")),                                         # unsure bedroom
+    ({"i45": 0.6}, PrivacyResult("blocked", "PRIVATE_BATHROOM")),                       # top guess >= 0.50
+    ({f"i{KITCHEN}": 0.3, "i52": 0.2, "i51": 0.12, "i182": 0.1}, PrivacyResult("blocked", "PRIVATE_BEDROOM")),  # >= 0.40 together
 ])
 def test_owner_confirmed_workspace(weights, expected):
     assert decide(probs(**weights), owner_workspace=True) == expected
