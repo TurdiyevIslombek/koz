@@ -1,0 +1,126 @@
+{
+  "dark": [
+    {
+      "name": "text",
+      "foreground": "#f1f0e7",
+      "background": "#141614",
+      "ratio": 15.9
+    },
+    {
+      "name": "muted",
+      "foreground": "#b8bcb3",
+      "background": "#141614",
+      "ratio": 9.43
+    },
+    {
+      "name": "muted surface",
+      "foreground": "#b8bcb3",
+      "background": "#20231f",
+      "ratio": 8.23
+    },
+    {
+      "name": "accent",
+      "foreground": "#a8c2ff",
+      "background": "#141614",
+      "ratio": 10.24
+    },
+    {
+      "name": "running",
+      "foreground": "#b9d5a8",
+      "background": "#141614",
+      "ratio": 11.39
+    },
+    {
+      "name": "warning",
+      "foreground": "#edd28e",
+      "background": "#141614",
+      "ratio": 12.31
+    },
+    {
+      "name": "blocked",
+      "foreground": "#ffc0b2",
+      "background": "#141614",
+      "ratio": 11.64
+    },
+    {
+      "name": "stop",
+      "foreground": "#602b21",
+      "background": "#f1d2c8",
+      "ratio": 7.93
+    },
+    {
+      "name": "primary",
+      "foreground": "#172b52",
+      "background": "#a8c2ff",
+      "ratio": 7.86
+    },
+    {
+      "name": "line",
+      "foreground": "#254ce2",
+      "background": "#dfe2d5",
+      "ratio": 4.98
+    }
+  ],
+  "light": [
+    {
+      "name": "text",
+      "foreground": "#202820",
+      "background": "#f2f1e9",
+      "ratio": 13.37
+    },
+    {
+      "name": "muted",
+      "foreground": "#53604f",
+      "background": "#f2f1e9",
+      "ratio": 5.88
+    },
+    {
+      "name": "muted surface",
+      "foreground": "#53604f",
+      "background": "#e8e8df",
+      "ratio": 5.4
+    },
+    {
+      "name": "accent",
+      "foreground": "#254dcc",
+      "background": "#f2f1e9",
+      "ratio": 6.15
+    },
+    {
+      "name": "running",
+      "foreground": "#385b25",
+      "background": "#f2f1e9",
+      "ratio": 6.89
+    },
+    {
+      "name": "warning",
+      "foreground": "#785507",
+      "background": "#f2f1e9",
+      "ratio": 5.98
+    },
+    {
+      "name": "blocked",
+      "foreground": "#9d3428",
+      "background": "#f2f1e9",
+      "ratio": 6.27
+    },
+    {
+      "name": "stop",
+      "foreground": "#fff0e8",
+      "background": "#572c23",
+      "ratio": 10.55
+    },
+    {
+      "name": "primary",
+      "foreground": "#ffffff",
+      "background": "#254dcc",
+      "ratio": 6.97
+    },
+    {
+      "name": "line",
+      "foreground": "#214bcf",
+      "background": "#d8ded0",
+      "ratio": 5.14
+    }
+  ]
+}

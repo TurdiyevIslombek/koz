@@ -1,0 +1,15 @@
+{
+  "name": "koz-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "node server/index.mjs",
+    "dev": "npm run build && npm start",
+    "test": "node scripts/contracts.mjs && node --test test/*.test.mjs"
+  },
+  "dependencies": { "ajv": "8.20.0", "ws": "8.22.0" },
+  "devDependencies": { "esbuild": "0.28.2" },
+  "engines": { "node": ">=22" }
+}

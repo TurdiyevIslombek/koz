@@ -1,0 +1,178 @@
+{
+  "errors": [],
+  "checks": [
+    {
+      "language": "uz",
+      "theme": "dark",
+      "screen": "live",
+      "violations": [],
+      "overflow": false
+    },
+    {
+      "language": "uz",
+      "theme": "dark",
+      "screen": "setup",
+      "violations": [],
+      "overflow": false
+    },
+    {
+      "language": "uz",
+      "theme": "dark",
+      "screen": "trials",
+      "violations": [],
+      "overflow": false
+    },
+    {
+      "language": "uz",
+      "theme": "light",
+      "screen": "live",
+      "violations": [],
+      "overflow": false
+    },
+    {
+      "language": "uz",
+      "theme": "light",
+      "screen": "setup",
+      "violations": [],
+      "overflow": false
+    },
+    {
+      "language": "uz",
+      "theme": "light",
+      "screen": "trials",
+      "violations": [],
+      "overflow": false
+    },
+    {
+      "language": "ru",
+      "theme": "dark",
+      "screen": "live",
+      "violations": [],
+      "overflow": false
+    },
+    {
+      "language": "ru",
+      "theme": "dark",
+      "screen": "setup",
+      "violations": [],
+      "overflow": false
+    },
+    {
+      "language": "ru",
+      "theme": "dark",
+      "screen": "trials",
+      "violations": [],
+      "overflow": false
+    },
+    {
+      "language": "ru",
+      "theme": "light",
+      "screen": "live",
+      "violations": [],
+      "overflow": false
+    },
+    {
+      "language": "ru",
+      "theme": "light",
+      "screen": "setup",
+      "violations": [],
+      "overflow": false
+    },
+    {
+      "language": "ru",
+      "theme": "light",
+      "screen": "trials",
+      "violations": [],
+      "overflow": false
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "screen": "live",
+      "violations": [],
+      "overflow": false
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "screen": "setup",
+      "violations": [],
+      "overflow": false
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "screen": "trials",
+      "violations": [],
+      "overflow": false
+    },
+    {
+      "language": "en",
+      "theme": "light",
+      "screen": "live",
+      "violations": [],
+      "overflow": false
+    },
+    {
+      "language": "en",
+      "theme": "light",
+      "screen": "setup",
+      "violations": [],
+      "overflow": false
+    },
+    {
+      "language": "en",
+      "theme": "light",
+      "screen": "trials",
+      "violations": [],
+      "overflow": false
+    },
+    {
+      "state": "FRAME_STALE",
+      "count": "—",
+      "reason": "Camera data is stale. Outputs stopped."
+    },
+    {
+      "state": "PRIVACY_UNAVAILABLE",
+      "count": "—",
+      "reason": "Privacy check is unavailable."
+    },
+    {
+      "state": "PRIVATE_BATHROOM",
+      "count": "—",
+      "reason": "Bathroom view blocked."
+    },
+    {
+      "state": "PRIVACY_UNCERTAIN",
+      "count": "—",
+      "reason": "Scene safety is unknown."
+    },
+    {
+      "test": "200% text",
+      "screen": "live",
+      "overflow": false
+    },
+    {
+      "test": "200% text",
+      "screen": "setup",
+      "overflow": false
+    },
+    {
+      "test": "200% text",
+      "screen": "trials",
+      "overflow": false
+    }
+  ],
+  "final_verification": {
+    "node_tests": {
+      "passed": 19,
+      "failed": 0
+    },
+    "build": "passed",
+    "independent_review": "ship within documented local-development scope",
+    "proof_association_fix": "resolved; red-ball chain absent from classroom/privacy tabs",
+    "browser_demo_flow": "passed",
+    "hardware_trials": "not performed",
+    "cloud_deployment": "not performed"
+  }
+}
