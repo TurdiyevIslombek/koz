@@ -159,6 +159,11 @@ def main():
         runner = Runner(demo_recipe(args.job, args.hue, line, args.school), setup, camera, EventLog(keep_latest))
     except KozError as error:
         print(f"Ko'z did not start: {error.code}: {messages.get(error.code, '')}")
+        if camera is None and not args.video and args.camera.isdigit():
+            print("The camera could not be opened. On a Mac this usually means the app that started\n"
+                  "this command may not use the camera. Double-click demo-blur.command (it runs in\n"
+                  "Terminal, which asks for permission), or allow the app in System Settings >\n"
+                  "Privacy & Security > Camera, then try again.")
         if camera is not None:
             camera.close()
         return 1
