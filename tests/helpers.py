@@ -184,3 +184,45 @@ class ScriptedPeople:
         boxes = self.script[self.calls] if self.calls < len(self.script) else []
         self.calls += 1
         return [Person(tuple(map(float, b)), 0.9) for b in boxes]
+
+
+ORANGE_RED = (0, 110, 255)   # BGR, OpenCV hue 13: how a red ball often looks under warm light
+
+
+def record_ball_clip(path, colour=ORANGE_RED, frames=60, ball=True):
+    """A longer clip for the agent tests: one ball drifting right on the textured grey
+    background (`ball=False`: background only)."""
+    rng = np.random.default_rng(11)
+    ramp = np.linspace(100, 160, WIDTH, dtype=np.float64)
+    writer = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*"MJPG"), FPS, (WIDTH, HEIGHT))
+    assert writer.isOpened()
+    for i in range(frames):
+        grey = np.tile(ramp, (HEIGHT, 1)) + rng.normal(0, 8, (HEIGHT, WIDTH))
+        frame = np.clip(np.dstack([grey, grey, grey]), 0, 255).astype(np.uint8)
+        if ball:
+            cv2.circle(frame, (80 + 2 * i, HEIGHT // 2), BALL_RADIUS, colour, -1)
+        writer.write(frame)
+    writer.release()
+    return path
+
+
+class EndlessCamera:
+    """A camera that never ends (a stand-in for a live camera): the same frame, stamped with
+    the fake clock, which moves on `dt` per frame. close() ends it, like a real camera."""
+    capabilities = ()
+
+    def __init__(self, image, clock, dt=0.1):
+        from koz.capture import Frame
+        self._frame, self.clock, self.dt = Frame, clock, dt
+        self.image, self.index, self.is_open, self.closed = image, 0, True, 0
+
+    def read(self):
+        if not self.is_open:
+            return None
+        self.clock.advance(self.dt)
+        self.index += 1
+        return self._frame(self.image, self.clock(), self.index)
+
+    def close(self):
+        self.is_open = False
+        self.closed += 1

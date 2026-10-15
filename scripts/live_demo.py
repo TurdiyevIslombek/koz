@@ -89,7 +89,7 @@ def draw(runner, latest, messages, fps, line):
     observation = latest.get("observation", {})
     fault = latest.get("fault")
     state = status.get("state", "starting")
-    colour = GREEN if state == "running" else AMBER if state == "checking" else RED
+    colour = GREEN if state == "running" else AMBER if state in ("checking", "evaluating") else RED
     privacy = status.get("privacy", "-")
     if runner.strict and privacy == "approved":
         privacy = "approved (strict)"

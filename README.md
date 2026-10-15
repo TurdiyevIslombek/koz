@@ -30,6 +30,33 @@ stops on what it sees (a bed, a toilet, a covered lens...), with the reason. q q
 for camera access the first time. Add `--job counter` to count people crossing a line instead
 (`--school` for school mode), and `--strict` for schools and public cameras (listed places only).
 
+## Agent demo: type the job in plain words
+
+Double-click `demo-agent.command`, or:
+
+```bash
+.venv/bin/python scripts/agent_demo.py --i-own-this-camera "find the red ball"
+.venv/bin/python scripts/agent_demo.py --i-own-this-camera "Sinfga kirgan o'quvchilarni sana, yuzlarni xiralashtir"
+```
+Ko'z prints its plan in the job's language, tries the recipe on the camera for 3 s, checks the
+OpenCV numbers (is the ball visible? are the counts known?), changes one setting if the check
+fails (at most 3 tries) and runs. Every step is printed as one line: observation → decision →
+new setting → result. Requests Ko'z refuses (who is this person, a hidden camera, age or gender)
+stop before the camera opens. `--video clip.mp4` uses a recording instead of the camera.
+
+The planner is rule-based by default. With `NEBIUS_API_KEY=...` in `.env`, NVIDIA Nemotron on
+Nebius Token Factory chooses the job instead (only your sentence is sent; `NEBIUS_MODEL` picks
+the model; `.venv/bin/python -m koz.agent.nebius --models` lists the ones your key can use).
+
+## Runner for the web app
+
+```bash
+.venv/bin/python -m koz.server --i-own-this-camera
+```
+A WebSocket at `ws://127.0.0.1:8765` (this computer only). It sends every event exactly as in
+`contracts/events.md` and accepts the 4 commands. Browsers can't connect to it directly; the
+web app's own server does.
+
 ## Models and credits
 
 **Face detection: YuNet**, from OpenCV Zoo (`models/face_detection_yunet`).

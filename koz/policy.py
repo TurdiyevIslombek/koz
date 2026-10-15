@@ -112,3 +112,8 @@ FACE_SCORE_THRESHOLD = 0.5
 FACE_MARGIN = 0.25             # grow each face box by this share on every side
 FACE_PIXEL_CELLS = 6           # each face becomes at most 6 x 6 flat squares...
 FACE_MIN_CELL_PX = 4           # ...each at least 4 px wide, so a tiny face becomes one flat square
+
+# Agent loop (koz/agent/loop.py): each try of a recipe runs on live frames this long, and a
+# job gets at most AGENT_MAX_ROUNDS tries (CLAUDE.md MVP item 4; contract section 9).
+AGENT_EVAL_S = 3.0
+AGENT_MAX_ROUNDS = 3

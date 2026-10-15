@@ -34,7 +34,7 @@ class Runner:
     needed model file is missing or changed, the runner refuses to start."""
 
     def __init__(self, recipe, setup, camera, events, scene_checker=None, face_detector=None,
-                 person_detector=None, revision=1, clock=time.monotonic):
+                 person_detector=None, revision=1, evaluation_round=None, clock=time.monotonic):
         if not isinstance(recipe, CheckedRecipe):
             raise TypeError("Runner needs a CheckedRecipe from koz.recipe")
         if OPENCV_MAJOR != 5:
@@ -45,6 +45,9 @@ class Runner:
         recipe = check_recipe(recipe.data, local_school=setup.school)
         self.recipe, self.camera, self.events = recipe, camera, events
         self.revision, self._clock = revision, clock
+        # Set by the agent loop while it tries this revision (rounds 1-3): status says
+        # "evaluating" instead of "running", and observations carry the round number.
+        self.evaluation_round = evaluation_round
         width, height = (int(n) for n in recipe.data["camera"]["size"].split("x"))
         self.size = (width, height)
         self._mask = setup.mask(width, height)
@@ -57,6 +60,7 @@ class Runner:
         self._blocks = [PersonDetector(b["settings"], detector=person_detector) if b["type"] == "person_detector"
                         else TASK_BLOCKS[b["type"]](b["settings"]) for b in recipe.data["blocks"][2:]]
         self._configured = {b["type"] for b in recipe.data["blocks"][2:]}
+        self._settings = {b["type"]: b["settings"] for b in recipe.data["blocks"][2:]}
 
         self.state = None           # set to "checking" on the first step
         self.coverage = "complete"  # becomes "gapped" after any stale or slow frame, and stays so
@@ -66,6 +70,37 @@ class Runner:
         self._last_reason_sent = None
         self._last_observation_t = None
         self._last_status_t = None
+
+    def finish_evaluation(self):
+        """The agent accepted this revision: keep running it as the job itself. A new phase
+        (contract 8.3): the line counts start again at 0 and coverage at "complete"."""
+        self.evaluation_round = None
+        self._blocks = [TASK_BLOCKS[b.type](self._settings[b.type]) if b.type == "line_counter" else b
+                        for b in self._blocks]
+        self.coverage = "complete"
+        self._last_observation_t = None   # the first normal-running observation goes out at once
+        if self.state == "evaluating":
+            self._set_state("running")
+
+    def stop(self):
+        """Stop on the owner's command (stop_job): close the camera, status idle."""
+        if self.state in ("checking", "evaluating", "running"):
+            self._stop("idle")
+
+    def hold(self, code):
+        """The agent loop decided to stop (its decision event carries the same code): outputs
+        stop, a fault says why, the camera closes, status held; a new start is needed."""
+        if self.state in ("checking", "evaluating", "running"):
+            self._drop_preview()
+            self.events.emit("fault", {"code": code, "effect": "held"}, revision=self.revision)
+            self._stop("held")
+
+    @property
+    def models(self):
+        """The loaded checks and models, so the agent's next round reuses them (same camera,
+        same setup) instead of loading the files again."""
+        people = next((b.detector for b in self._blocks if isinstance(b, PersonDetector)), None)
+        return {"scene_checker": self.guard, "face_detector": self._blur.detector, "person_detector": people}
 
     def run(self, max_frames=None):
         """Process frames until the job stops (or max_frames). Returns the final state."""
@@ -78,7 +113,7 @@ class Runner:
         """Process one frame. Returns False once the job has stopped."""
         if self.state is None:
             self._set_state("checking")
-        if self.state not in ("checking", "running"):
+        if self.state not in ("checking", "evaluating", "running"):
             return False
         try:
             return self._process_next_frame()
@@ -115,7 +150,7 @@ class Runner:
             return False
         if self.state == "checking":
             self._was_running = True
-            self._set_state("running")
+            self._set_state("evaluating" if self.evaluation_round else "running")
 
         ctx = FrameContext(image, t=frame.t)
         self._blur.process(ctx)   # raises BLUR_UNAVAILABLE if it can't blur
@@ -165,7 +200,7 @@ class Runner:
             return
         self._last_observation_t, self._last_reason_sent = now, reason
         self.events.emit("observation", {
-            "round": None,   # set by the agent loop during evaluation rounds (next task)
+            "round": self.evaluation_round,
             "privacy": privacy, **outputs, "coverage": self.coverage,
             "motion": None, "looming": None, "alert": None, "unknown_reason": reason,
         }, revision=self.revision)

@@ -1,0 +1,452 @@
+"""The local WebSocket the web app connects to: ws://127.0.0.1:8765
+(contracts/events.md sections 5, 6 and 10).
+
+Out: every event exactly as contracts/events.md defines it, one JSON text message each.
+     A fresh `status` is the first message on every connection, then one at least every second.
+In:  the 4 commands (start_job, stop_job, begin_trial, finish_trial), checked strictly.
+
+Safety:
+- It listens on 127.0.0.1 only, so other computers can't reach it.
+- It refuses any connection with a browser Origin header. Otherwise any web page open in
+  your browser could talk to localhost and start a camera job ("cross-site WebSocket
+  hijacking"). The web app's Node server connects without one.
+- The local setup (ownership, allowed area, strict mode, which camera) comes from this
+  command line only, never from a command (contract section 10, "No command exists for").
+- Events never carry pictures or free text: EventLog refuses anything not in the contract.
+- While nobody is connected, recipe/decision/fault/command_result/trial_result events wait in
+  memory (at most 200); status and observations are dropped (contract section 5).
+
+Run:  python -m koz.server --i-own-this-camera [--camera 0 | --video clip.mp4] [--strict] [--planner fake]"""
+import argparse
+import asyncio
+import json
+import sys
+import threading
+import time
+from collections import OrderedDict, deque
+from http import HTTPStatus
+
+from . import policy
+from .agent import Agent, make_planner
+from .agent.planner import MAX_TEXT
+from .errors import CODES, KozError
+from .events import ID_PATTERN, MAX_MESSAGE_BYTES, EventLog, count_unknown
+from .runner import OPENCV_MAJOR
+
+HOST, PORT = "127.0.0.1", 8765
+OFFLINE_QUEUE = 200
+KEEP_OFFLINE = frozenset({"recipe", "decision", "fault", "command_result", "trial_result"})
+ENVELOPE = frozenset({"v", "type", "command_id", "session_id", "job_id", "trial_id", "expires_at", "command", "data"})
+COMMANDS = ("start_job", "stop_job", "begin_trial", "finish_trial")
+DEMOS = ("red_ball", "classroom", "privacy_guard")
+REASONS = ("none", "missed_target", "wrong_direction", "count_mismatch", "privacy_miss", "safety_stop",
+           "interrupted", "unknown")
+IDLE_STATES = ("idle", "held", "refused")
+STOP_WAIT_S = 3.0   # on Ctrl+C, wait this long for the job to stop
+
+
+class BadMessage(Exception):
+    """A message that isn't even a command we can answer (no valid command_id): close."""
+
+
+def _id(v, nullable=True):
+    return (v is None and nullable) or (type(v) is str and ID_PATTERN.fullmatch(v) is not None)
+
+
+def parse_command(text):
+    """Text -> command dict, or BadMessage. Strict JSON: no duplicate keys, no NaN/Infinity."""
+    if type(text) is not str or len(text.encode("utf-8")) > MAX_MESSAGE_BYTES:
+        raise BadMessage("not a text message, or too large")
+
+    def no_duplicates(pairs):
+        if len({k for k, _ in pairs}) != len(pairs):
+            raise ValueError("duplicate key")
+        return dict(pairs)
+
+    def no_constant(_):
+        raise ValueError("NaN or Infinity")
+
+    try:
+        command = json.loads(text, object_pairs_hook=no_duplicates, parse_constant=no_constant)
+    except (ValueError, RecursionError):
+        raise BadMessage("not strict JSON") from None
+    if type(command) is not dict or not _id(command.get("command_id"), nullable=False):
+        raise BadMessage("no command_id")
+    return command
+
+
+def command_problem(command, session_id, now):
+    """The error code for a malformed or expired command, else None (state is checked later)."""
+    expires = command.get("expires_at")
+    if (set(command) != ENVELOPE or command["v"] != 1 or type(command["v"]) is not int
+            or command["type"] != "command" or command["command"] not in COMMANDS
+            or not _id(command["job_id"]) or not _id(command["trial_id"])
+            or type(expires) not in (int, float) or expires != expires or type(command["data"]) is not dict
+            or not _data_ok(command["command"], command["data"])):
+        return "INVALID_COMMAND"
+    if now > expires:
+        return "COMMAND_EXPIRED"
+    if command["session_id"] != session_id:
+        return "INVALID_COMMAND"
+    return None
+
+
+def _data_ok(name, data):
+    if name == "start_job":
+        if data.get("input") == "prompt":
+            return (set(data) == {"input", "language", "text"} and data["language"] in ("uz", "ru", "en")
+                    and type(data["text"]) is str and 0 < len(data["text"].strip()) and len(data["text"]) <= MAX_TEXT)
+        return data.get("input") == "recipe" and set(data) == {"input", "recipe"} and type(data["recipe"]) is dict
+    if name == "stop_job":
+        return data == {}
+    if name == "begin_trial":
+        return (set(data) == {"demo", "index"} and data["demo"] in DEMOS
+                and type(data["index"]) is int and 1 <= data["index"] <= 10)
+    expected = data.get("expected_count")
+    return (set(data) == {"result", "reason", "expected_count"} and data["result"] in ("pass", "fail", "unknown")
+            and data["reason"] in REASONS and (data["result"] != "pass" or data["reason"] == "none")
+            and (expected is None or (type(expected) is int and 0 <= expected <= 2147483647)))
+
+
+class Hub:
+    """The runner's side of the protocol without the network: commands in (handle), events
+    out (deliver). Tests drive it directly; serve() connects it to the WebSocket.
+
+    `open_camera` opens the camera chosen on the command line; `planner` makes the plans."""
+
+    def __init__(self, setup, open_camera, planner, capabilities=(), deliver=None, clock=time.monotonic,
+                 wall_clock=time.time, eval_seconds=policy.AGENT_EVAL_S, models=None):
+        self.setup, self._open_camera, self.planner = setup, open_camera, planner
+        self.capabilities = sorted(capabilities)
+        self.deliver = deliver or (lambda event: None)
+        self.clock, self.wall_clock, self.eval_seconds, self.models = clock, wall_clock, eval_seconds, models
+        self.events = EventLog(lambda event: self.deliver(event), wall_clock=wall_clock)
+        self.events.listeners.append(self._track)
+        self.lock = self.events.lock   # one lock for events and hub state (see EventLog)
+        self._results = OrderedDict()  # command_id -> its command_result data
+        self._agent = self._thread = self._camera = None
+        self._running_job = None   # the job_id while its thread works (set and cleared under the lock)
+        self._job_result = None    # (job_id, JobResult) of the last job
+        self._trial = None
+        self._status, self._status_t = None, None
+        self.emit_status("idle")
+
+    # --- status ---------------------------------------------------------------------
+
+    def emit_status(self, state=None):
+        """A status event: the latest one again (heartbeat, new connection) or a new state."""
+        with self.lock:
+            if state is None and self._status is not None:
+                data, revision = self._status
+            else:
+                data = {"state": state or "idle", "camera_on": False, "privacy": "unknown",
+                        "school": self.setup.school, "motor": "not_present", "opencv_major": OPENCV_MAJOR,
+                        "capabilities": self.capabilities}
+                revision = None
+            seq = self.events.emit("status", data, revision=revision)
+            return {"seq": seq}
+
+    def heartbeat(self):
+        with self.lock:
+            if self._status_t is None or self.clock() - self._status_t >= policy.STATUS_INTERVAL_S:
+                self.emit_status()
+
+    def _track(self, event):
+        """Runs inside EventLog's lock for every event: keeps the latest status and the trial's evidence."""
+        kind, data = event["type"], event["data"]
+        if kind == "status":
+            self._status, self._status_t = (data, event["revision"]), self.clock()
+        trial = self._trial
+        if trial is None or event["trial_id"] != trial["id"]:
+            return
+        if kind == "fault":
+            trial["fault"] = data["code"]
+        elif kind == "recipe":
+            trial["revision"] = event["revision"]
+        elif kind == "observation" and data["round"] is None and event["job_id"] is not None:
+            trial["ran"] = trial["ran"] or data["privacy"] == "approved"
+            if data["entered"] is not None:
+                if data["entered"]["state"] != "known" or data["coverage"] != "complete":
+                    trial["gap"] = trial["gap"] or data["unknown_reason"] or "FRAME_STALE"
+                trial["entered"] = data["entered"]
+
+    def mark_lost(self):
+        """An event was dropped from the offline queue: the open trial's evidence is incomplete."""
+        with self.lock:
+            if self._trial is not None:
+                self._trial["lost"] = True
+
+    @property
+    def busy(self):
+        return self._running_job is not None
+
+    # --- commands -------------------------------------------------------------------
+
+    def handle(self, text):
+        """One message from the web app. Raises BadMessage if it can't even be answered."""
+        command = parse_command(text)
+        with self.lock:
+            cached = self._results.get(command["command_id"])
+            if cached is not None:   # a repeat: the same answer, nothing runs twice
+                self.events.emit("command_result", cached)
+                return
+            code = command_problem(command, self.events.session_id, self.wall_clock())
+            if code is None:
+                code = getattr(self, "_" + command["command"])(command)
+            if code is not None:
+                self._answer(command, code)
+
+    def _answer(self, command, code=None):
+        data = {"command_id": command["command_id"], "result": "rejected" if code else "accepted", "code": code}
+        self._results[command["command_id"]] = data
+        while len(self._results) > 500:
+            self._results.popitem(last=False)
+        self.events.emit("command_result", data)
+
+    def _start_job(self, command):
+        trial = self._trial
+        if self.busy or self._status[0]["state"] not in IDLE_STATES:
+            return "BUSY"
+        if command["job_id"] is None or command["trial_id"] != (trial["id"] if trial else None):
+            return "INVALID_COMMAND"
+        if trial is not None and trial["job_id"] is not None:
+            return "BUSY"   # one job per trial
+        if trial is not None:
+            trial["job_id"] = command["job_id"]
+        self.events.bind(command["job_id"], command["trial_id"])
+        self._answer(command)
+        self._job_result, self._camera, self._running_job = None, None, command["job_id"]
+        self._agent = Agent(self.planner, self.setup, self._opened_camera, self.events, clock=self.clock,
+                            eval_seconds=self.eval_seconds, models=self.models)
+        self._thread = threading.Thread(target=self._work, args=(self._agent, command["job_id"], command["data"]),
+                                        name="koz-job", daemon=True)
+        self._thread.start()
+        return None
+
+    def _stop_job(self, command):
+        if command["job_id"] != self.events.job_id or command["trial_id"] != self.events.trial_id:
+            return "INVALID_COMMAND"
+        self._answer(command)
+        self._stop()
+        return None
+
+    def _begin_trial(self, command):
+        if self.busy or self._status[0]["state"] not in IDLE_STATES or self._trial is not None:
+            return "BUSY"
+        if command["job_id"] is not None or command["trial_id"] is None:
+            return "INVALID_COMMAND"
+        self._trial = {"id": command["trial_id"], "demo": command["data"]["demo"], "index": command["data"]["index"],
+                       "job_id": None, "revision": None, "fault": None, "ran": False, "entered": None,
+                       "gap": None, "lost": False, "finish": None}
+        self._job_result = None   # an earlier job's changes never count for this trial
+        self.events.bind(None, command["trial_id"])
+        self._answer(command)
+        return None
+
+    def _finish_trial(self, command):
+        if self._trial is None or command["trial_id"] != self._trial["id"]:
+            return "INVALID_COMMAND"
+        if command["job_id"] != self.events.job_id:
+            return "INVALID_COMMAND"
+        if command["data"]["expected_count"] is not None and self._trial["demo"] != "classroom":
+            return "INVALID_COMMAND"
+        if self._trial["finish"] is not None:
+            return "BUSY"   # already finishing: waiting for the job to stop
+        self._answer(command)
+        self._trial["finish"] = command["data"]
+        self._stop()
+        if not self.busy:
+            self._close_trial()
+        # Otherwise the job thread sends trial_result once the job has really stopped (_work),
+        # so no event of this trial's job can arrive after the trial is closed.
+        return None
+
+    def _stop(self):
+        """stop_job: at once, before any planner work. A planner answer that comes later can't
+        start the job (Agent checks stop_requested)."""
+        if self.busy:
+            self._agent.stop_requested = True
+            if self._agent.phase in (None, "planning") or self._camera is None:
+                self.emit_status("idle")   # the planner or the camera may take seconds: say idle now
+        elif self._status[0]["state"] != "idle":
+            self.emit_status("idle")
+
+    def _close_trial(self):
+        """Send trial_result (contract 8.7) and close the trial."""
+        trial = self._trial
+        if trial is None or trial["finish"] is None:
+            return
+        job = self._job_result[1] if self._job_result and self._job_result[0] == trial["job_id"] else None
+        finish = trial["finish"]
+        result, reason = finish["result"], finish["reason"]
+        observed = None
+        if trial["demo"] == "classroom" and trial["entered"] is not None:
+            observed = count_unknown(trial["gap"]) if trial["gap"] else trial["entered"]
+        # The runner may lower a pass it can't support to unknown; it never raises a fail.
+        supported = {"red_ball": trial["ran"],
+                     "classroom": observed is not None and observed["state"] == "known",
+                     "privacy_guard": (trial["fault"] or "").startswith("PRIVATE_")}[trial["demo"]]
+        if result == "pass" and (not supported or trial["lost"]):
+            result, reason = "unknown", "unknown"
+        self.events.emit("trial_result", {
+            "demo": trial["demo"], "index": trial["index"], "result": result, "basis": "owner_report",
+            "reason": reason, "expected_count": finish["expected_count"], "observed_count": observed,
+            "fault_code": trial["fault"], "evidence": "incomplete" if trial["lost"] else "complete",
+            "agent_changes": (job.agent_changes if job else [])[:2]}, revision=trial["revision"])
+        self._trial = None
+        self.events.bind(None, None)
+
+    # --- the job thread ---------------------------------------------------------------
+
+    def _opened_camera(self):
+        self._camera = self._open_camera()
+        return self._camera
+
+    def _work(self, agent, job_id, start):
+        try:
+            if start["input"] == "prompt":
+                result = agent.run(start["text"])
+            else:
+                result = agent.run_recipe(start["recipe"], origin="import")
+            with self.lock:
+                self._job_result = (job_id, result)
+            if result.state == "running":
+                runner = result.runner
+                while not agent.stop_requested and runner.step():
+                    pass
+                runner.stop()
+        except Exception as error:   # fail closed: close the camera, say why, hold the job
+            if self._camera is not None:
+                self._camera.close()
+            code = error.code if isinstance(error, KozError) else "INTERNAL_ERROR"
+            try:
+                self.events.emit("fault", {"code": code if code in CODES else "INTERNAL_ERROR", "effect": "held"})
+                self.emit_status("held")
+            except Exception:
+                pass
+        finally:
+            with self.lock:
+                self._running_job = None
+                if self._trial is not None and self._trial["job_id"] == job_id:
+                    self._close_trial()   # only if finish_trial is waiting for this job
+
+
+async def serve(hub, host=HOST, port=PORT, started=None):
+    """Serve `hub` until cancelled. `started` (an asyncio.Event) is set once it listens."""
+    from websockets.asyncio.server import broadcast
+    from websockets.asyncio.server import serve as ws_serve
+
+    loop = asyncio.get_running_loop()
+    clients, joining, queue = set(), {}, deque()
+
+    def send_all(event):   # always on the event loop, in seq order
+        text = json.dumps(event, allow_nan=False)
+        joiner = joining.pop(event["seq"], None)
+        if clients:
+            broadcast(set(clients), text)
+        elif joiner is None and event["type"] in KEEP_OFFLINE:
+            if len(queue) == OFFLINE_QUEUE:
+                queue.popleft()
+                hub.mark_lost()
+            queue.append(text)
+        if joiner is not None:   # its first message is this fresh status, then what waited
+            broadcast([joiner], text)
+            while queue:
+                broadcast([joiner], queue.popleft())
+            clients.add(joiner)
+
+    def deliver(event):   # from any thread
+        try:
+            loop.call_soon_threadsafe(send_all, event)
+        except RuntimeError:   # the server already stopped
+            pass
+
+    hub.deliver = deliver
+
+    def refuse_browsers(connection, request):
+        if request.headers.get("Origin") is not None:
+            return connection.respond(HTTPStatus.FORBIDDEN, "Browsers may not connect to the Ko'z runner.\n")
+        return None
+
+    async def connected(connection):
+        joining[hub.emit_status()["seq"]] = connection   # no await between: send_all hasn't run yet
+        try:
+            async for message in connection:
+                if not isinstance(message, str):
+                    await connection.close(1003, "INVALID_COMMAND")
+                    return
+                try:
+                    await asyncio.to_thread(hub.handle, message)
+                except BadMessage:
+                    await connection.close(1008, "INVALID_COMMAND")
+                    return
+        finally:
+            clients.discard(connection)
+
+    async def beat():
+        while True:
+            await asyncio.sleep(0.25)
+            hub.heartbeat()
+
+    async with ws_serve(connected, host, port, process_request=refuse_browsers, max_size=MAX_MESSAGE_BYTES,
+                        compression=None):
+        beating = asyncio.create_task(beat())
+        if started is not None:
+            started.set()
+        try:
+            await asyncio.Future()   # run until cancelled
+        finally:
+            beating.cancel()
+
+
+def main(argv=None):
+    from .capture import FileCamera, LiveCamera
+    from .local_setup import LocalSetup
+
+    parser = argparse.ArgumentParser(description="Ko'z runner: the WebSocket the web app connects to")
+    parser.add_argument("--i-own-this-camera", action="store_true",
+                        help="confirm the camera is yours and you may film this view (rule 7)")
+    parser.add_argument("--camera", default="0", help="0 = this computer's camera, or a stream URL")
+    parser.add_argument("--video", help="play a recorded video file instead of a camera (a new start replays it)")
+    parser.add_argument("--allowed-area", default="0,0,1,1",
+                        help="left,top,right,bottom of the allowed area, 0..1 (default: whole frame)")
+    parser.add_argument("--school", action="store_true", help="school mode: counts only, and always strict")
+    parser.add_argument("--strict", action="store_true", help="strict mode for schools and public cameras")
+    parser.add_argument("--planner", choices=("auto", "fake", "nebius"), default="auto",
+                        help="auto: Nemotron on Nebius if NEBIUS_API_KEY is in .env, else the rule-based planner")
+    parser.add_argument("--port", type=int, default=PORT)
+    args = parser.parse_args(argv)
+
+    left, top, right, bottom = (float(v) for v in args.allowed_area.split(","))
+    setup = LocalSetup(owner_confirmed=args.i_own_this_camera,
+                       allowed_area=(((left, top), (right, top), (right, bottom), (left, bottom)),),
+                       school=args.school, strict=args.strict)
+    try:
+        setup.check()
+    except KozError as error:
+        print(f"Ko'z did not start: {error.code}. Add --i-own-this-camera if this camera is yours.")
+        return 1
+    planner = make_planner(args.planner)
+    if args.planner == "nebius" and planner.__class__.__name__ != "NebiusPlanner":
+        return 1
+    if args.video:
+        open_camera, capabilities = (lambda: FileCamera(args.video)), ("recorded_fixture",)
+    else:
+        source = int(args.camera) if args.camera.isdigit() else args.camera
+        open_camera, capabilities = (lambda: LiveCamera(source)), ()
+    hub = Hub(setup, open_camera, planner, capabilities=capabilities)
+    print(f"Ko'z runner on ws://{HOST}:{args.port} ({planner.name}). The web app connects here. Ctrl+C stops.", flush=True)
+    try:
+        asyncio.run(serve(hub, port=args.port))
+    except KeyboardInterrupt:
+        pass
+    finally:
+        with hub.lock:
+            hub._stop()
+        if hub._thread is not None:
+            hub._thread.join(STOP_WAIT_S)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

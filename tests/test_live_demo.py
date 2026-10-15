@@ -86,9 +86,17 @@ def test_banner_is_a_full_width_red_band():
 
 def test_one_launcher_per_job_both_using_the_default_guard():
     root = DEMO.parent.parent
-    assert sorted(p.name for p in root.glob("demo-*.command")) == ["demo-blur.command", "demo-counter.command"]
+    assert sorted(p.name for p in root.glob("demo-*.command")) == ["demo-agent.command", "demo-blur.command",
+                                                                    "demo-counter.command"]
     args = {name: next(line for line in (root / name).read_text().splitlines() if "live_demo.py" in line)
             for name in ("demo-blur.command", "demo-counter.command")}
     assert all("--strict" not in a and "--owner-workspace" not in a for a in args.values())
     assert "--job counter" in args["demo-counter.command"] and "--job counter" not in args["demo-blur.command"]
     assert "--school" not in args["demo-counter.command"]   # school mode is strict: it wouldn't start at home
+
+
+def test_agent_launcher_asks_for_the_job_and_warns_about_names():
+    text = (DEMO.parent.parent / "demo-agent.command").read_text()
+    run = next(line for line in text.splitlines() if "agent_demo.py" in line)
+    assert "--i-own-this-camera" in run and '"$job"' in run and "--strict" not in run
+    assert "read -r" in text and "Do not type names" in text   # CLAUDE.md rule 9 (simple)
