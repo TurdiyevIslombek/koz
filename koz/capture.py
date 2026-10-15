@@ -26,19 +26,32 @@ class FileCamera:
     """The mock camera: plays a recorded video file, one frame per read().
 
     For tests and trials only. The file must not be a recording made by Ko'z
-    (Ko'z never records), and a recipe can never choose the path."""
+    (Ko'z never records), and a recipe can never choose the path.
+
+    `realtime=True` plays it at its own frame rate, like a camera (the demos and the runner):
+    otherwise a short clip is over before the agent's 3-second rounds are. Tests leave it off
+    and move a fake clock instead."""
     capabilities = ("recorded_fixture",)
 
-    def __init__(self, path, clock=time.monotonic):
+    def __init__(self, path, clock=time.monotonic, realtime=False):
         self._clock = clock
         self._cap = cv2.VideoCapture(str(path))
         if not self._cap.isOpened():
             raise KozError("UNSUPPORTED_CAPABILITY", "video file cannot be opened")
+        fps = self._cap.get(cv2.CAP_PROP_FPS)
+        self._period = (1.0 / fps if fps and 1 <= fps <= 120 else 1 / 15) if realtime else 0.0
+        self._started = None
         self._index = 0
         self.is_open = True
 
     def read(self):
         """The next frame, or None when the recording has ended."""
+        if self._period:   # wait until this frame's moment in the recording
+            if self._started is None:
+                self._started = time.monotonic()
+            wait = self._started + self._index * self._period - time.monotonic()
+            if wait > 0:
+                time.sleep(wait)
         ok, image = self._cap.read() if self.is_open else (False, None)
         if not ok:
             self.close()

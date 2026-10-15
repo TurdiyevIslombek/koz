@@ -28,6 +28,7 @@ from http import HTTPStatus
 
 from . import policy
 from .agent import Agent, make_planner
+from .agent.choose import CHOICES, planned_by
 from .agent.planner import MAX_TEXT
 from .errors import CODES, KozError
 from .events import ID_PATTERN, MAX_MESSAGE_BYTES, EventLog, count_unknown
@@ -115,12 +116,14 @@ class Hub:
     `open_camera` opens the camera chosen on the command line; `planner` makes the plans."""
 
     def __init__(self, setup, open_camera, planner, capabilities=(), deliver=None, clock=time.monotonic,
-                 wall_clock=time.time, eval_seconds=policy.AGENT_EVAL_S, models=None):
+                 wall_clock=time.time, eval_seconds=policy.AGENT_EVAL_S, models=None, report_planner=False,
+                 say=lambda text: None):
         self.setup, self._open_camera, self.planner = setup, open_camera, planner
         self.capabilities = sorted(capabilities)
         self.deliver = deliver or (lambda event: None)
         self.clock, self.wall_clock, self.eval_seconds, self.models = clock, wall_clock, eval_seconds, models
-        self.events = EventLog(lambda event: self.deliver(event), wall_clock=wall_clock)
+        self.say = say   # one line per job for the terminal: who planned it and how it ended (no job text)
+        self.events = EventLog(lambda event: self.deliver(event), wall_clock=wall_clock, report_planner=report_planner)
         self.events.listeners.append(self._track)
         self.lock = self.events.lock   # one lock for events and hub state (see EventLog)
         self._results = OrderedDict()  # command_id -> its command_result data
@@ -180,6 +183,16 @@ class Hub:
     def busy(self):
         return self._running_job is not None
 
+    @property
+    def agent(self):
+        """The current or last job's Agent (its plan and runner), or None."""
+        return self._agent
+
+    def stop_local(self):
+        """Stop the current job from this computer (q in the window): the same as stop_job."""
+        with self.lock:
+            self._stop()
+
     # --- commands -------------------------------------------------------------------
 
     def handle(self, text):
@@ -217,7 +230,7 @@ class Hub:
         self._answer(command)
         self._job_result, self._camera, self._running_job = None, None, command["job_id"]
         self._agent = Agent(self.planner, self.setup, self._opened_camera, self.events, clock=self.clock,
-                            eval_seconds=self.eval_seconds, models=self.models)
+                            eval_seconds=self.eval_seconds, models=self.models, on_plan=self._planned)
         self._thread = threading.Thread(target=self._work, args=(self._agent, command["job_id"], command["data"]),
                                         name="koz-job", daemon=True)
         self._thread.start()
@@ -298,6 +311,10 @@ class Hub:
 
     # --- the job thread ---------------------------------------------------------------
 
+    def _planned(self, plan):
+        self.say(f"Plan by {planned_by(plan, self.planner)}: "
+                 + (f"refused ({plan.refusal})" if plan.refusal else f"{plan.job} ({plan.language})"))
+
     def _opened_camera(self):
         self._camera = self._open_camera()
         return self._camera
@@ -310,6 +327,9 @@ class Hub:
                 result = agent.run_recipe(start["recipe"], origin="import")
             with self.lock:
                 self._job_result = (job_id, result)
+            self.say(f"Job {result.state}" + (f" ({result.code})" if result.code else "")
+                     + (", after adjusting " + ", ".join(c["change"]["setting"] for c in result.agent_changes)
+                        if result.agent_changes else ""))
             if result.state == "running":
                 runner = result.runner
                 while not agent.stop_requested and runner.step():
@@ -399,7 +419,67 @@ async def serve(hub, host=HOST, port=PORT, started=None):
             beating.cancel()
 
 
+def show_window(hub, alive):
+    """The local preview of the current job (--window): what the camera sees, faces blurred,
+    with the status and the privacy check. On screen only, never saved or sent (rule 8).
+    Runs in the main thread (macOS draws windows only there). q or Esc stops the job."""
+    import cv2
+    import numpy as np
+
+    from .messages import all_messages
+    from .preview import WHITE, draw, put_centred
+
+    title = "Ko'z runner (q stops the job)"
+    messages, latest = all_messages("en"), {}
+
+    def keep(event):   # runs in the job thread, inside EventLog's lock: just store
+        kind, data = event["type"], event["data"]
+        if kind == "status" and data["state"] == "planning":
+            latest.clear()   # a new job: forget the last one's fault and numbers
+        latest[kind] = data
+        if kind == "recipe":
+            block = next((b for b in data["recipe"]["blocks"] if b["type"] == "line_counter"), None)
+            latest["line"] = tuple(block["settings"]["line"][0] + block["settings"]["line"][1]) if block else None
+
+    def screen(lines):
+        view = np.zeros((480, 640, 3), np.uint8)
+        for i, text in enumerate(lines):
+            put_centred(view, text, 200 + 40 * i, 0.8 if i == 0 else 0.6, 2 if i == 0 else 1, WHITE)
+        return view
+
+    hub.events.listeners.append(keep)
+    frames, since, last = 0, time.monotonic(), None
+    while alive():
+        agent = hub.agent
+        runner = agent.runner if agent is not None else None
+        try:
+            if runner is not None and (runner.state in ("checking", "evaluating", "running") or "fault" in latest):
+                if runner.preview is not None and runner.preview is not last:
+                    frames, last = frames + 1, runner.preview
+                note = f"plan by {planned_by(agent.plan, hub.planner)}" if agent.plan is not None else None
+                view = draw(runner, latest, messages, frames / max(time.monotonic() - since, 1e-6),
+                            latest.get("line"), note)
+            elif hub.busy:
+                view = screen(["Planning the job...", "then trying it on the camera"])
+            elif "fault" in latest:   # refused before any camera opened
+                code = latest["fault"]["code"]
+                view = screen(["Refused", messages.get(code, code), f"({code})"])
+            else:
+                frames, since = 0, time.monotonic()
+                view = screen(["Ko'z is ready", "Type the job in the web app (Setup).",
+                               "This window shows what the camera sees, faces blurred."])
+        except Exception:   # the job thread changed the frame while drawing: skip this one
+            time.sleep(0.01)
+            continue
+        cv2.imshow(title, view)
+        if cv2.waitKey(30) & 0xFF in (ord("q"), 27):
+            hub.stop_local()
+    cv2.destroyAllWindows()
+
+
 def main(argv=None):
+    import signal
+
     from .capture import FileCamera, LiveCamera
     from .local_setup import LocalSetup
 
@@ -412,8 +492,12 @@ def main(argv=None):
                         help="left,top,right,bottom of the allowed area, 0..1 (default: whole frame)")
     parser.add_argument("--school", action="store_true", help="school mode: counts only, and always strict")
     parser.add_argument("--strict", action="store_true", help="strict mode for schools and public cameras")
-    parser.add_argument("--planner", choices=("auto", "fake", "nebius"), default="auto",
-                        help="auto: Nemotron on Nebius if NEBIUS_API_KEY is in .env, else the rule-based planner")
+    parser.add_argument("--planner", choices=CHOICES, default="auto",
+                        help="auto: Nemotron on Nebius if NEBIUS_API_KEY is in .env, else Gemma 4 on this Mac "
+                             "if Ollama runs, else the rule planner")
+    parser.add_argument("--window", action="store_true", help="show the camera view (faces blurred) of each job")
+    parser.add_argument("--report-planner", action="store_true",
+                        help="send status.planner (contract 8.1); only once the web app accepts it")
     parser.add_argument("--port", type=int, default=PORT)
     args = parser.parse_args(argv)
 
@@ -427,24 +511,46 @@ def main(argv=None):
         print(f"Ko'z did not start: {error.code}. Add --i-own-this-camera if this camera is yours.")
         return 1
     planner = make_planner(args.planner)
-    if args.planner == "nebius" and planner.__class__.__name__ != "NebiusPlanner":
-        return 1
     if args.video:
-        open_camera, capabilities = (lambda: FileCamera(args.video)), ("recorded_fixture",)
+        open_camera, capabilities = (lambda: FileCamera(args.video, realtime=True)), ("recorded_fixture",)
     else:
         source = int(args.camera) if args.camera.isdigit() else args.camera
         open_camera, capabilities = (lambda: LiveCamera(source)), ()
-    hub = Hub(setup, open_camera, planner, capabilities=capabilities)
-    print(f"Ko'z runner on ws://{HOST}:{args.port} ({planner.name}). The web app connects here. Ctrl+C stops.", flush=True)
+    hub = Hub(setup, open_camera, planner, capabilities=capabilities, report_planner=args.report_planner,
+              say=lambda text: print(text, flush=True))
+
+    def interrupted(signum, frame):   # closing the Terminal window (HUP) or the launcher (TERM): stop cleanly
+        raise KeyboardInterrupt
+    for sig in (signal.SIGTERM, signal.SIGHUP):
+        signal.signal(sig, interrupted)
+
+    print(f"Ko'z runner on ws://{HOST}:{args.port}. The web app connects here. Ctrl+C stops.", flush=True)
+    print(f"Planners, in order: {planner.name}", flush=True)
+    failed = []
+
+    def run_server():
+        try:
+            asyncio.run(serve(hub, port=args.port))
+        except OSError as error:   # most often: another runner already uses the port
+            failed.append(error)
+
     try:
-        asyncio.run(serve(hub, port=args.port))
+        if args.window:
+            server = threading.Thread(target=run_server, name="koz-websocket", daemon=True)
+            server.start()
+            show_window(hub, server.is_alive)
+        else:
+            run_server()
     except KeyboardInterrupt:
         pass
     finally:
-        with hub.lock:
-            hub._stop()
+        hub.stop_local()
         if hub._thread is not None:
             hub._thread.join(STOP_WAIT_S)
+    if failed:
+        print(f"Ko'z runner could not listen on port {args.port}: is another runner already running?")
+        return 1
+    print("Ko'z runner stopped.", flush=True)
     return 0
 
 

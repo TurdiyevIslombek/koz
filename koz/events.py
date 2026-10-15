@@ -63,6 +63,8 @@ def _capabilities(v):
 
 
 _PRIVACY = ("approved", "blocked", "unknown")
+PLANNERS = ("rules", "ollama", "nebius")
+_STATUS_PLANNER = _words(*PLANNERS, nullable=True)   # optional status field (contract 8.1, Oct 15)
 CHECKS = ("target_visible", "target_centered", "counts_available", "motion_available", "privacy_approved")
 LABELS = ("left", "center", "right", "lost", "detected", "clear", "risk", "approved", "blocked", "known", "unknown")
 SETTINGS = ("color_finder.hue_center", "color_finder.hue_half_width", "color_finder.saturation_min",
@@ -219,7 +221,7 @@ class EventLog:
     """Numbers the events of one runner session and hands each to `sink`
     (a list's append in tests; the WebSocket later)."""
 
-    def __init__(self, sink, job_id=None, trial_id=None, wall_clock=time.time):
+    def __init__(self, sink, job_id=None, trial_id=None, wall_clock=time.time, report_planner=False):
         for given in (job_id, trial_id):
             if given is not None and not (type(given) is str and ID_PATTERN.fullmatch(given)):
                 raise KozError("INVALID_EVENT", "bad job or trial ID")
@@ -231,6 +233,8 @@ class EventLog:
         # The job thread and the WebSocket thread both emit: one lock keeps seq in order.
         # Re-entrant, so the server can hold it around a check and an emit.
         self.lock = threading.RLock()
+        # status.planner (contract 8.1): sent only once the web accepts it (report_planner).
+        self.report_planner, self.planner = report_planner, None
 
     def emit(self, event_type, data, revision=None):
         with self.lock:
@@ -238,6 +242,8 @@ class EventLog:
 
     def _emit(self, event_type, data, revision):
         spec = FIELDS.get(event_type)
+        if event_type == "status" and self.report_planner and type(data) is dict:
+            data, spec = {**data, "planner": self.planner}, {**spec, "planner": _STATUS_PLANNER}
         if (spec is None or type(data) is not dict or set(data) != set(spec)
                 or not all(spec[name](data[name]) for name in spec)
                 or not _whole(1, 3, nullable=True)(revision)
@@ -261,4 +267,13 @@ class EventLog:
             if given is not None and not (type(given) is str and ID_PATTERN.fullmatch(given)):
                 raise KozError("INVALID_EVENT", "bad job or trial ID")
         with self.lock:
+            if job_id != self.job_id:
+                self.planner = None   # a new job: nobody has planned it yet
             self.job_id, self.trial_id = job_id, trial_id
+
+    def set_planner(self, source):
+        """Who made the current job's plan: "rules", "ollama", "nebius" or None."""
+        if source not in (*PLANNERS, None):
+            raise KozError("INVALID_EVENT", "unknown planner")
+        with self.lock:
+            self.planner = source

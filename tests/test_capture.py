@@ -32,3 +32,17 @@ def test_a_camera_that_cannot_open_is_refused(tmp_path):
     with pytest.raises(KozError) as caught:
         LiveCamera(str(tmp_path / "no-such-camera.avi"), warmup_s=0)
     assert caught.value.code == "UNSUPPORTED_CAPABILITY"
+
+
+def test_a_recording_can_play_at_its_own_speed(test_video):
+    """The demos and the runner play --video like a camera (10 fps here), so a short clip
+    lasts long enough for the agent's rounds."""
+    import time
+
+    from koz.capture import FileCamera
+    camera = FileCamera(test_video, realtime=True)
+    started = time.monotonic()
+    for _ in range(6):
+        assert camera.read() is not None
+    assert time.monotonic() - started >= 0.45   # frames 0..5 at 10 fps: 0.5 s
+    camera.close()

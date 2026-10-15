@@ -13,7 +13,8 @@ from helpers import (FULL_FRAME, GREEN, ORANGE_RED, RED, Approve, EndlessCamera,
 from koz import policy
 from koz.agent import Agent, ChainLog, FakePlanner, NebiusPlanner, make_planner
 from koz.agent import loop as agent_loop
-from koz.agent.nebius import load_env, parse_choice
+from koz.agent.choose import load_env
+from koz.agent.menu import parse_choice
 from koz.agent.planner import HUES, language_of
 from koz.capture import FileCamera
 from koz.errors import KozError
@@ -326,12 +327,17 @@ def test_nebius_refusal_uses_the_contract_message():
     assert plan.refusal == "PROFILING_FORBIDDEN" and plan.message == message("PROFILING_FORBIDDEN", "en")
 
 
-def test_without_a_key_the_fake_planner_is_used_and_it_says_so():
+def test_without_a_key_or_ollama_the_rule_planner_answers_and_it_says_so():
     said = []
-    assert isinstance(make_planner(env={}, say=said.append), FakePlanner)
+    planner = make_planner(env={}, say=said.append)
     assert said and "NEBIUS_API_KEY" in said[0]
-    assert isinstance(make_planner(env={"NEBIUS_API_KEY": "k"}, say=said.append), NebiusPlanner)
-    assert make_planner(env={"NEBIUS_API_KEY": "k", "NEBIUS_MODEL": "nvidia/x"}).model == "nvidia/x"
+    assert [p.source for p in planner.planners] == ["ollama", "rules"]
+    planner.planners[0]._send = lambda *a, **k: (_ for _ in ()).throw(KozError("PLANNER_UNAVAILABLE"))
+    plan = planner.plan("find the red ball")   # Ollama isn't running: the rule planner answers
+    assert plan.source == "rules" and planner.last is planner.planners[-1]
+    assert [p.source for p in make_planner(env={"NEBIUS_API_KEY": "k"}).planners] == ["nebius", "ollama", "rules"]
+    assert make_planner(env={"NEBIUS_API_KEY": "k", "NEBIUS_MODEL": "nvidia/x"}).planners[0].model == "nvidia/x"
+    assert isinstance(make_planner("rules", env={}), FakePlanner)
 
 
 def test_env_file_is_read_without_printing(tmp_path, capsys):

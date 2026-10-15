@@ -1,6 +1,6 @@
 # Ko'z status
 
-Updated Oct 15, after the agent loop. 291 tests pass, 1 skipped (it needs your face clip):
+Updated Oct 15, after Ollama, round targets and start-koz. 326 tests pass, 1 skipped (it needs your face clip):
 `.venv/bin/python -m pytest -q`
 
 ## What works
@@ -10,21 +10,24 @@ Updated Oct 15, after the agent loop. 291 tests pass, 1 skipped (it needs your f
 | Recipe checks (`koz/recipe.py`) | Strict parsing → contract schema → extra checks → "is it built?". Tested. |
 | Privacy guard (`koz/privacy.py`, `koz/scene.py`) | **Default (every job): run anywhere, stop on what it sees**: darkness or a covered lens, a bed or toilet (NanoDet ≥ 0.40 in 2 of 3 checks), a sink in what looks like a bathroom, or a confident private room (top guess ≥ 0.50, or ≥ 0.40 together). **`--strict`** (schools, public cameras): only listed public places run. Objects checked every 0.5 s, the room every 3 s, and on the next frame when the camera moves; stops 0.07 s after a toilet or bed comes into view on recorded clips (target 1 s); one line per check, with timings. On 71 real photos: default runs every desk without a bed, kitchen, classroom and shop, and lets 3 of 23 bathroom/bedroom photos through (limit); strict stops all 23. **Live stop time: to measure (live test #5).** |
 | Face blur (`koz/blocks/face_blur.py`) | YuNet on OpenCV 5, heavy pixelation, fails closed. **No real-face test yet** (waiting for your clip in `tests/fixtures/private/face.mp4`). |
-| Colour finder (`koz/blocks/color_finder.py`) | Biggest patch of one colour → left / center / right / lost. Tested on the recorded test video. |
+| Colour finder (`koz/blocks/color_finder.py`) | The biggest **round** patch of one colour (roundness ≥ 0.65, fills ≥ 0.70 of its circle, radius ≥ 8 px; fixed in code) → left / center / right / lost. Measured on drawn shapes: finds balls (small, highlighted, a quarter hidden, a third out of the frame); rejects squares, rectangles, triangles, long ovals and the orange-lit classroom that fooled it. **Not yet tried on a real ball on camera.** |
 | Person detector (`koz/blocks/person_detector.py`) | NanoDet-Plus on OpenCV 5, "person" class only; boxes stay local, only the number of people is sent. Decoding tested with exact fake outputs. **Not yet measured on real people.** |
 | Line counter (`koz/blocks/line_counter.py`) | In-memory tracker; counts crossings through the line segment in each direction; person numbers forgotten 2 s after they leave. Tested with scripted walkers. |
 | Runner (`koz/runner.py`) | mask → privacy → blur → blocks → events; stale or slow frames → `unknown` with a reason. School mode allows the counter only. |
 | Events (`koz/events.py`) | All 7 types (status, recipe, observation, decision, command_result, fault, trial_result), checked against `contracts/events.md` before sending. |
 | Agent loop (`koz/agent/`) | Words → plan → try 3 s → check the OpenCV numbers → change one setting → try again (3 tries at most) → run. Each step is an event (observation → decision → new revision → result) and one printed line. Refusals stop before the camera opens. On recorded clips: red asked, ball looks orange-red → hue 0 → 13, found; with the real models, green asked for a teal ball → hue 60 → 77, found. **Not yet tried on your camera.** |
-| Planners (`koz/agent/planner.py`, `nebius.py`) | FakePlanner (word lists, Uz/Ru/En, used by every test). NebiusPlanner: Nemotron picks only the job / colour / school / refusal; the recipe and the plan text come from fixed templates. **No `.env` key yet, so Nemotron is untested**; default model `nvidia/nemotron-3-super-120b-a12b` (from Nebius's cookbook). |
-| Runner WebSocket (`koz/server.py`) | `ws://127.0.0.1:8765` for the web app: every event as JSON, the 4 commands, trials → `trial_result` with the agent's changes. Refuses browser connections. Tested with a real WebSocket client; **not yet with Codex's web app.** |
+| Planners (`koz/agent/`) | Asked in order for every job: Nemotron on Nebius (if a key) → Gemma 4 on this Mac via Ollama (if running) → rule planner. The AI only picks job / colour / school / refusal (`menu.py`); recipe and plan text from templates; any refusal wins; a failing planner falls back. **Nebius: blocked (Uzbekistan isn't in its sign-up list). Ollama: not installed yet, so Gemma is untested.** The rule planner is used for now. |
+| Runner WebSocket (`koz/server.py`) | `ws://127.0.0.1:8765` for the web app: every event as JSON, the 4 commands, trials → `trial_result` with the agent's changes. Refuses browser connections. `--window` shows each job's blurred camera view. |
+| One launcher (`start-koz.command`) | Runner + web app, opens Setup. Tested on a recorded clip: typed "Yashil koptokni top" in Setup → trying → running; the Trials tab showed the chain (not found → hue 60 → 77 → left). Closing Terminal (HUP) or TERM stops both, nothing left running. |
+| Texts (`docs/TEXTS.md`) | Every Uzbek and Russian plan, refusal and stop text, made from the code and the contract (a test keeps it up to date). **Waiting for your check.** |
 | Cameras (`koz/capture.py`) | Recorded video (mock camera); live reader for the MacBook camera that drops the first second (too dark). **ESP32-CAM stream: not tried yet.** |
 | Live demo (`scripts/live_demo.py`) | Colour job or `--job counter`: blurred view, red-object ring or people boxes + line, status, scene guesses; a full-width red banner when it stops or can't start (e.g. camera not allowed). Runs headless in tests. Live test #1 on your camera found the guard bug (fixed); **re-run pending.** |
 
 ## How to run
 
 Double-click in Finder (uses the MacBook camera; q quits; if Ko'z stops, a red banner says why):
-- `demo-agent.command`: type the job in words; Ko'z plans, tries, checks, adjusts and runs it
+- `start-koz.command`: the runner and the web app together; type the job in the browser's Setup page
+- `demo-agent.command`: type the job in Terminal; Ko'z plans, tries, checks, adjusts and runs it
 - `demo-blur.command`: privacy guard + face blur + colour finder (red object)
 - `demo-counter.command`: people counter
 
@@ -44,9 +47,9 @@ python3.13 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
 
 ## What's next
 
-1. You: try `demo-agent.command` with the red ball (and a ball that isn't quite red); live test #5 with `demo-blur.command`; the privacy trials in `docs/TRIALS.md`; the face clip.
-2. You: put `NEBIUS_API_KEY=...` in `.env`, then `.venv/bin/python -m koz.agent.nebius --models` to see the Nemotron IDs.
-3. Codex: connect the web app to `ws://127.0.0.1:8765`.
+1. You: say yes to installing Ollama (207 MB) + `gemma4:e2b-it-qat` (4.3 GB); then Claude measures planning time and memory next to the camera.
+2. You: try `start-koz.command` with a red ball on the camera; live test #5 with `demo-blur.command`; the privacy trials in `docs/TRIALS.md`; the face clip; check `docs/TEXTS.md`.
+3. Codex: `.collab/specs/web-planner-and-live.md` (show `status.planner`, the Setup privacy line, the colour job's Live view). Then Claude turns on `--report-planner` in `start-koz.command`.
 4. Fly-brain block (from the copied stage 2–3 code) + `firmware/motor_listener/` (car demo).
 5. AWS in eu-central-1 on Oct 19–20.
 6. Trials: car and classroom lists to write in `docs/TRIALS.md`.
@@ -63,7 +66,9 @@ python3.13 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
 - Someone standing on the counting line and swaying can be counted in and out.
 - The live demo finds one fixed colour (red by default); the agent demo tunes it.
 - The agent can only adjust the settings the contract lists (colour and detector numbers). The counting line's position is geometry, which the contract doesn't allow an adjustment to change; moving it needs a new start (or a contract change).
-- "Target visible" passes if any patch of the asked colour is in view, not necessarily the ball (seen on a classroom photo with other red things).
+- "Target visible" now needs a round blob, but any round thing of that colour counts (a red plate, a red lamp). A ball more than half out of the frame, or stretched more than about 1.5 : 1 by motion blur, counts as lost.
 - The plan texts in Uzbek and Russian need your check (`koz/agent/planner.py`).
 - The web app talks to the runner on this computer (`ws://127.0.0.1:8765`, no login). The contract's cloud connection (runner → web with a runner token, section 5) comes with AWS.
+- This Mac has 8 GB of memory (Apple M3) and 13 GB of free disk. Only the smallest Gemma 4 (E2B, 4.3 GB) fits next to macOS, the browser and the camera models; it is unloaded after each plan.
+- Recorded clips (`--video`) now play at their own speed, like a camera.
 

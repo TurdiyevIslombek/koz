@@ -26,6 +26,7 @@ class Plan:
     recipe: dict | None
     refusal: str | None    # an error code from contracts/events.md, when refused
     message: str           # what Ko'z will do, or why it won't, in the user's language
+    source: str = "rules"  # who made it: "rules" (this file), "ollama" or "nebius" (status.planner)
 
 
 # --- the recipes Ko'z can run (templates) ---------------------------------------------
@@ -63,12 +64,12 @@ COLOUR_WORDS = {
 }
 PLAN_TEXT = {
     "find_colour": {
-        "en": "I will look for the {colour} object and say whether it is left, center or right. "
+        "en": "I will look for a round {colour} object, like a ball, and say whether it is left, center or right. "
               "Faces are blurred and nothing is saved.",
-        "ru": "Я буду искать {colour} предмет и говорить, где он: слева, по центру или справа. "
-              "Лица размываются, ничего не сохраняется.",
-        "uz": "{colour} narsani qidiraman va u chapda, o'rtada yoki o'ngda ekanini aytaman. "
-              "Yuzlar xiralashtiriladi, hech narsa saqlanmaydi.",
+        "ru": "Я буду искать круглый {colour} предмет, например мяч, и говорить, где он: слева, по центру или "
+              "справа. Лица размываются, ничего не сохраняется.",
+        "uz": "Yumaloq {colour} narsani (masalan, koptokni) qidiraman va u chapda, o'rtada yoki o'ngda ekanini "
+              "aytaman. Yuzlar xiralashtiriladi, hech narsa saqlanmaydi.",
     },
     "count_people": {
         "en": "I will count people crossing the line in the middle of the view (right to left = in). "
@@ -184,14 +185,18 @@ def refusal_for(text):
     return None
 
 
-def refused(text, code):
+def refused(text, code, source="rules"):
     language = language_of(text)
-    return Plan(language, None, None, code, message(code, language))
+    return Plan(language, None, None, code, message(code, language), source)
 
 
 class FakePlanner:
     """Fixed word lists, no network: the same sentence always gives the same plan."""
-    name = "FakePlanner (rules)"
+    name = "rule planner (no AI model)"
+    source = "rules"
+
+    def available(self):
+        return True
 
     def plan(self, text):
         code = refusal_for(text)

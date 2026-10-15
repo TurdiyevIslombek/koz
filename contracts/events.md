@@ -10,6 +10,9 @@ Changes since then (both lanes agreed):
 - Oct 15: `status.state` `checking` now means "not approved yet, or confirming an object
   it saw once" (section 8.1). Routine privacy checks (every 0.5 s) no longer flip the
   status, which would have sent about 4 status events per second.
+- Oct 15: optional `status.planner` (section 8.1), so the dashboard can show who made the
+  plan. Proposed by Codex and Claude independently. Rollout: web accepts both shapes first,
+  then the runner sends it on every status.
 
 `recipe.schema.json` and this file are the contract together.
 **MVP** = built by Oct 26. **stretch** = only if built; the dashboard must not
@@ -269,6 +272,14 @@ never a person.
 | `motor` | `not_present` · `disarmed` · `enabled` · `stop_commanded` |
 | `opencv_major` | 5, or null before OpenCV starts |
 | `capabilities` | list from `rtsp`, `recorded_fixture`, `looming`, `scene_tripwire`; may be empty |
+| `planner` | optional: `rules` · `ollama` · `nebius` · null — who made this job's plan |
+
+`planner` names the planner whose answer was used, after any fallback (Nebius → Ollama →
+rules): `rules` also when the rule check refused the request before any AI model saw it. It
+is null with no job, while planning, for an imported recipe, and when planning failed. It
+stays the same through the job's adjustments (the tuner is not a planner) and resets with
+each new job. No model names: they are free text. A missing field means "not reported",
+never `rules`.
 
 `held` = outputs stopped; a new start is needed. `checking` = before the first
 privacy approval, or while the guard confirms an object it saw once (frames held, outputs

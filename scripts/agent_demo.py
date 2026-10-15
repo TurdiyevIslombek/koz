@@ -18,14 +18,14 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from live_demo import WINDOW, draw, draw_banner, english_messages, quit_pressed, startup_banner  # noqa: E402
-
 from koz.agent import Agent, ChainLog, make_planner  # noqa: E402
+from koz.agent.choose import CHOICES, planned_by  # noqa: E402
 from koz.capture import FileCamera, LiveCamera  # noqa: E402
 from koz.errors import KozError  # noqa: E402
 from koz.events import EventLog  # noqa: E402
 from koz.local_setup import LocalSetup  # noqa: E402
-from koz.messages import message  # noqa: E402
+from koz.messages import all_messages, message  # noqa: E402
+from koz.preview import WINDOW, draw, draw_banner, quit_pressed, startup_banner  # noqa: E402
 
 
 def counting_line(recipe):
@@ -40,19 +40,18 @@ def main(argv=None):
                         help="confirm the camera is yours and you may film this view (rule 7)")
     parser.add_argument("--camera", default="0", help="0 = this computer's camera, or a stream URL")
     parser.add_argument("--video", help="play a recorded video file instead of a camera")
-    parser.add_argument("--planner", choices=("auto", "fake", "nebius"), default="auto",
-                        help="auto: Nemotron on Nebius if NEBIUS_API_KEY is in .env, else the rule-based planner")
+    parser.add_argument("--planner", choices=CHOICES, default="auto",
+                        help="auto: Nemotron on Nebius if NEBIUS_API_KEY is in .env, else Gemma 4 on this Mac "
+                             "if Ollama runs, else the rule planner")
     parser.add_argument("--strict", action="store_true", help="strict mode for schools and public cameras")
     parser.add_argument("--seconds", type=float, help="stop this many seconds after the job starts running")
     parser.add_argument("--no-window", action="store_true", help="terminal only")
     args = parser.parse_args(argv)
 
     planner = make_planner(args.planner)
-    if args.planner == "nebius" and planner.__class__.__name__ != "NebiusPlanner":
-        return 1
     setup = LocalSetup(owner_confirmed=args.i_own_this_camera,
                        allowed_area=(((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)),), strict=args.strict)
-    messages = english_messages()
+    messages = all_messages("en")
     latest, shown = {}, {"line": None}
     chain = ChainLog()
 
@@ -79,14 +78,15 @@ def main(argv=None):
 
     def open_camera():
         if args.video:
-            return FileCamera(args.video)
+            return FileCamera(args.video, realtime=True)
         return LiveCamera(int(args.camera) if args.camera.isdigit() else args.camera)
 
     def on_plan(plan):
         chain.language = plan.language
+        print(f"Plan by {planned_by(plan, planner)}.")
         print(f"\nPlan ({plan.language}): {plan.message}\n", flush=True)
 
-    print(f"Planner: {planner.name}")
+    print(f"Planners, in order: {planner.name}")
     agent = Agent(planner, setup, open_camera, events, on_frame=on_frame, on_plan=on_plan)
     try:
         result = agent.run(args.job)

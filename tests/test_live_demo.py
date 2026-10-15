@@ -100,3 +100,16 @@ def test_agent_launcher_asks_for_the_job_and_warns_about_names():
     run = next(line for line in text.splitlines() if "agent_demo.py" in line)
     assert "--i-own-this-camera" in run and '"$job"' in run and "--strict" not in run
     assert "read -r" in text and "Do not type names" in text   # CLAUDE.md rule 9 (simple)
+
+
+def test_start_koz_runs_runner_and_web_together_and_stops_both():
+    root = DEMO.parent.parent
+    launcher = root / "start-koz.command"
+    text = launcher.read_text()
+    assert launcher.stat().st_mode & 0o111   # double-clickable
+    assert subprocess.run(["bash", "-n", str(launcher)]).returncode == 0
+    runner = next(line for line in text.splitlines() if "koz.server" in line and not line.lstrip().startswith("#"))
+    assert "--i-own-this-camera" in runner and "$window" in runner and "--strict" not in runner
+    assert "node server/index.mjs" in text and "#setup" in text
+    assert "trap 'stop; exit 0' INT TERM HUP" in text   # closing the Terminal window stops both
+    assert "Do not type names" in text

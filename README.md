@@ -44,16 +44,25 @@ fails (at most 3 tries) and runs. Every step is printed as one line: observation
 new setting → result. Requests Ko'z refuses (who is this person, a hidden camera, age or gender)
 stop before the camera opens. `--video clip.mp4` uses a recording instead of the camera.
 
-The planner is rule-based by default. With `NEBIUS_API_KEY=...` in `.env`, NVIDIA Nemotron on
-Nebius Token Factory chooses the job instead (only your sentence is sent; `NEBIUS_MODEL` picks
-the model; `.venv/bin/python -m koz.agent.nebius --models` lists the ones your key can use).
+Which planner reads the sentence, asked again for every job:
+1. NVIDIA Nemotron on Nebius Token Factory, if `NEBIUS_API_KEY=...` is in `.env` (only the
+   sentence is sent; `NEBIUS_MODEL` picks the model);
+2. else Gemma 4 on this Mac through [Ollama](https://ollama.com), if it is running with the
+   model (`ollama pull gemma4:e2b-it-qat`, 4.3 GB; `OLLAMA_MODEL` picks another). Nothing leaves the Mac;
+3. else the rule planner (fixed word lists).
+If an AI planner fails, the next one answers. Whichever it is, the AI only picks the job, colour
+and refusal: the recipe and the plan text come from fixed templates, and any refusal wins. The
+terminal prints which planner made each plan.
 
-## Runner for the web app
+## Everything at once: `start-koz.command`
 
-```bash
-.venv/bin/python -m koz.server --i-own-this-camera
-```
-A WebSocket at `ws://127.0.0.1:8765` (this computer only). It sends every event exactly as in
+Double-click `start-koz.command`. It starts the runner and the web app and opens the Setup
+page: type the job there and watch it run. The numbers, the plan and the adjustments show in the
+browser; the camera view (faces blurred) shows in the "Ko'z runner" window, where q stops the
+job. Close the Terminal window to stop both. (Needs Node.js 22+ for the web app.)
+
+The runner alone: `.venv/bin/python -m koz.server --i-own-this-camera [--window]`, a WebSocket
+at `ws://127.0.0.1:8765` (this computer only) that sends every event exactly as in
 `contracts/events.md` and accepts the 4 commands. Browsers can't connect to it directly; the
 web app's own server does.
 

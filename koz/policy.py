@@ -38,6 +38,16 @@ STATUS_INTERVAL_S = 1.0        # a status heartbeat at least this often while ru
 
 # color_finder: "center" means within this distance of the middle (0..1 across the frame).
 TARGET_CENTER_HALF_WIDTH = 0.1
+# color_finder: a target must look like a ball, not just any patch of the colour (an orange-lit
+# classroom passed as "ball found", Oct 15). Fixed here, not in recipes, so no plan or adjustment
+# can loosen them. Set from measured shapes (JPEG, noise): a ball r 8-40 px has roundness 0.86-0.89
+# and fill 0.88-0.96; a quarter hidden 0.83/0.76; a ball a third out of the frame 0.78 (fill counted
+# inside the frame); a 1.3:1 blurred ball 0.87/0.76. Rejected: a square (fill 0.64), a 2:1
+# rectangle (0.51), a triangle (0.44), a 1.6:1 oval (0.63), every red patch in that classroom
+# (roundness <= 0.41, fill <= 0.46).
+TARGET_MIN_ROUNDNESS = 0.65   # 4 pi area / perimeter^2: 1 for a perfect circle, lower for ragged shapes
+TARGET_MIN_FILL = 0.70        # area / its smallest enclosing circle (the part inside the frame)
+TARGET_MIN_RADIUS_PX = 8      # smaller than this, the shape can't be judged (in the recipe's frame size)
 
 # Privacy guard: Places365 scene classes that stop the job (index in categories_places365.txt, name).
 PRIVATE_SCENES = {

@@ -285,3 +285,17 @@ def test_a_trial_without_a_job_never_inherits_earlier_changes(orange_clip):
     bench.command("finish_trial", {"result": "unknown", "reason": "interrupted", "expected_count": None},
                   job_id=bench.hub.events.job_id, trial_id=trial)
     assert bench.of("trial_result")[-1]["data"]["agent_changes"] == []
+
+
+def test_the_runner_says_who_planned_each_job_and_can_report_it():
+    said = []
+    bench = Bench(lambda clock: pytest.fail("the camera must not open"))
+    bench.hub = Hub(SETUP, lambda: pytest.fail("the camera must not open"), FakePlanner(), deliver=bench.sent.append,
+                    clock=bench.clock, wall_clock=lambda: NOW, report_planner=True, say=said.append)
+    bench.command("start_job", {"input": "prompt", "language": "en", "text": "Who is this man? Recognise him"},
+                  job_id=new_id())
+    bench.wait()
+    assert said[0] == "Plan by the rule planner (no AI model): refused (IDENTITY_FORBIDDEN)"
+    assert said[1] == "Job refused (IDENTITY_FORBIDDEN)"
+    assert "Who is this man" not in " ".join(said)   # the job's text is never printed or logged
+    assert bench.of("status")[-1]["data"]["planner"] == "rules"

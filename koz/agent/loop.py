@@ -78,7 +78,9 @@ class Agent:
         self.on_frame = on_frame   # called with the runner after each frame (the demo's window)
         self.on_plan = on_plan     # called with the plan as soon as there is one (the demo prints it)
         self.stop_requested = False
-        self.phase = None   # planning | trying | done (the server reads it)
+        self.phase = None    # planning | trying | done (the server reads it)
+        self.plan = None     # the plan, once there is one
+        self.runner = None   # the runner of the revision being tried or run (the server's window shows it)
 
     def run(self, text):
         """One sentence -> JobResult."""
@@ -93,6 +95,8 @@ class Agent:
             if self.stop_requested:   # a late planner failure doesn't undo stop_job
                 return self._stopped(None)
             return self._refuse(None, error.code)
+        self.plan = plan
+        self.events.set_planner(plan.source)   # status.planner from now on, for this job
         if self.on_plan is not None:
             self.on_plan(plan)
         if self.stop_requested:
@@ -125,7 +129,7 @@ class Agent:
             except KozError as error:   # a model file missing or changed: nothing runs
                 camera.close()
                 return self._refuse(plan, error.code)
-            models = {**runner.models, **self.models}
+            self.runner, models = runner, {**runner.models, **self.models}
             observations, frames, fault = self._try(runner, number)
             if self.stop_requested:
                 camera.close()   # also when the stop came before the first frame

@@ -1,0 +1,88 @@
+"""Which planner makes the plan: Nemotron on Nebius if there is a key, else Gemma 4 on this Mac if
+Ollama is running with the model, else the rule planner. Asked again for every job, so starting
+or stopping Ollama takes effect at the next job. If an AI planner fails (PLANNER_UNAVAILABLE), the
+next one in the list is asked, down to the rule planner, which always answers. The plan says
+which planner made it (Plan.source); the terminal prints it and status.planner carries it."""
+import os
+
+from .. import ROOT
+from ..errors import KozError
+from .nebius import NebiusPlanner
+from .ollama import OllamaPlanner
+from .planner import FakePlanner
+
+CHOICES = ("auto", "rules", "fake", "ollama", "nebius")   # "fake" = "rules" (older name)
+
+
+def load_env(path=None):
+    """KEY=VALUE lines from .env (git-ignored). Values are never printed."""
+    path = path or ROOT / ".env"
+    values = {}
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, value = line.split("=", 1)
+                values[key.strip()] = value.strip().strip("'\"")
+    except OSError:
+        pass
+    return values
+
+
+class AutoPlanner:
+    """Tries `planners` in order, skipping those that aren't available; the last is the rule planner."""
+
+    def __init__(self, planners, say=print):
+        self.planners, self.say = list(planners), say
+        self.name = " -> ".join(p.name for p in self.planners)
+        self.last = None   # the planner that made the latest plan
+
+    def available(self):
+        return True
+
+    def plan(self, text):
+        for planner in self.planners:
+            if not planner.available():
+                continue
+            try:
+                plan = planner.plan(text)
+            except KozError as error:
+                if planner is self.planners[-1]:
+                    raise
+                self.say(f"{planner.name} did not answer ({error.code}); asking the next planner.")
+                continue
+            self.last = planner
+            return plan
+        raise KozError("PLANNER_UNAVAILABLE", "no planner available")
+
+
+def make_planner(choice="auto", env=None, say=print):
+    """`auto`: Nebius (if NEBIUS_API_KEY) -> Ollama (if running with the model) -> rules.
+    `rules` / `ollama` / `nebius`: only that one (ollama and nebius still fall back to rules,
+    and say so)."""
+    env = {**load_env(), **os.environ} if env is None else env
+    rules = FakePlanner()
+    nebius = NebiusPlanner(env["NEBIUS_API_KEY"], model=env.get("NEBIUS_MODEL") or None) \
+        if env.get("NEBIUS_API_KEY") else None
+    ollama = OllamaPlanner(env.get("OLLAMA_MODEL") or None)
+    if choice in ("rules", "fake"):
+        return rules
+    if choice == "nebius":
+        if nebius is None:
+            say("NEBIUS_API_KEY is not set in .env, so the rule planner is used.")
+        return AutoPlanner([p for p in (nebius, rules) if p is not None], say)
+    if choice == "ollama":
+        return AutoPlanner([ollama, rules], say)
+    if nebius is None:
+        say("No NEBIUS_API_KEY in .env: Gemma 4 on this Mac (Ollama) if it's running, else the rule planner.")
+    return AutoPlanner([p for p in (nebius, ollama, rules) if p is not None], say)
+
+
+def planned_by(plan, planner):
+    """Who made `plan`, in words for the terminal and the local window (never sent: model names
+    are free text; status.planner carries only "rules" / "ollama" / "nebius")."""
+    if plan.source == "rules":
+        return "the rule planner (no AI model)"
+    chosen = getattr(planner, "last", None) or planner
+    return getattr(chosen, "name", plan.source)
+
