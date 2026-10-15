@@ -175,6 +175,56 @@ grows.
   saved, so a missed room is a local mistake, not a leak.
 - `--strict` exists for schools and public cameras, and stops all 23.
 
+## Live test #4: too slow to stop (Oct 15)
+
+**What happened.** Both launchers now stopped correctly for a toilet, a bed and a bathroom,
+but too slowly: with the camera held on a toilet for 5+ seconds, Ko'z kept running. The
+guard only looked every 10 s.
+
+**Fix** (`koz/privacy.py`, `koz/policy.py`, `koz/runner.py`):
+- The **object check** (bed, toilet, sink) runs every **0.5 s**, the **room check** every **3 s**.
+- **When the picture changes a lot** (the camera moved; a 32 x 24 grey thumbnail compared with
+  the last check), the guard checks on the next frame, at most every 0.15 s while it keeps
+  moving, and re-checks the room at most once a second. Off on the moving car (its view always
+  changes), where the 0.5 s schedule applies.
+- **While confirming** an object seen once, no frame is shown and no block runs (tested).
+- The check line shows the time and, when an object stops Ko'z, how long after it was first
+  seen: "check 6 @ 2.1 s (objects): ... seen toilet 0.80 -> blocked, 0.07 s after first seen".
+- Contract 8.1 (agreed with Codex): routine checks don't flip the status to `checking`, which
+  would have sent about 4 status events per second.
+
+**Measured on recorded clips** (real Places365 photos, MJPEG at 15 fps; `tests/test_stop_time.py`):
+
+| Clip | Stopped after the toilet / bed came into view |
+|---|---|
+| Quick turn from a desk to a toilet | **0.07 s** (one frame) |
+| Quick turn from a desk to a bed | **0.07 s** |
+| Same, moving-car setting (no camera-moved trigger) | **0.20 s** (worst case about 0.57 s: the 0.5 s schedule plus one frame) |
+| Slow 1 s pan to a toilet | stopped **before** the toilet view was half in (0.37 s into the pan) |
+
+Target "within 1 s": met in every clip. **Live number: to fill in** from the check line
+("… s after first seen") when Islombek repeats the test with the real camera.
+
+**Speed** (frames per second the MacBook can process at 640 x 480: blur, colour finder,
+guard; the camera's own rate, about 30 fps on the MacBook and 10–15 on the ESP32, is the
+real limit):
+
+| Clip | Before (every 10 s) | After |
+|---|---|---|
+| Still view | 93–99 fps | 87–93 fps |
+| Camera swinging the whole time | 94–96 fps | 82–86 fps |
+
+Without the 0.15 s limit, checking on every frame while the camera moves would have dropped
+it to about 18 fps (object check ~19 ms + room check ~29 ms per frame).
+
+**Found while measuring.** In clips made by gluing two photos side by side and panning
+across the seam, NanoDet saw a "bed" at 0.40–0.44 in a classroom, a shop and a desk, and
+Ko'z stopped (a false stop, on the safe side). Panning across one photo, with no seam, gave
+no false stops. Real bedrooms scored bed 0.53–0.71 when detected; other rooms at most 0.36,
+apart from two home-office photos at 0.45 and 0.58 that may show a real bed. Raising the bed
+limit from 0.40 to 0.45 would keep all 7 detected beds and drop those false ones (Islombek's
+decision).
+
 ## Fly-brain car (demo 1) and classroom counter (demo 2)
 
 To be written.

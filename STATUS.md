@@ -1,6 +1,6 @@
 # Ko'z status
 
-Updated Oct 15, after live test #3 (new default guard). 203 tests pass, 1 skipped (it needs your face clip):
+Updated Oct 15, after live test #4 (faster privacy checks). 214 tests pass, 1 skipped (it needs your face clip):
 `.venv/bin/python -m pytest -q`
 
 ## What works
@@ -8,7 +8,7 @@ Updated Oct 15, after live test #3 (new default guard). 203 tests pass, 1 skippe
 | Part | State |
 |---|---|
 | Recipe checks (`koz/recipe.py`) | Strict parsing → contract schema → extra checks → "is it built?". Tested. |
-| Privacy guard (`koz/privacy.py`, `koz/scene.py`) | **Default (every job): run anywhere, stop on what it sees**: darkness or a covered lens, a bed or toilet (NanoDet ≥ 0.40 in 2 of 3 checks), a sink in what looks like a bathroom, or a confident private room (top guess ≥ 0.50, or ≥ 0.40 together). **`--strict`** (schools, public cameras): only listed public places run. Checks every 10 s; one line per check on screen and in the terminal. On 71 real photos: default runs every desk without a bed, kitchen, classroom and shop, and lets 3 of 23 bathroom/bedroom photos through (limit); strict stops all 23. **Your rooms: live test #4 pending.** |
+| Privacy guard (`koz/privacy.py`, `koz/scene.py`) | **Default (every job): run anywhere, stop on what it sees**: darkness or a covered lens, a bed or toilet (NanoDet ≥ 0.40 in 2 of 3 checks), a sink in what looks like a bathroom, or a confident private room (top guess ≥ 0.50, or ≥ 0.40 together). **`--strict`** (schools, public cameras): only listed public places run. Objects checked every 0.5 s, the room every 3 s, and on the next frame when the camera moves; stops 0.07 s after a toilet or bed comes into view on recorded clips (target 1 s); one line per check, with timings. On 71 real photos: default runs every desk without a bed, kitchen, classroom and shop, and lets 3 of 23 bathroom/bedroom photos through (limit); strict stops all 23. **Live stop time: to measure (live test #5).** |
 | Face blur (`koz/blocks/face_blur.py`) | YuNet on OpenCV 5, heavy pixelation, fails closed. **No real-face test yet** (waiting for your clip in `tests/fixtures/private/face.mp4`). |
 | Colour finder (`koz/blocks/color_finder.py`) | Biggest patch of one colour → left / center / right / lost. Tested on the recorded test video. |
 | Person detector (`koz/blocks/person_detector.py`) | NanoDet-Plus on OpenCV 5, "person" class only; boxes stay local, only the number of people is sent. Decoding tested with exact fake outputs. **Not yet measured on real people.** |
@@ -38,7 +38,7 @@ python3.13 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
 
 ## What's next
 
-1. You: live test #4 with `demo-blur.command` (desk, bed, bathroom, covered lens); then the privacy trials in `docs/TRIALS.md`; the face clip.
+1. You: live test #5 with `demo-blur.command` (turn to the toilet and to the bed; read "… s after first seen"); then the privacy trials in `docs/TRIALS.md`; the face clip.
 2. Contract (maybe): a `strict` flag in `status` and `trial_result`, so the dashboard and trial reports can show the mode; to agree with Codex.
 3. Fly-brain block (from the copied stage 2–3 code) + `firmware/motor_listener/` (car demo).
 4. Agent loop: words → recipe → check on live frames → adjust (max 3 tries).
@@ -52,6 +52,7 @@ python3.13 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
 - Strict mode shows only in the live window and terminal, not in events (no contract field yet).
 - The stricter guard stops more often by mistake ("uncertain"); the trials measure how often.
 - Places365 has no toilet class; a toilet stall is trial #3.
+- In glued-photo test clips NanoDet saw a "bed" at 0.40–0.44 while panning (false stop); raising the bed limit to 0.45 would avoid it (your decision).
 - Which crossing direction counts as "in" (right-to-left of the line A→B) is defined in `koz/blocks/line_counter.py` but not yet in the contract; to agree with Codex in one short question.
 - Someone standing on the counting line and swaying can be counted in and out.
 - The live demo finds one colour (red by default); the agent loop will tune it later.

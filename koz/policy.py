@@ -22,7 +22,16 @@ MAX_RECIPE_DEPTH = 12
 
 # Runtime limits (proposed).
 MAX_FRAME_AGE_S = 0.5          # older than this when used -> outputs "unknown"
-PRIVACY_RECHECK_S = 10.0       # scene check at start, then this often (one check takes ~10 ms)
+# How often the privacy guard looks (live test #4: a toilet in view must stop Ko'z within 1 s).
+# Measured at 640 x 480 on Oct 15: object check (NanoDet) ~19 ms, room check (Places365) ~29 ms,
+# face blur + colour finder ~8 ms per frame, the camera-moved test ~0.3 ms.
+OBJECT_RECHECK_S = 0.5         # object check (bed, toilet, sink)
+ROOM_RECHECK_S = 3.0           # room check
+SCENE_CHANGE_DIFF = 25         # mean grey change (0-255) of a 32 x 24 thumbnail since the last check
+                               # that counts as "the camera moved": check on the next frame...
+CHANGE_MIN_GAP_S = 0.15        # ...but at most this often while it keeps moving (checking every
+                               # frame would drop a 30 fps camera to about 18 fps)
+ROOM_CHANGE_MIN_GAP_S = 1.0    # and the room check at most once a second while moving
 PRIVACY_TIMEOUT_S = 5.0        # a slower scene check counts as failed
 OBSERVATION_INTERVAL_S = 1.0   # at most one observation event per second
 STATUS_INTERVAL_S = 1.0        # a status heartbeat at least this often while running

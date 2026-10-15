@@ -4,7 +4,8 @@ PrivacyGate sits between the camera and every block. Only APPROVED frames go on.
 else (a private room, an uncertain or dark view, a missing model, an error, a slow or stuck
 check) stops the job.
 
-GuardCheck is what the gate runs on a frame, for every job:
+GuardCheck is what the gate runs, for every job: objects every 0.5 s, the room every 3 s,
+and on the very next frame when the camera moved (live test #4: stop within 1 s):
   0. too dark or too flat to judge                                  -> UNKNOWN
   1. object check: a bed or a toilet (NanoDet, confidence >= 0.40)
      seen in 2 of the last 3 checks                                 -> BLOCKED (bedroom / bathroom)
@@ -21,6 +22,9 @@ import threading
 import time
 from collections import deque
 from dataclasses import dataclass
+
+import cv2
+import numpy as np
 
 from . import policy
 from .blocks.person_detector import NanoDet
@@ -58,26 +62,62 @@ class PrivateObjects:
         return found
 
 
+def thumbnail(image):
+    """A tiny grey copy of the frame (32 x 24), to notice when the camera moves."""
+    grey = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    return cv2.resize(grey, (32, 24), interpolation=cv2.INTER_AREA).astype(np.int16)
+
+
+def _moved(a, b):
+    return a is not None and b is not None and np.abs(a - b).mean() > policy.SCENE_CHANGE_DIFF
+
+
 class GuardCheck:
     """check(image) -> PrivacyResult, following the steps in the module docstring.
 
+    The object check runs on every check (every OBJECT_RECHECK_S); the room check only every
+    ROOM_RECHECK_S, or sooner when the view changed a lot (at most every ROOM_CHANGE_MIN_GAP_S).
     `scene` is a koz.scene.PlacesSceneChecker (or a stand-in with the same methods);
-    `objects` a PrivateObjects. The latest room guesses, objects and result are kept for a
-    local display (`line`); they are never sent."""
+    `objects` a PrivateObjects. `watch_changes` is off on the moving car, whose view always
+    changes. The latest room guesses, objects and result are kept for a local display
+    (`line`); they are never sent."""
 
-    def __init__(self, scene, objects, strict=False):
+    def __init__(self, scene, objects, strict=False, clock=time.monotonic, watch_changes=True):
         self.scene, self.objects, self.strict = scene, objects, strict
+        self._clock, self.watch_changes = clock, watch_changes
         self._history = deque(maxlen=policy.OBJECT_CHECK_WINDOW)   # objects seen in each recent check
-        self.checks = 0
+        self._started = clock()
+        self._last_thumb = self._room_thumb = self._room_at = None
+        self._first_seen = {}       # object -> when this run of sightings began
+        self.checks = self.room_checks = 0
         self.last_probabilities, self.last_found, self.last_result = None, {}, None
+        self.last_at, self.last_room_fresh, self.stop_delay = None, False, None
+
+    def changed(self, image):
+        """True if the view changed a lot since the last check (the camera moved)."""
+        return self.watch_changes and _moved(thumbnail(image), self._last_thumb)
 
     def check(self, image):
-        probabilities = self.scene.probabilities(image)
+        now, thumb = self._clock(), thumbnail(image)
+        room_due = (self.last_probabilities is None or now - self._room_at >= policy.ROOM_RECHECK_S
+                    or (self.watch_changes and _moved(thumb, self._room_thumb)
+                        and now - self._room_at >= policy.ROOM_CHANGE_MIN_GAP_S))
+        if room_due:
+            self.last_probabilities = self.scene.probabilities(image)
+            self._room_at, self._room_thumb = now, thumb
+            self.room_checks += 1
         found = self.objects.find(image)
         self._history.append(set(found) & set(policy.PRIVATE_OBJECTS))
+        for name in SEEN:            # when did the current run of sightings of each object begin?
+            if name in found:
+                self._first_seen.setdefault(name, now)
+            elif not any(name in seen for seen in self._history):   # (sinks aren't in the history)
+                self._first_seen.pop(name, None)
         self.checks += 1
-        self.last_probabilities, self.last_found = probabilities, found
-        self.last_result = self._decide(image, probabilities, found)
+        self._last_thumb, self.last_at, self.last_room_fresh, self.last_found = thumb, now, room_due, found
+        self.last_result = self._decide(image, self.last_probabilities, found)
+        if self.last_result.state == BLOCKED and self.last_result.seen in self._first_seen:
+            self.stop_delay = now - self._first_seen[self.last_result.seen]
         return self.last_result
 
     def _decide(self, image, probabilities, found):
@@ -98,19 +138,23 @@ class GuardCheck:
 
     @property
     def line(self):
-        """One line for the screen and the terminal, e.g.
-        "check 3: room bedroom 0.41, home_office 0.20, dorm_room 0.08 | seen bed 0.83 -> blocked"."""
+        """One line for the screen and the terminal, e.g. "check 7 @ 3.1 s (room+objects):
+        room bathroom 0.62, shower 0.11, ... | seen toilet 0.81 -> blocked, 0.07 s after first seen"."""
         if self.last_probabilities is None:
             return "check: not yet"
         rooms = ", ".join(f"{name} {p:.2f}" for name, p in self.scene.top(self.last_probabilities, 3))
         seen = ", ".join(f"{name} {score:.2f}" for name, score in sorted(self.last_found.items())) or "nothing"
         result = self.last_result.state + (" (confirming)" if self.last_result.confirming else "")
-        return f"check {self.checks}: room {rooms} | seen {seen} -> {result}"
+        if self.last_result.state == BLOCKED and self.stop_delay is not None:
+            result += f", {self.stop_delay:.2f} s after first seen"
+        kind = "room+objects" if self.last_room_fresh else "objects"
+        return f"check {self.checks} @ {self.last_at - self._started:.1f} s ({kind}): room {rooms} | seen {seen} -> {result}"
 
 
 class PrivacyGate:
-    """Runs the guard's check on the first frame, then again every PRIVACY_RECHECK_S, and on
-    every frame while a check is confirming an object it saw once.
+    """Runs the guard's check on the first frame, then every OBJECT_RECHECK_S, on the next frame
+    when the view changed a lot (if the checker has changed(); at most every CHANGE_MIN_GAP_S),
+    and on every frame while a check is confirming an object it saw once.
 
     A checker is any object with check(image) -> PrivacyResult. Each check runs in a
     background thread: if it hasn't answered within `timeout_s` (real seconds), or the
@@ -124,12 +168,17 @@ class PrivacyGate:
         self._checked_at = None
         self.last = None   # the latest PrivacyResult, or None before the first check
 
-    def due(self):
-        return (self._checked_at is None or (self.last is not None and self.last.confirming)
-                or self._clock() - self._checked_at >= policy.PRIVACY_RECHECK_S)
+    def due(self, image=None):
+        if self._checked_at is None or (self.last is not None and self.last.confirming):
+            return True
+        since = self._clock() - self._checked_at
+        if since >= policy.OBJECT_RECHECK_S:
+            return True
+        changed = getattr(self._checker, "changed", None)
+        return bool(since >= policy.CHANGE_MIN_GAP_S and image is not None and changed is not None and changed(image))
 
     def admit(self, image):
-        if self.due():
+        if self.due(image):
             self._checked_at = self._clock()
             self.last = self._run_check(image)
         return self.last

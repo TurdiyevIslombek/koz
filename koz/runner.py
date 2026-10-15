@@ -50,7 +50,8 @@ class Runner:
         self._mask = setup.mask(width, height)
         self.strict = setup.strict
         self.guard = (scene_checker if scene_checker is not None
-                      else GuardCheck(PlacesSceneChecker(), PrivateObjects(), setup.strict))
+                      else GuardCheck(PlacesSceneChecker(), PrivateObjects(), setup.strict, clock=clock,
+                                      watch_changes=setup.mount == "fixed"))
         self._gate = PrivacyGate(self.guard, clock)
         self._blur = FaceBlur({}, detector=face_detector)
         self._blocks = [PersonDetector(b["settings"], detector=person_detector) if b["type"] == "person_detector"
@@ -102,12 +103,11 @@ class Runner:
 
         image = cv2.resize(frame.image, self.size, interpolation=cv2.INTER_AREA)
         image = cv2.bitwise_and(image, image, mask=self._mask)   # black outside the allowed area
-        if self._gate.due():
-            self._drop_preview()
-            self._set_state("checking")
+        if self._gate.due(image):
+            self._drop_preview()   # nothing from before this check stays on screen
         privacy = self._gate.admit(image)
-        if privacy.confirming:   # an object seen once: hold this frame, check the next one first
-            self._drop_preview()
+        if privacy.confirming:   # an object seen once: hold this frame and run no block
+            self._set_state("checking")   # contract 8.1: "checking" = before approval or confirming
             self._observe(UNKNOWN, None, privacy.code)
             return True
         if privacy.state != APPROVED:

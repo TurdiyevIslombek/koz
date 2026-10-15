@@ -100,13 +100,14 @@ def test_slow_scene_check_counts_as_failed(test_video):
 
 def test_recheck_stops_a_running_job(test_video):
     checker = Sequence(PrivacyResult("approved"), PrivacyResult("blocked", "PRIVATE_BEDROOM"))
-    half = policy.PRIVACY_RECHECK_S / 2
+    half = policy.OBJECT_RECHECK_S / 2
     runner, sent, _ = make(test_video, seconds_per_frame=half, scene_checker=checker, face_detector=FakeFaces())
     assert runner.run() == "held"   # frame 3 is one recheck interval after the first check
     assert of_type(sent, "fault") == [{"code": "PRIVATE_BEDROOM", "effect": "held"}]
-    assert [o["target"] for o in of_type(sent, "observation")] == ["left", "left", "unknown"]
+    # frames are 0.25 s apart, so the second "left" falls under the once-per-second limit
+    assert [o["target"] for o in of_type(sent, "observation")] == ["left", "unknown"]
     assert of_type(sent, "observation")[-1]["unknown_reason"] == "PRIVATE_BEDROOM"
-    assert states(sent) == ["checking", "running", "checking", "held"]   # the recheck is visible
+    assert states(sent) == ["checking", "running", "held"]   # routine rechecks don't flip the status
 
 
 def test_stale_frames_are_unknown_not_lost(test_video):

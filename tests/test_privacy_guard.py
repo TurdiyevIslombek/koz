@@ -110,7 +110,7 @@ def test_default_relies_on_objects_not_on_a_vague_room_guess():
 def test_check_line_names_rooms_objects_and_result():
     guard = GuardCheck(FakeScene(room(CLASSROOM)), FakeObjects({"bed": 0.83}))
     guard.check(FRAME)
-    assert guard.line.startswith("check 1: room classroom 0.70")
+    assert guard.line.startswith("check 1 @ 0.0 s (room+objects): room classroom 0.70")
     assert "| seen bed 0.83 -> unknown (confirming)" in guard.line
 
 
@@ -132,3 +132,89 @@ def test_runner_holds_frames_while_confirming_then_stops(test_video):
     assert runner.run() == "refused"
     assert [e["data"] for e in sent if e["type"] == "fault"] == [{"code": "PRIVATE_BEDROOM", "effect": "off"}]
     assert faces.calls == 0 and guard.checks == 2   # no frame got past the guard
+
+
+class CountingScene(FakeScene):
+    def __init__(self, probabilities):
+        super().__init__(probabilities)
+        self.calls = 0
+
+    def probabilities(self, image):
+        self.calls += 1
+        return self.p
+
+
+def test_objects_every_check_room_every_three_seconds():
+    """Live test #4: objects every 0.5 s, the room every 3 s (when the view stays still)."""
+    clock, scene, objects = FakeClock(), CountingScene(room(CLASSROOM)), FakeObjects({})
+    gate = PrivacyGate(GuardCheck(scene, objects, clock=clock), clock)
+    for _ in range(int(4.0 / 0.1)):          # 4 s of frames at 10 fps
+        gate.admit(FRAME)
+        clock.advance(0.1)
+    assert objects.calls == 8                 # every 0.5 s
+    assert scene.calls == 2                   # at 0 s and at 3 s
+
+
+def test_camera_moved_means_check_on_the_next_frame():
+    clock, scene, objects = FakeClock(), CountingScene(room(CLASSROOM)), FakeObjects({})
+    guard = GuardCheck(scene, objects, clock=clock)
+    gate = PrivacyGate(guard, clock)
+    gate.admit(FRAME)
+    other_view = np.zeros((240, 320, 3), np.uint8)
+    other_view[:, :160] = 230                 # a very different picture
+    clock.advance(0.1)
+    assert gate.due(other_view) is False      # moved, but only 0.1 s since the last check
+    clock.advance(0.1)
+    assert gate.due(FRAME) is False           # same view, 0.2 s later: not yet
+    assert gate.due(other_view) is True       # the camera moved: check now
+    gate.admit(other_view)
+    assert objects.calls == 2 and scene.calls == 1   # the room waits: checked < 1 s ago
+    clock.advance(1.0)
+    gate.admit(other_view)                     # still on the new view, 1 s later: room checked again
+    assert scene.calls == 2
+
+
+def test_moving_car_does_not_check_on_every_frame():
+    """On the car the view always changes, so only the 0.5 s schedule applies."""
+    clock = FakeClock()
+    gate = PrivacyGate(GuardCheck(FakeScene(room(CLASSROOM)), FakeObjects({}), clock=clock, watch_changes=False), clock)
+    gate.admit(FRAME)
+    clock.advance(0.1)
+    assert gate.due(np.zeros((240, 320, 3), np.uint8)) is False
+
+
+def test_check_line_says_how_long_after_first_seen_it_stopped():
+    clock = FakeClock()
+    guard = GuardCheck(FakeScene(room(CLASSROOM)), FakeObjects({"toilet": 0.8}), clock=clock)
+    guard.check(FRAME)
+    clock.advance(0.07)
+    assert guard.check(FRAME).state == "blocked"
+    assert guard.stop_delay == pytest.approx(0.07)
+    assert guard.line.endswith("-> blocked, 0.07 s after first seen")
+
+
+def test_routine_checks_do_not_flip_the_status(test_video):
+    """Contract 8.1 (agreed with Codex, Oct 15): 'checking' only before approval or while confirming."""
+    clock, sent = FakeClock(), []
+    runner = Runner(check_recipe(color_recipe()), LocalSetup(True, FULL_FRAME),
+                    TickingCamera(FileCamera(test_video, clock=clock), clock, 0.25), EventLog(sent.append),
+                    scene_checker=GuardCheck(FakeScene(room(CLASSROOM)), FakeObjects({}), clock=clock),
+                    face_detector=FakeFaces(), clock=clock)
+    runner.run()   # 18 frames, 4.5 s: about 9 privacy checks
+    states = [e["data"]["state"] for e in sent if e["type"] == "status"]
+    assert "checking" not in states[1:]
+
+
+def test_while_confirming_no_frame_is_shown_and_no_block_runs(test_video):
+    clock = FakeClock()
+    faces = FakeFaces()
+    runner = Runner(check_recipe(color_recipe()), LocalSetup(True, FULL_FRAME),
+                    TickingCamera(FileCamera(test_video, clock=clock), clock, 0.05), EventLog(list().append),
+                    scene_checker=GuardCheck(FakeScene(room(CLASSROOM)), FakeObjects({"bed": 0.8}, {}, {}), clock=clock),
+                    face_detector=faces, clock=clock)
+    runner.step()                              # bed seen once: confirming
+    assert runner.preview is None and faces.calls == 0 and runner.state == "checking"
+    runner.step()                              # not seen: still confirming (2 of 3 still possible)
+    assert runner.preview is None and faces.calls == 0
+    runner.step()                              # not seen again: approved, the frame is processed
+    assert runner.preview is not None and faces.calls == 1 and runner.state == "running"

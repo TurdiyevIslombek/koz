@@ -7,6 +7,9 @@ lanes agree.
 Changes since then (both lanes agreed):
 - Oct 14: `observation.unknown_reason` added (section 8.3), so the dashboard can say
   why an output is unknown.
+- Oct 15: `status.state` `checking` now means "not approved yet, or confirming an object
+  it saw once" (section 8.1). Routine privacy checks (every 0.5 s) no longer flip the
+  status, which would have sent about 4 status events per second.
 
 `recipe.schema.json` and this file are the contract together.
 **MVP** = built by Oct 26. **stretch** = only if built; the dashboard must not
@@ -267,8 +270,11 @@ never a person.
 | `opencv_major` | 5, or null before OpenCV starts |
 | `capabilities` | list from `rtsp`, `recorded_fixture`, `looming`, `scene_tripwire`; may be empty |
 
-`held` = outputs stopped; a new start is needed. A scheduled privacy re-check
-shows `checking` and returns to `running` only after APPROVED with fresh frames.
+`held` = outputs stopped; a new start is needed. `checking` = before the first
+privacy approval, or while the guard confirms an object it saw once (frames held, outputs
+unknown); it returns to `running` only after APPROVED with fresh frames. Routine privacy
+checks while running don't change the status: they hold their frame for the few ms they
+take, and a check that hangs still ends in a fault after 5 s.
 `stop_commanded` does not claim the car physically stopped.
 
 ```json
