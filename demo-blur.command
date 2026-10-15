@@ -1,5 +1,6 @@
 #!/bin/bash
-# Double-click to run Ko'z on this MacBook's camera: privacy guard + face blur + colour finder (red object).
+# Double-click to run Ko'z on this MacBook's camera: privacy guard + face blur + colour finder.
+# STRICT guard (no workspace): use it to check that a bathroom or bedroom is refused.
 # Nothing is saved or sent. Press q in the window to quit.
 cd "$(dirname "$0")" || exit 1
 finish() { echo; read -r -p "Press Enter to close this window. "; exit "$1"; }

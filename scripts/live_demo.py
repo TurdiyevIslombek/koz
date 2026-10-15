@@ -30,6 +30,10 @@ from koz.runner import Runner  # noqa: E402
 
 WINDOW = "Ko'z live demo (q to quit)"
 GREEN, AMBER, RED, WHITE = (60, 180, 75), (0, 170, 255), (60, 60, 230), (255, 255, 255)
+BANNER_RED = (30, 30, 190)
+FONT = cv2.FONT_HERSHEY_SIMPLEX   # OpenCV's built-in fonts are ASCII only, so no long dashes
+ROOM_GUESS = {"PRIVATE_BATHROOM": "bathroom", "PRIVATE_TOILET": "toilet",
+              "PRIVATE_BEDROOM": "bedroom", "PRIVATE_CHANGING_ROOM": "changing room"}
 
 
 def english_messages():
@@ -106,6 +110,57 @@ def draw(runner, latest, messages, fps, scene_line, line):
     for i, line in enumerate(lines):
         tint = colour if i == 0 else AMBER if line.startswith("OWNER-CONFIRMED") else WHITE
         cv2.putText(view, line, (10, 24 + 28 * i), cv2.FONT_HERSHEY_SIMPLEX, 0.6 if i < 2 else 0.45, tint, 1)
+    if fault:
+        draw_banner(view, *stop_banner(fault["code"], messages, runner.owner_workspace))
+    return view
+
+
+def stop_banner(code, messages, owner_workspace):
+    """What the big banner says when Ko'z stops: (title, lines)."""
+    if code in ROOM_GUESS:
+        room = ROOM_GUESS[code]
+        if owner_workspace:
+            return "STOPPED", [f"this looks like a private room ({room}?)",
+                               "The workspace option never overrides a private room.",
+                               "Point the camera away from it and start again."]
+        hint = ("If this is your desk, use demo-desk.command and keep the bed out of view."
+                if room == "bedroom" else "Private rooms always stop Ko'z.")
+        return "STOPPED", [f"this room isn't allowed ({room}?)", hint]
+    if code == "PRIVACY_UNCERTAIN":
+        if owner_workspace:   # in a workspace only darkness makes the guard unsure
+            return "STOPPED", ["too dark to check the room", "Turn on a light or uncover the lens, then start again."]
+        return "STOPPED", ["Ko'z can't tell this is an allowed place",
+                           "Too dark, or not a classroom, shop or office.",
+                           "For your desk use demo-desk.command."]
+    return "STOPPED", [messages.get(code, code), f"({code})"]
+
+
+def startup_banner(code, messages, camera_problem):
+    """What the banner says when Ko'z can't start at all: (title, lines)."""
+    if camera_problem:
+        return "CAMERA NOT ALLOWED", ["macOS didn't let this app use the camera.",
+                                      "Allow Terminal in System Settings > Privacy & Security > Camera,",
+                                      "then double-click the demo again."]
+    return "KO'Z DID NOT START", [messages.get(code, code), f"({code})"]
+
+
+def put_centred(view, text, y, scale, thickness, colour):
+    """Write text centred at height y, shrinking it until it fits the width."""
+    while scale > 0.3 and cv2.getTextSize(text, FONT, scale, thickness)[0][0] > view.shape[1] - 30:
+        scale -= 0.05
+    width = cv2.getTextSize(text, FONT, scale, thickness)[0][0]
+    cv2.putText(view, text, ((view.shape[1] - width) // 2, y), FONT, scale, colour, thickness, cv2.LINE_AA)
+
+
+def draw_banner(view, title, lines):
+    """A full-width red band across the middle of the window."""
+    height = view.shape[0]
+    top = height // 2 - 70
+    bottom = top + 90 + 34 * len(lines)
+    cv2.rectangle(view, (0, top), (view.shape[1], bottom), BANNER_RED, -1)
+    put_centred(view, title, top + 60, 1.8, 4, WHITE)
+    for i, text in enumerate(lines):
+        put_centred(view, text, top + 100 + 34 * i, 0.75, 2, WHITE)
     return view
 
 
@@ -159,13 +214,21 @@ def main():
         runner = Runner(demo_recipe(args.job, args.hue, line, args.school), setup, camera, EventLog(keep_latest))
     except KozError as error:
         print(f"Ko'z did not start: {error.code}: {messages.get(error.code, '')}")
-        if camera is None and not args.video and args.camera.isdigit():
+        camera_problem = camera is None and not args.video and args.camera.isdigit() \
+            and error.code == "UNSUPPORTED_CAPABILITY"
+        if camera_problem:
             print("The camera could not be opened. On a Mac this usually means the app that started\n"
                   "this command may not use the camera. Double-click demo-blur.command (it runs in\n"
                   "Terminal, which asks for permission), or allow the app in System Settings >\n"
                   "Privacy & Security > Camera, then try again.")
         if camera is not None:
             camera.close()
+        if not args.no_window:   # show it big too, until q
+            cv2.imshow(WINDOW, draw_banner(np.zeros((480, 640, 3), np.uint8),
+                                           *startup_banner(error.code, messages, camera_problem)))
+            while not quit_pressed(100):
+                pass
+            cv2.destroyAllWindows()
         return 1
 
     checker = runner.scene_checker

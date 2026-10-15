@@ -1,6 +1,6 @@
 # Ko'z status
 
-Updated Oct 14, after the allowlist review and the owner-confirmed workspace. 169 tests pass, 1 skipped (it needs your face clip):
+Updated Oct 15, after the desk launchers and the stop banner. 172 tests pass, 1 skipped (it needs your face clip):
 `.venv/bin/python -m pytest -q`
 
 ## What works
@@ -16,13 +16,15 @@ Updated Oct 14, after the allowlist review and the owner-confirmed workspace. 16
 | Runner (`koz/runner.py`) | mask → privacy → blur → blocks → events; stale or slow frames → `unknown` with a reason. School mode allows the counter only. |
 | Events (`koz/events.py`) | status, observation (target, people, in, out), fault, exactly as `contracts/events.md`. |
 | Cameras (`koz/capture.py`) | Recorded video (mock camera); live reader for the MacBook camera that drops the first second (too dark). **ESP32-CAM stream: not tried yet.** |
-| Live demo (`scripts/live_demo.py`) | Colour job or `--job counter`: blurred view, red-object ring or people boxes + line, status, scene guesses. Runs headless in tests. Live test #1 on your camera found the guard bug (fixed); **re-run pending.** |
+| Live demo (`scripts/live_demo.py`) | Colour job or `--job counter`: blurred view, red-object ring or people boxes + line, status, scene guesses; a full-width red banner when it stops or can't start (e.g. camera not allowed). Runs headless in tests. Live test #1 on your camera found the guard bug (fixed); **re-run pending.** |
 
 ## How to run
 
-Double-click in Finder (uses the MacBook camera; q quits):
-- `demo-blur.command`: privacy guard + face blur + colour finder (red object)
-- `demo-counter.command`: people counter in school mode
+Double-click in Finder (uses the MacBook camera; q quits; if Ko'z stops, a red banner says why):
+- `demo-blur.command`: privacy guard + face blur + colour finder, **strict** (to check a bathroom or bedroom is refused)
+- `demo-counter.command`: people counter in school mode, **strict** (runs only in an allowed place, e.g. a classroom)
+- `demo-desk.command`: colour finder + face blur with the **owner-confirmed workspace** (your desk, the robot arena)
+- `demo-desk-counter.command`: people counter (school mode) with the **owner-confirmed workspace**
 
 Or in Terminal:
 

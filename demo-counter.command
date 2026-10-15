@@ -1,5 +1,6 @@
 #!/bin/bash
-# Double-click to run Ko'z on this MacBook's camera: people counter in school mode (counts only).
+# Double-click to run Ko'z on this MacBook's camera: people counter in school mode.
+# STRICT guard (no workspace): it runs only in an allowed place such as a classroom.
 # Nothing is saved or sent. Press q in the window to quit.
 cd "$(dirname "$0")" || exit 1
 finish() { echo; read -r -p "Press Enter to close this window. "; exit "$1"; }

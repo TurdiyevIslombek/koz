@@ -9,7 +9,10 @@ Results go in the trial dashboard; failures are kept, not hidden.
 Point the camera at each scene, start a job, and record: result (pass/fail), the error
 code shown, how long until it stopped, and **whether the owner-confirmed workspace was on**
 (`--owner-workspace`; the window says "OWNER-CONFIRMED WORKSPACE"). A trial report without
-that is incomplete. Trials 1–10 are run with it **off**. Use your own home or a place you have
+that is incomplete. Trials 1–10 are run with it **off**.
+
+Which file to double-click: trials 1–10 → `demo-blur.command` (strict); W1, W3, W4 →
+`demo-desk.command` (workspace on). When Ko'z stops, a red banner says why. Use your own home or a place you have
 permission to film, with nobody undressed or asleep in view. Ko'z saves no frames.
 
 | # | Scene | Expected |
