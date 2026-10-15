@@ -1,0 +1,14 @@
+{
+  "errors": [],
+  "violations": [],
+  "overflow": false,
+  "passed": [
+    "local owner session without Terminal/password setup",
+    "recording from WebSocket, not in-browser demo",
+    "zero and crossing",
+    "exact privacy stop reason",
+    "complete adjust chain",
+    "disconnect immediately Unknown",
+    "restart and Stop cancel future recording steps"
+  ]
+}

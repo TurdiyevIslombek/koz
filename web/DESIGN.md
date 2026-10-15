@@ -36,7 +36,7 @@ A crossing moves one illustrative person for 900 ms in demo mode and briefly pul
 - Measured `0` is printed as zero with its label; unknown shows `—` plus the exact contract reason.
 - Empty and unconfigured are different. A coverage gap survives a later known reading.
 - Sent/accepted is not applied. Stop stays pending until the runner confirms state.
-- No heartbeat for 3 seconds means offline, never stopped.
+- Connection loss, or no heartbeat for 3 seconds, means Unknown with an offline reason; never stopped. Old readings are cleared and require a fresh observation after reconnect.
 - Checked steps appear only from a recipe event or a locally validated import labelled as needing device validation.
 - A synthetic demonstration is labelled on every screen. Real trials are owner-reported, not autonomous claims of success.
 

@@ -1,9 +1,10 @@
 import './contracts.mjs';
 import { build } from 'esbuild';
-import { mkdir, copyFile, cp } from 'node:fs/promises';
+import { mkdir, copyFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 const root = new URL('../', import.meta.url);
 await mkdir(new URL('dist/assets/', root), { recursive: true });
-await build({ absWorkingDir: root.pathname, entryPoints: ['src/app.js'], outdir: 'dist', bundle: true, format: 'esm', target: ['es2022'], minify: false });
+await build({ absWorkingDir: fileURLToPath(root), entryPoints: ['src/app.js'], outdir: 'dist', bundle: true, format: 'esm', target: ['es2022'], minify: false });
 await copyFile(new URL('index.html', root), new URL('dist/index.html', root));
 await copyFile(new URL('src/styles.css', root), new URL('dist/styles.css', root));
 for (const name of ['onest.ttf','onest-OFL.txt']) await copyFile(new URL(`design/assets/${name}`, root), new URL(`dist/assets/${name}`, root));

@@ -6,31 +6,38 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolve, extname } from 'node:path';
 import { WebSocketServer, WebSocket } from 'ws';
 import { readEvent, parseStrict, validateCommandData, ContractError } from '../src/protocol.js';
-import { createModel, ingest, liveView, summaryFor } from '../src/model.js';
+import { createModel, ingest, liveView, summaryFor, invalidateLive } from '../src/model.js';
+
+import { connectRunner } from './runner-link.mjs';
+import { createFakeRunner } from './fake-runner.mjs';
 
 const id=()=>randomBytes(16).toString('hex'),hash=v=>createHash('sha256').update(v).digest('hex');
 const root=fileURLToPath(new URL('../',import.meta.url));
-export async function createApplication({password='',dataDir=resolve(root,'.data'),persist=true}={}){
- const model=createModel(),sessions=new Map(),subscribers=new Set(),attempts=new Map();
+export async function createApplication({password='',dataDir=resolve(root,'.data'),persist=true,localRunnerUrl=null,localAccess=false,retryMs=1000}={}){
+ const realModel=createModel(),sessions=new Map(),subscribers=new Set(),attempts=new Map();
+ let model=realModel,realSaved=[],fake=null,link=null,closing=false;
+ let transport={mode:localRunnerUrl?'local':'inbound',url:localRunnerUrl,state:'disconnected',source:'runner',replayOwned:false};
  let runner=null,runnerSession=null,tokenHash=null,saved=[],commandTimer=null,activeTrial=null;
  const subscriberSessions=new Map();
  const passwordSalt=randomBytes(16),passwordHash=password?scryptSync(password,passwordSalt,32):null;
  const historyFile=resolve(dataDir,'events.ndjson'),metaFile=resolve(dataDir,'owner.json');
  if(persist){await mkdir(dataDir,{recursive:true,mode:0o700});try{const meta=JSON.parse(await readFile(metaFile,'utf8'));tokenHash=meta.tokenHash||null;saved=meta.saved||[];}catch{}try{for(const line of (await readFile(historyFile,'utf8')).split('\n').filter(Boolean)){const row=JSON.parse(line);if(row.expiresAt>Date.now())ingest(model,row.event,row.receivedAt);}}catch{}}
+ realSaved=saved;
  // A persisted old heartbeat never reconnects a device after a web restart.
  model.statusAt=0;
  let persistence=Promise.resolve();
- const persistMeta=async()=>{if(persist){const content=JSON.stringify({tokenHash,saved});persistence=persistence.catch(()=>{}).then(()=>writeFile(metaFile,content,{mode:0o600}));await persistence;}};
+ const persistMeta=async()=>{if(model!==realModel)return;realSaved=saved;if(persist){const content=JSON.stringify({tokenHash,saved});persistence=persistence.catch(()=>{}).then(()=>writeFile(metaFile,content,{mode:0o600}));await persistence;}};
  const broadcast=packet=>{for(const response of subscribers)response.write(`data: ${JSON.stringify(packet)}\n\n`);};
  const receive=event=>{
   const at=Date.now(),prior=model.status;
   const unchanged=event.type==='status'&&prior?.session_id===event.session_id&&prior?.job_id===event.job_id&&prior?.trial_id===event.trial_id&&prior?.revision===event.revision&&JSON.stringify(prior.data)===JSON.stringify(event.data);
   if(!ingest(model,event,at))return;
   if(unchanged)model.events=model.events.filter(r=>r.event!==event);
-  if(persist&&!unchanged){const row=model.events.find(r=>r.event===event);if(row)persistence=persistence.then(()=>appendFile(historyFile,JSON.stringify({...row,receivedAt:Math.floor(at/60000)*60000})+'\n',{mode:0o600})).catch(()=>broadcast({error:'INTERNAL_ERROR'}));}
+  if(persist&&model===realModel&&!unchanged){const row=model.events.find(r=>r.event===event);if(row)persistence=persistence.then(()=>appendFile(historyFile,JSON.stringify({...row,receivedAt:Math.floor(at/60000)*60000})+'\n',{mode:0o600})).catch(()=>broadcast({error:'INTERNAL_ERROR'}));}
   if(event.type==='status'&&!event.trial_id&&['idle','running'].includes(event.data.state))activeTrial=null;
   if(event.type==='command_result'&&event.data.result==='rejected'&&model.pending?.command==='begin_trial')activeTrial=null;
-  broadcast({event,receivedAt:at,activeTrial});
+  if(event.type==='status'&&model.status===event)transport={...transport,state:'connected'};
+  broadcast({event,receivedAt:at,activeTrial,transport});
  };
  const json=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
  const authenticated=req=>{const token=(req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith('koz_session='))?.slice(12);const expires=sessions.get(token);return expires&&expires>Date.now();};
@@ -42,7 +49,11 @@ export async function createApplication({password='',dataDir=resolve(root,'.data
   try{
    if(url.pathname.startsWith('/api/')){
     if(req.headers['sec-fetch-site']==='cross-site'||req.method!=='GET'&&req.headers.origin&&req.headers.origin!==`http://${req.headers.host}`)return json(res,403,{code:'AUTH_REQUIRED'});
-    if(url.pathname==='/api/session'&&req.method==='GET')return json(res,200,{authenticated:Boolean(authenticated(req)),configured:Boolean(passwordHash)});
+    if(url.pathname==='/api/health'&&req.method==='GET')return json(res,200,{service:'koz-web',workspace:hash(resolve(root))});
+    if(url.pathname==='/api/session'&&req.method==='GET'){
+     if(localAccess&&!passwordHash&&!authenticated(req)){const session=randomBytes(32).toString('hex');sessions.set(session,Date.now()+8*3600000);res.setHeader('Set-Cookie',`koz_session=${session}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800`);return json(res,200,{authenticated:true,configured:false,transport});}
+     return json(res,200,{authenticated:Boolean(authenticated(req)),configured:Boolean(passwordHash),transport});
+    }
     if(url.pathname==='/api/login'&&req.method==='POST'){
      const key=req.socket.remoteAddress,rate=attempts.get(key)||{count:0,until:Date.now()+300000};
      if(rate.until<Date.now()){rate.count=0;rate.until=Date.now()+300000;}rate.count++;attempts.set(key,rate);
@@ -56,12 +67,20 @@ export async function createApplication({password='',dataDir=resolve(root,'.data
     if(url.pathname==='/api/snapshot'&&req.method==='GET'){
      const rows=model.events.filter(r=>r.expiresAt>Date.now());
      const latest=model.status&&{event:model.status,receivedAt:model.statusAt};
-     return json(res,200,{events:latest?[...rows.filter(r=>r.event!==model.status),latest]:rows,pending:model.pending,statusAt:model.statusAt,activeTrial,saved});
+     return json(res,200,{events:latest?[...rows.filter(r=>r.event!==model.status),latest]:rows,pending:model.pending,statusAt:model.statusAt,activeTrial,saved,transport});
     }
     if(url.pathname==='/api/events'&&req.method==='GET'){
      res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-store','Connection':'keep-alive'});res.write(': connected\n\n');subscribers.add(res);subscriberSessions.set(res,sessions.get((req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith('koz_session='))?.slice(12)));req.on('close',()=>{subscribers.delete(res);subscriberSessions.delete(res);});return;
     }
+    if(url.pathname==='/api/replay'&&req.method==='POST'){
+     if(!localRunnerUrl)throw new ContractError('INVALID_COMMAND');
+     const data=await body(req);if(!data||Object.keys(data).join(',')!=='action'||!['start','stop'].includes(data.action))throw new ContractError('INVALID_COMMAND');
+     if(data.action==='stop'){if(fake){await fake.close();fake=null;}else if(transport.source==='replay')throw new ContractError('BUSY');}
+     else {if(runner?.readyState===WebSocket.OPEN&&transport.source!=='replay')throw new ContractError('BUSY');if(fake){await fake.close();fake=null;}try{fake=await createFakeRunner({port:Number(new URL(localRunnerUrl).port)});}catch(error){if(error.code==='EADDRINUSE')throw new ContractError('BUSY');throw error;}}
+     transport={...transport,replayOwned:Boolean(fake)};broadcast({transport});return json(res,200,{transport});
+    }
     if(url.pathname==='/api/runner-token'&&req.method==='POST'){
+     if(localRunnerUrl)throw new ContractError('INVALID_COMMAND');
      const token=randomBytes(32).toString('hex');tokenHash=hash(token);runner?.close(1008,'AUTH_REQUIRED');runner=null;runnerSession=null;await persistMeta();return json(res,200,{token});
     }
     if(url.pathname==='/api/commands'&&req.method==='POST'){
@@ -95,30 +114,49 @@ export async function createApplication({password='',dataDir=resolve(root,'.data
    res.writeHead(200,{'Content-Type':`${types[extname(path)]||'application/octet-stream'}; charset=utf-8`,'Cache-Control':'no-cache'});res.end(req.method==='HEAD'?undefined:content);
   }catch(error){json(res,error instanceof ContractError?400:500,{code:error instanceof ContractError?error.code:'INTERNAL_ERROR'});}
  });
+ function disconnected(){
+  if(closing)return;
+  invalidateLive(model);clearTimeout(commandTimer);
+  transport={...transport,state:'disconnected'};broadcast({transport});
+ }
+ function attachRunner(ws,source='runner'){
+  runner?.terminate();runner=ws;runnerSession=null;
+  if(source!==transport.source){
+   if(source==='replay'){realSaved=saved;model=createModel();saved=[];}
+   else {model=realModel;saved=realSaved;}
+   activeTrial=null;
+  }
+  invalidateLive(model);
+  transport={...transport,source,state:'connecting',replayOwned:Boolean(fake)};
+  broadcast({reset:true,transport});
+  ws.on('message',(data,isBinary)=>{if(runner!==ws)return;try{
+   if(isBinary)throw new ContractError();const event=readEvent(new TextDecoder('utf-8',{fatal:true}).decode(data));
+   if(!runnerSession){if(event.type!=='status')throw new ContractError();runnerSession=event.session_id;}
+   if(event.session_id!==runnerSession)throw new ContractError();receive(event);
+  }catch{ws.send(JSON.stringify({v:1,type:'protocol_error',code:'INVALID_EVENT'}));ws.close(1008,'INVALID_EVENT');}});
+  ws.on('close',()=>{if(runner===ws){runner=null;runnerSession=null;disconnected();}});ws.on('error',()=>{});
+ }
  const wss=new WebSocketServer({noServer:true,maxPayload:32768,perMessageDeflate:false});
  server.on('upgrade',(req,socket,head)=>{
   const supplied=req.headers.authorization?.startsWith('Bearer ')?req.headers.authorization.slice(7):'';
-  if(req.url!=='/v1/runner'||!supplied||!tokenHash||!timingSafeEqual(Buffer.from(tokenHash,'hex'),Buffer.from(hash(supplied),'hex'))){socket.end('HTTP/1.1 401 Unauthorized\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{"code":"AUTH_REQUIRED"}');return;}
-  wss.handleUpgrade(req,socket,head,ws=>{
-   runner?.close(1000,'REPLACED');runner=ws;runnerSession=null;
-   ws.on('message',(data,isBinary)=>{if(runner!==ws)return;try{
-    if(isBinary)throw new ContractError();const event=readEvent(new TextDecoder('utf-8',{fatal:true}).decode(data));
-    if(!runnerSession){if(event.type!=='status')throw new ContractError();runnerSession=event.session_id;}if(event.session_id!==runnerSession)throw new ContractError();receive(event);
-   }catch{ws.send(JSON.stringify({v:1,type:'protocol_error',code:'INVALID_EVENT'}));ws.close(1008,'INVALID_EVENT');}});
-   ws.on('close',()=>{if(runner===ws){runner=null;runnerSession=null;}});ws.on('error',()=>{});
-  });
+  if(localRunnerUrl||req.url!=='/v1/runner'||!supplied||!tokenHash||!timingSafeEqual(Buffer.from(tokenHash,'hex'),Buffer.from(hash(supplied),'hex'))){socket.end('HTTP/1.1 401 Unauthorized\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{"code":"AUTH_REQUIRED"}');return;}
+  wss.handleUpgrade(req,socket,head,ws=>attachRunner(ws));
  });
+ if(localRunnerUrl)link=connectRunner({url:localRunnerUrl,onSocket:attachRunner,onWaiting:disconnected,retryMs});
+ const freshness=setInterval(()=>{
+  if(transport.state==='connected'&&liveView(model).offline){invalidateLive(model);transport={...transport,state:'waiting'};broadcast({transport});}
+ },250);freshness.unref();
  const maintenance=setInterval(()=>{
   for(const [session,expires]of sessions)if(expires<Date.now())sessions.delete(session);
-  const before=model.events.length;model.events=model.events.filter(r=>r.expiresAt>Date.now());
-  if(persist&&before!==model.events.length)persistence=persistence.then(()=>writeFile(historyFile,model.events.map(r=>JSON.stringify({...r,receivedAt:Math.floor(r.receivedAt/60000)*60000})).join('\n')+'\n',{mode:0o600})).catch(()=>broadcast({error:'INTERNAL_ERROR'}));
+  const before=realModel.events.length;realModel.events=realModel.events.filter(r=>r.expiresAt>Date.now());if(model!==realModel)model.events=model.events.filter(r=>r.expiresAt>Date.now());
+  if(persist&&before!==realModel.events.length)persistence=persistence.then(()=>writeFile(historyFile,realModel.events.map(r=>JSON.stringify({...r,receivedAt:Math.floor(r.receivedAt/60000)*60000})).join('\n')+'\n',{mode:0o600})).catch(()=>broadcast({error:'INTERNAL_ERROR'}));
   for(const res of subscribers){if(subscriberSessions.get(res)<Date.now()){res.end();subscribers.delete(res);subscriberSessions.delete(res);}else res.write(': heartbeat\n\n');}
  },30000);maintenance.unref();
- return {server,model,close:async()=>{clearInterval(maintenance);clearTimeout(commandTimer);runner?.terminate();for(const r of subscribers)r.end();wss.close();await persistence;await new Promise(resolve=>server.close(resolve));}};
+ return {server,get model(){return model;},close:async()=>{closing=true;link?.close();await fake?.close();clearInterval(freshness);clearInterval(maintenance);clearTimeout(commandTimer);runner?.terminate();for(const r of subscribers)r.end();wss.close();await persistence;await new Promise(resolve=>server.close(resolve));}};
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
  const env=resolve(root,'.env');if(existsSync(env))process.loadEnvFile(env);
- const app=await createApplication({password:process.env.KOZ_OWNER_PASSWORD||''});
+ const app=await createApplication({password:process.env.KOZ_OWNER_PASSWORD||'',localRunnerUrl:'ws://127.0.0.1:8765',localAccess:true});
  const port=Number(process.env.PORT)||4173;app.server.listen(port,'127.0.0.1',()=>console.log(`Koʻz web: http://127.0.0.1:${port}`));
  for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>app.close().then(()=>process.exit(0)));
 }

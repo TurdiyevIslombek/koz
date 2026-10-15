@@ -3,6 +3,7 @@ export const DAY = 86400000;
 const sameJob=(a,b)=>a&&b&&a.session_id===b.session_id&&a.job_id===b.job_id;
 export const expiry=(event,receivedAt)=>Math.min(event.minute,Math.floor(receivedAt/60000))*60000+7*DAY;
 export function createModel(){return {events:[],seen:new Set(),highest:new Map(),status:null,statusAt:0,observation:null,fault:null,recipe:null,pending:null,trial:null};}
+export function invalidateLive(model){model.statusAt=0;model.observation=null;model.pending=null;}
 export function ingest(model,event,receivedAt=Date.now()) {
   validateEvent(event,receivedAt);
   if(event.type==='observation'&&event.data.looming!==null&&!model.status?.data.capabilities.includes('looming'))throw new ContractError('INVALID_EVENT');
@@ -16,6 +17,7 @@ export function ingest(model,event,receivedAt=Date.now()) {
   model.events=model.events.filter(r=>r.expiresAt>Date.now());
   if(event.type==='status'&&fresh){
     const changed=!sameJob(model.status,event);
+    if(!model.statusAt||receivedAt-model.statusAt>3000)model.observation=null;
     if(changed){model.observation=null;model.fault=null;model.recipe=null;}
     model.status=event;model.statusAt=receivedAt;
     const matchesPending=model.pending&&(!model.pending.session_id||model.pending.session_id===event.session_id)&&(!model.pending.job_id||model.pending.job_id===event.job_id);
@@ -52,7 +54,7 @@ export function liveView(model,now=Date.now()) {
   };
   const counts=['occupancy','entered','exited'].map(field);
   const outputUnknown=counts.some(c=>c?.state==='unknown')||['target','motion','looming'].some(k=>observation?.[k]==='unknown');
-  let state=offline?'offline':status.state==='idle'?'stopped':status.state==='held'?'stopped':status.state==='refused'||status.privacy==='blocked'?'blocked':['checking','planning'].includes(status.state)?'paused':unavailable||outputUnknown?'unknown':status.state==='evaluating'?'evaluating':'running';
+  let state=offline?'unknown':status.state==='idle'?'stopped':status.state==='held'?'stopped':status.state==='refused'||status.privacy==='blocked'?'blocked':['checking','planning'].includes(status.state)?'paused':unavailable||outputUnknown?'unknown':status.state==='evaluating'?'evaluating':'running';
   if(model.fault&&!offline)state=model.fault.data.code.startsWith('PRIVATE_')?'blocked':'stopped';
   return {offline,state,reason,status,observation,current,unavailable,counts,coverage:observation?.coverage||'gapped',target:current&&!unavailable?observation.target:'unknown',motion:current&&!unavailable?observation.motion:'unknown',looming:current&&!unavailable?observation.looming:'unknown'};
 }

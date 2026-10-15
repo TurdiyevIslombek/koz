@@ -98,3 +98,10 @@ export function validateCommandData(command,data,capabilities=[]) {
   if(!valid)fail('INVALID_COMMAND');return data;
 }
 export function newId(){return [...crypto.getRandomValues(new Uint8Array(16))].map(n=>n.toString(16).padStart(2,'0')).join('');}
+
+export function readCommand(text,now=Date.now()) {
+  const c=parseStrict(text,32768,'INVALID_COMMAND');
+  if(!closed(c,{v:one(1),type:one('command'),command_id:id,session_id:id,job_id:nullable(id),trial_id:nullable(id),expires_at:v=>integer(v,0,Number.MAX_SAFE_INTEGER),command:one('start_job','stop_job','begin_trial','finish_trial'),data:obj}))fail('INVALID_COMMAND');
+  validateCommandData(c.command,c.data);
+  return c;
+}

@@ -1,0 +1,676 @@
+{
+  "description": "Synthetic recorded wire fixture, not a measured camera trial. Zero, crossings, privacy hold, then a separate agent-adjust trial.",
+  "events": [
+    {
+      "at_ms": 0,
+      "event": {
+        "v": 1,
+        "type": "status",
+        "session_id": "11111111111111111111111111111111",
+        "seq": 1,
+        "job_id": "33333333333333333333333333333333",
+        "trial_id": null,
+        "revision": 1,
+        "minute": 29865600,
+        "data": {
+          "state": "running",
+          "camera_on": true,
+          "privacy": "approved",
+          "school": false,
+          "motor": "not_present",
+          "opencv_major": 5,
+          "capabilities": []
+        }
+      }
+    },
+    {
+      "at_ms": 20,
+      "event": {
+        "v": 1,
+        "type": "recipe",
+        "session_id": "11111111111111111111111111111111",
+        "seq": 2,
+        "job_id": "33333333333333333333333333333333",
+        "trial_id": null,
+        "revision": 1,
+        "minute": 29865600,
+        "data": {
+          "origin": "planner",
+          "caused_by": null,
+          "recipe": {
+            "version": 1,
+            "language": "uz",
+            "camera": {
+              "source": "device_camera",
+              "size": "320x240",
+              "fps": 10
+            },
+            "blocks": [
+              {
+                "type": "privacy_guard",
+                "settings": {}
+              },
+              {
+                "type": "face_blur",
+                "settings": {}
+              },
+              {
+                "type": "person_detector",
+                "settings": {
+                  "min_confidence": 0.5
+                }
+              },
+              {
+                "type": "line_counter",
+                "settings": {
+                  "line": [
+                    [
+                      0.5,
+                      0
+                    ],
+                    [
+                      0.5,
+                      1
+                    ]
+                  ]
+                }
+              }
+            ],
+            "brain": {
+              "type": "none"
+            },
+            "actions": [
+              {
+                "type": "dashboard"
+              }
+            ],
+            "privacy": {
+              "school": false
+            }
+          }
+        }
+      }
+    },
+    {
+      "at_ms": 40,
+      "event": {
+        "v": 1,
+        "type": "observation",
+        "session_id": "11111111111111111111111111111111",
+        "seq": 3,
+        "job_id": "33333333333333333333333333333333",
+        "trial_id": null,
+        "revision": 1,
+        "minute": 29865600,
+        "data": {
+          "round": null,
+          "privacy": "approved",
+          "occupancy": {
+            "state": "known",
+            "value": 0,
+            "reason": null
+          },
+          "entered": {
+            "state": "known",
+            "value": 0,
+            "reason": null
+          },
+          "exited": {
+            "state": "known",
+            "value": 0,
+            "reason": null
+          },
+          "coverage": "complete",
+          "target": null,
+          "motion": null,
+          "looming": null,
+          "alert": null,
+          "unknown_reason": null
+        }
+      }
+    },
+    {
+      "at_ms": 1200,
+      "event": {
+        "v": 1,
+        "type": "observation",
+        "session_id": "11111111111111111111111111111111",
+        "seq": 4,
+        "job_id": "33333333333333333333333333333333",
+        "trial_id": null,
+        "revision": 1,
+        "minute": 29865600,
+        "data": {
+          "round": null,
+          "privacy": "approved",
+          "occupancy": {
+            "state": "known",
+            "value": 1,
+            "reason": null
+          },
+          "entered": {
+            "state": "known",
+            "value": 1,
+            "reason": null
+          },
+          "exited": {
+            "state": "known",
+            "value": 0,
+            "reason": null
+          },
+          "coverage": "complete",
+          "target": null,
+          "motion": null,
+          "looming": null,
+          "alert": null,
+          "unknown_reason": null
+        }
+      }
+    },
+    {
+      "at_ms": 2400,
+      "event": {
+        "v": 1,
+        "type": "observation",
+        "session_id": "11111111111111111111111111111111",
+        "seq": 5,
+        "job_id": "33333333333333333333333333333333",
+        "trial_id": null,
+        "revision": 1,
+        "minute": 29865600,
+        "data": {
+          "round": null,
+          "privacy": "approved",
+          "occupancy": {
+            "state": "known",
+            "value": 2,
+            "reason": null
+          },
+          "entered": {
+            "state": "known",
+            "value": 2,
+            "reason": null
+          },
+          "exited": {
+            "state": "known",
+            "value": 0,
+            "reason": null
+          },
+          "coverage": "complete",
+          "target": null,
+          "motion": null,
+          "looming": null,
+          "alert": null,
+          "unknown_reason": null
+        }
+      }
+    },
+    {
+      "at_ms": 3600,
+      "event": {
+        "v": 1,
+        "type": "status",
+        "session_id": "11111111111111111111111111111111",
+        "seq": 6,
+        "job_id": "33333333333333333333333333333333",
+        "trial_id": null,
+        "revision": 1,
+        "minute": 29865600,
+        "data": {
+          "state": "held",
+          "camera_on": true,
+          "privacy": "blocked",
+          "school": false,
+          "motor": "not_present",
+          "opencv_major": 5,
+          "capabilities": []
+        }
+      }
+    },
+    {
+      "at_ms": 3620,
+      "event": {
+        "v": 1,
+        "type": "observation",
+        "session_id": "11111111111111111111111111111111",
+        "seq": 7,
+        "job_id": "33333333333333333333333333333333",
+        "trial_id": null,
+        "revision": 1,
+        "minute": 29865600,
+        "data": {
+          "round": null,
+          "privacy": "blocked",
+          "occupancy": {
+            "state": "unknown",
+            "value": null,
+            "reason": "PRIVATE_BATHROOM"
+          },
+          "entered": {
+            "state": "unknown",
+            "value": null,
+            "reason": "PRIVATE_BATHROOM"
+          },
+          "exited": {
+            "state": "unknown",
+            "value": null,
+            "reason": "PRIVATE_BATHROOM"
+          },
+          "coverage": "gapped",
+          "target": null,
+          "motion": null,
+          "looming": null,
+          "alert": null,
+          "unknown_reason": "PRIVATE_BATHROOM"
+        }
+      }
+    },
+    {
+      "at_ms": 3640,
+      "event": {
+        "v": 1,
+        "type": "fault",
+        "session_id": "11111111111111111111111111111111",
+        "seq": 8,
+        "job_id": "33333333333333333333333333333333",
+        "trial_id": null,
+        "revision": null,
+        "minute": 29865600,
+        "data": {
+          "code": "PRIVATE_BATHROOM",
+          "effect": "held"
+        }
+      }
+    },
+    {
+      "at_ms": 6500,
+      "event": {
+        "v": 1,
+        "type": "status",
+        "session_id": "11111111111111111111111111111111",
+        "seq": 9,
+        "job_id": "22222222222222222222222222222222",
+        "trial_id": "44444444444444444444444444444444",
+        "revision": 1,
+        "minute": 29865600,
+        "data": {
+          "state": "evaluating",
+          "camera_on": true,
+          "privacy": "approved",
+          "school": false,
+          "motor": "stop_commanded",
+          "opencv_major": 5,
+          "capabilities": []
+        }
+      }
+    },
+    {
+      "at_ms": 6520,
+      "event": {
+        "v": 1,
+        "type": "recipe",
+        "session_id": "11111111111111111111111111111111",
+        "seq": 10,
+        "job_id": "22222222222222222222222222222222",
+        "trial_id": "44444444444444444444444444444444",
+        "revision": 1,
+        "minute": 29865600,
+        "data": {
+          "origin": "planner",
+          "caused_by": null,
+          "recipe": {
+            "version": 1,
+            "language": "uz",
+            "camera": {
+              "source": "device_camera",
+              "size": "320x240",
+              "fps": 10
+            },
+            "blocks": [
+              {
+                "type": "privacy_guard",
+                "settings": {}
+              },
+              {
+                "type": "face_blur",
+                "settings": {}
+              },
+              {
+                "type": "color_finder",
+                "settings": {
+                  "hue_center": 0,
+                  "hue_half_width": 10,
+                  "saturation_min": 120,
+                  "value_min": 80,
+                  "min_area_ratio": 0.01
+                }
+              }
+            ],
+            "brain": {
+              "type": "flybrain",
+              "settings": {
+                "turn_gain": 0.5,
+                "deadband": 0.1
+              }
+            },
+            "actions": [
+              {
+                "type": "dashboard"
+              },
+              {
+                "type": "motors",
+                "max_speed_ratio": 0.15
+              }
+            ],
+            "privacy": {
+              "school": false
+            }
+          }
+        }
+      }
+    },
+    {
+      "at_ms": 6800,
+      "event": {
+        "v": 1,
+        "type": "observation",
+        "session_id": "11111111111111111111111111111111",
+        "seq": 11,
+        "job_id": "22222222222222222222222222222222",
+        "trial_id": "44444444444444444444444444444444",
+        "revision": 1,
+        "minute": 29865600,
+        "data": {
+          "round": 1,
+          "privacy": "approved",
+          "occupancy": null,
+          "entered": null,
+          "exited": null,
+          "coverage": "complete",
+          "target": "right",
+          "motion": null,
+          "looming": null,
+          "alert": null,
+          "unknown_reason": null
+        }
+      }
+    },
+    {
+      "at_ms": 8000,
+      "event": {
+        "v": 1,
+        "type": "decision",
+        "session_id": "11111111111111111111111111111111",
+        "seq": 12,
+        "job_id": "22222222222222222222222222222222",
+        "trial_id": "44444444444444444444444444444444",
+        "revision": 1,
+        "minute": 29865600,
+        "data": {
+          "round": 1,
+          "evidence_seq": [
+            11
+          ],
+          "check": "target_centered",
+          "result": "fail",
+          "next": "adjust",
+          "next_revision": 2,
+          "change": {
+            "setting": "brain.turn_gain",
+            "before": 0.5,
+            "after": 0.4
+          },
+          "code": null
+        }
+      }
+    },
+    {
+      "at_ms": 8400,
+      "event": {
+        "v": 1,
+        "type": "recipe",
+        "session_id": "11111111111111111111111111111111",
+        "seq": 13,
+        "job_id": "22222222222222222222222222222222",
+        "trial_id": "44444444444444444444444444444444",
+        "revision": 2,
+        "minute": 29865600,
+        "data": {
+          "origin": "adjustment",
+          "caused_by": 12,
+          "recipe": {
+            "version": 1,
+            "language": "uz",
+            "camera": {
+              "source": "device_camera",
+              "size": "320x240",
+              "fps": 10
+            },
+            "blocks": [
+              {
+                "type": "privacy_guard",
+                "settings": {}
+              },
+              {
+                "type": "face_blur",
+                "settings": {}
+              },
+              {
+                "type": "color_finder",
+                "settings": {
+                  "hue_center": 0,
+                  "hue_half_width": 10,
+                  "saturation_min": 120,
+                  "value_min": 80,
+                  "min_area_ratio": 0.01
+                }
+              }
+            ],
+            "brain": {
+              "type": "flybrain",
+              "settings": {
+                "turn_gain": 0.4,
+                "deadband": 0.1
+              }
+            },
+            "actions": [
+              {
+                "type": "dashboard"
+              },
+              {
+                "type": "motors",
+                "max_speed_ratio": 0.15
+              }
+            ],
+            "privacy": {
+              "school": false
+            }
+          }
+        }
+      }
+    },
+    {
+      "at_ms": 8600,
+      "event": {
+        "v": 1,
+        "type": "status",
+        "session_id": "11111111111111111111111111111111",
+        "seq": 14,
+        "job_id": "22222222222222222222222222222222",
+        "trial_id": "44444444444444444444444444444444",
+        "revision": 2,
+        "minute": 29865600,
+        "data": {
+          "state": "evaluating",
+          "camera_on": true,
+          "privacy": "approved",
+          "school": false,
+          "motor": "stop_commanded",
+          "opencv_major": 5,
+          "capabilities": []
+        }
+      }
+    },
+    {
+      "at_ms": 9000,
+      "event": {
+        "v": 1,
+        "type": "observation",
+        "session_id": "11111111111111111111111111111111",
+        "seq": 15,
+        "job_id": "22222222222222222222222222222222",
+        "trial_id": "44444444444444444444444444444444",
+        "revision": 2,
+        "minute": 29865600,
+        "data": {
+          "round": 2,
+          "privacy": "approved",
+          "occupancy": null,
+          "entered": null,
+          "exited": null,
+          "coverage": "complete",
+          "target": "center",
+          "motion": null,
+          "looming": null,
+          "alert": null,
+          "unknown_reason": null
+        }
+      }
+    },
+    {
+      "at_ms": 9600,
+      "event": {
+        "v": 1,
+        "type": "decision",
+        "session_id": "11111111111111111111111111111111",
+        "seq": 16,
+        "job_id": "22222222222222222222222222222222",
+        "trial_id": "44444444444444444444444444444444",
+        "revision": 2,
+        "minute": 29865600,
+        "data": {
+          "round": 2,
+          "evidence_seq": [
+            15
+          ],
+          "check": "target_centered",
+          "result": "pass",
+          "next": "run",
+          "next_revision": 2,
+          "change": null,
+          "code": null
+        }
+      }
+    },
+    {
+      "at_ms": 10000,
+      "event": {
+        "v": 1,
+        "type": "status",
+        "session_id": "11111111111111111111111111111111",
+        "seq": 17,
+        "job_id": "22222222222222222222222222222222",
+        "trial_id": "44444444444444444444444444444444",
+        "revision": 2,
+        "minute": 29865600,
+        "data": {
+          "state": "running",
+          "camera_on": true,
+          "privacy": "approved",
+          "school": false,
+          "motor": "enabled",
+          "opencv_major": 5,
+          "capabilities": []
+        }
+      }
+    },
+    {
+      "at_ms": 10020,
+      "event": {
+        "v": 1,
+        "type": "observation",
+        "session_id": "11111111111111111111111111111111",
+        "seq": 18,
+        "job_id": "22222222222222222222222222222222",
+        "trial_id": "44444444444444444444444444444444",
+        "revision": 2,
+        "minute": 29865600,
+        "data": {
+          "round": null,
+          "privacy": "approved",
+          "occupancy": null,
+          "entered": null,
+          "exited": null,
+          "coverage": "complete",
+          "target": "center",
+          "motion": null,
+          "looming": null,
+          "alert": null,
+          "unknown_reason": null
+        }
+      }
+    },
+    {
+      "at_ms": 10800,
+      "event": {
+        "v": 1,
+        "type": "trial_result",
+        "session_id": "11111111111111111111111111111111",
+        "seq": 19,
+        "job_id": "22222222222222222222222222222222",
+        "trial_id": "44444444444444444444444444444444",
+        "revision": 2,
+        "minute": 29865600,
+        "data": {
+          "demo": "red_ball",
+          "index": 1,
+          "result": "pass",
+          "basis": "owner_report",
+          "reason": "none",
+          "expected_count": null,
+          "observed_count": null,
+          "fault_code": null,
+          "evidence": "complete",
+          "agent_changes": [
+            {
+              "from_revision": 1,
+              "to_revision": 2,
+              "check": "target_centered",
+              "before_label": "right",
+              "change": {
+                "setting": "brain.turn_gain",
+                "before": 0.5,
+                "after": 0.4
+              },
+              "executed": true,
+              "after_label": "center",
+              "after_result": "pass"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "at_ms": 11000,
+      "event": {
+        "v": 1,
+        "type": "status",
+        "session_id": "11111111111111111111111111111111",
+        "seq": 20,
+        "job_id": "22222222222222222222222222222222",
+        "trial_id": null,
+        "revision": null,
+        "minute": 29865600,
+        "data": {
+          "state": "idle",
+          "camera_on": false,
+          "privacy": "unknown",
+          "school": false,
+          "motor": "stop_commanded",
+          "opencv_major": 5,
+          "capabilities": []
+        }
+      }
+    }
+  ]
+}

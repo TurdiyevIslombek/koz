@@ -7,9 +7,17 @@
     "build": "node scripts/build.mjs",
     "start": "node server/index.mjs",
     "dev": "npm run build && npm start",
-    "test": "node scripts/contracts.mjs && node --test test/*.test.mjs"
+    "test": "node scripts/contracts.mjs && node --test test/*.test.mjs",
+    "fake-runner": "node server/fake-runner.mjs"
   },
-  "dependencies": { "ajv": "8.20.0", "ws": "8.22.0" },
-  "devDependencies": { "esbuild": "0.28.2" },
-  "engines": { "node": ">=22" }
+  "dependencies": {
+    "ajv": "8.20.0",
+    "ws": "8.22.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  },
+  "engines": {
+    "node": ">=22"
+  }
 }

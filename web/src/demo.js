@@ -30,21 +30,21 @@ export class DemoRunner {
   this.status();if(this.state!=='idle')this.observation();
  }
  cross(){if(this.state!=='running'||this.reason||this.offline)return;this.count++;this.entered++;this.observation();}
- command(command,data,language){
-  const envelope={command_id:newId(),command,trial_id:this.trial,expires_at:Math.floor(Date.now()/1000)+10};
+ command(command,data,language,wire=null){
+  const envelope=wire?{command_id:wire.command_id,command,session_id:wire.session_id,job_id:wire.job_id,trial_id:wire.trial_id,expires_at:wire.expires_at}:{command_id:newId(),command,trial_id:this.trial,expires_at:Math.floor(Date.now()/1000)+10};
   this.later(()=>this.event('command_result',{command_id:envelope.command_id,result:'accepted',code:null},{revision:null}),100);
   if(command==='stop_job'){
    for(const t of this.timers)clearTimeout(t);this.timers.clear();
    this.later(()=>this.event('command_result',{command_id:envelope.command_id,result:'accepted',code:null},{revision:null}),100);
    this.later(()=>{this.state='idle';this.reason=null;this.status();},550);
   } else if(command==='start_job'){
-   this.job=newId();this.revision=1;this.reason=null;this.state='planning';this.count=this.entered=this.exited=0;
+   this.job=wire?.job_id||newId();this.trial=wire?.trial_id??this.trial;this.revision=1;this.reason=null;this.state='planning';this.count=this.entered=this.exited=0;
    this.recipe=data.input==='recipe'?structuredClone(data.recipe):recipeFor(this.kind,language);this.kind=this.recipe.brain.type==='flybrain'?'red_ball':this.recipe.privacy.school?'classroom':this.recipe.blocks.some(b=>b.type==='person_detector')?'counter':'privacy_guard';
    this.later(()=>this.status(),180);
    this.later(()=>{this.event('recipe',{origin:data.input==='recipe'?'import':'planner',caused_by:null,recipe:this.recipe});this.state='evaluating';this.status();this.evalEvidence=this.observation(1,this.kind==='red_ball'?'right':'center').seq;},500);
    this.later(()=>{if(this.kind==='red_ball'){const evidence=this.evalEvidence;const before=this.recipe.brain.settings.turn_gain;const after=before===.4?.3:.4;const decision=this.event('decision',{round:1,evidence_seq:[evidence],check:'target_centered',result:'fail',next:'adjust',next_revision:2,change:{setting:'brain.turn_gain',before,after},code:null});this.revision=2;this.recipe.brain.settings.turn_gain=after;this.event('recipe',{origin:'adjustment',caused_by:decision.seq,recipe:structuredClone(this.recipe)});this.status();this.evalEvidence=this.observation(2,'center').seq;}const evidence=this.evalEvidence;this.event('decision',{round:this.revision,evidence_seq:[evidence],check:this.kind==='red_ball'?'target_centered':this.kind==='privacy_guard'?'privacy_approved':'counts_available',result:'pass',next:'run',next_revision:this.revision,change:null,code:null});this.state='running';this.status();this.observation();},1400);
   } else if(command==='begin_trial'){
-   this.trial=newId();this.trialInfo=data;this.job=null;this.state='idle';this.kind=data.demo;envelope.trial_id=this.trial;this.later(()=>this.status(),250);
+   this.trial=wire?.trial_id||newId();this.trialInfo=data;this.job=null;this.state='idle';this.kind=data.demo;envelope.trial_id=this.trial;this.later(()=>this.status(),250);
   } else if(command==='finish_trial'){
    const observed=this.trialInfo.demo==='classroom'?(this.reason||this.gapped?unknown(this.reason||'FRAME_STALE'):known(this.entered)):null;
    const invalidPass=data.result==='pass'&&this.trialInfo.demo!=='privacy_guard'&&(observed?.state==='unknown'||this.offline);

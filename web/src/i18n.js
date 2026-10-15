@@ -1,5 +1,12 @@
 export const languages = ['uz','ru','en'];
 const rows = {
+ replayTitle:['Yozuvni qayta koʻrish','Воспроизвести запись','Replay recording'], replayAgain:['Qayta koʻrsatish','Повторить запись','Replay again'],
+ replayStop:['Yozuvni uzish','Отключить запись','Disconnect replay'], replayLabel:['Sinov yozuvi · kamera ulanmagan','Тестовая запись · без камеры','Recorded fixture · no camera'],
+ replayHint:['Nol, kirishlar, maxfiylik toʻxtatishi va agent oʻzgarishi yozilgan namuna. Haqiqiy kamera sinovi emas.','Пример записи: ноль, входы, остановка приватности и корректировка агента. Не испытание реальной камеры.','A recorded example: zero, entries, a privacy stop, and an agent adjustment. Not a real camera trial.'],
+ localWaiting:['Qurilma bilan aloqa yoʻq. Yangi maʼlumot kutilmoqda. Sinov yozuvini koʻrishingiz mumkin.','Нет связи с устройством. Ожидаются свежие данные. Можно воспроизвести тестовую запись.','No runner connection. Waiting for fresh data. You can replay the test recording.'],
+ localConnection:['Mahalliy qurilma','Локальное устройство','Local runner'], localConnectionHint:['Koʻz shu manzilga avtomatik ulanadi. Aloqa tiklanganda buyruqlar takrorlanmaydi.','Koʻz подключается к этому адресу автоматически. При восстановлении связи команды не повторяются.','Koʻz connects to this address automatically. Reconnection never repeats commands.'],
+ replayBusy:['Bu portda qurilma allaqachon ishlayapti. Sinov yozuvi uni almashtirmaydi.','На этом порту уже работает устройство. Запись его не заменяет.','A runner already uses this port. The recording will not replace it.'],
+
  jobEvidence:['Joriy vazifa dalili · sinovdan tashqari','Доказательства текущего задания · вне испытаний','Current job evidence · outside trials'],
  trialContextUnknown:['Sinov turi topilmadi. Uni bekor qilib, yangi sinov boshlang.','Тип испытания недоступен. Отмените его и начните новое.','Trial type is unavailable. Cancel it and begin a new trial.'],
 
