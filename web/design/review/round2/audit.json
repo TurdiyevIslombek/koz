@@ -1,0 +1,1202 @@
+{
+  "errors": [],
+  "report": [
+    {
+      "d": "c",
+      "theme": "light",
+      "width": 360,
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "smallTargets": [],
+        "count": {
+          "x": 246.171875,
+          "y": 475.828125,
+          "width": 93.828125,
+          "height": 142.796875,
+          "top": 475.828125,
+          "right": 340,
+          "bottom": 618.625,
+          "left": 246.171875
+        },
+        "dock": {
+          "x": 0,
+          "y": 676.609375,
+          "width": 360,
+          "height": 123.390625,
+          "top": 676.609375,
+          "right": 360,
+          "bottom": 800,
+          "left": 0
+        }
+      },
+      "axe": []
+    },
+    {
+      "d": "c",
+      "theme": "light",
+      "width": 1280,
+      "layout": {
+        "width": 1280,
+        "scroll": 1280,
+        "smallTargets": [],
+        "count": {
+          "x": 1055.8125,
+          "y": 344.515625,
+          "width": 124.1875,
+          "height": 189,
+          "top": 344.515625,
+          "right": 1180,
+          "bottom": 533.515625,
+          "left": 1055.8125
+        },
+        "dock": {
+          "x": 0,
+          "y": 697,
+          "width": 1280,
+          "height": 103,
+          "top": 697,
+          "right": 1280,
+          "bottom": 800,
+          "left": 0
+        }
+      },
+      "axe": []
+    },
+    {
+      "d": "c",
+      "theme": "dark",
+      "width": 360,
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "smallTargets": [],
+        "count": {
+          "x": 246.171875,
+          "y": 475.828125,
+          "width": 93.828125,
+          "height": 142.796875,
+          "top": 475.828125,
+          "right": 340,
+          "bottom": 618.625,
+          "left": 246.171875
+        },
+        "dock": {
+          "x": 0,
+          "y": 676.609375,
+          "width": 360,
+          "height": 123.390625,
+          "top": 676.609375,
+          "right": 360,
+          "bottom": 800,
+          "left": 0
+        }
+      },
+      "axe": []
+    },
+    {
+      "d": "c",
+      "theme": "dark",
+      "width": 1280,
+      "layout": {
+        "width": 1280,
+        "scroll": 1280,
+        "smallTargets": [],
+        "count": {
+          "x": 1055.8125,
+          "y": 344.515625,
+          "width": 124.1875,
+          "height": 189,
+          "top": 344.515625,
+          "right": 1180,
+          "bottom": 533.515625,
+          "left": 1055.8125
+        },
+        "dock": {
+          "x": 0,
+          "y": 697,
+          "width": 1280,
+          "height": 103,
+          "top": 697,
+          "right": 1280,
+          "bottom": 800,
+          "left": 0
+        }
+      },
+      "axe": []
+    },
+    {
+      "d": "d",
+      "theme": "light",
+      "width": 360,
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "smallTargets": [],
+        "count": {
+          "x": 20,
+          "y": 474.578125,
+          "width": 107.625,
+          "height": 156,
+          "top": 474.578125,
+          "right": 127.625,
+          "bottom": 630.578125,
+          "left": 20
+        },
+        "dock": {
+          "x": 0,
+          "y": 676.609375,
+          "width": 360,
+          "height": 123.390625,
+          "top": 676.609375,
+          "right": 360,
+          "bottom": 800,
+          "left": 0
+        }
+      },
+      "axe": []
+    },
+    {
+      "d": "d",
+      "theme": "light",
+      "width": 1280,
+      "layout": {
+        "width": 1280,
+        "scroll": 1280,
+        "smallTargets": [],
+        "count": {
+          "x": 787.546875,
+          "y": 329.890625,
+          "width": 154.546875,
+          "height": 224,
+          "top": 329.890625,
+          "right": 942.09375,
+          "bottom": 553.890625,
+          "left": 787.546875
+        },
+        "dock": {
+          "x": 0,
+          "y": 697,
+          "width": 1280,
+          "height": 103,
+          "top": 697,
+          "right": 1280,
+          "bottom": 800,
+          "left": 0
+        }
+      },
+      "axe": []
+    },
+    {
+      "d": "d",
+      "theme": "dark",
+      "width": 360,
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "smallTargets": [],
+        "count": {
+          "x": 20,
+          "y": 474.578125,
+          "width": 107.625,
+          "height": 156,
+          "top": 474.578125,
+          "right": 127.625,
+          "bottom": 630.578125,
+          "left": 20
+        },
+        "dock": {
+          "x": 0,
+          "y": 676.609375,
+          "width": 360,
+          "height": 123.390625,
+          "top": 676.609375,
+          "right": 360,
+          "bottom": 800,
+          "left": 0
+        }
+      },
+      "axe": []
+    },
+    {
+      "d": "d",
+      "theme": "dark",
+      "width": 1280,
+      "layout": {
+        "width": 1280,
+        "scroll": 1280,
+        "smallTargets": [],
+        "count": {
+          "x": 787.546875,
+          "y": 329.890625,
+          "width": 154.546875,
+          "height": 224,
+          "top": 329.890625,
+          "right": 942.09375,
+          "bottom": 553.890625,
+          "left": 787.546875
+        },
+        "dock": {
+          "x": 0,
+          "y": 697,
+          "width": 1280,
+          "height": 103,
+          "top": 697,
+          "right": 1280,
+          "bottom": 800,
+          "left": 0
+        }
+      },
+      "axe": []
+    },
+    {
+      "d": "c",
+      "lang": "uz",
+      "state": "running",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "7",
+        "cover": false,
+        "sceneEnabled": true,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "uz",
+      "state": "zero",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "0",
+        "cover": false,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "uz",
+      "state": "paused",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "uz",
+      "state": "stopped",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "uz",
+      "state": "blocked",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "uz",
+      "state": "unknown",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "uz",
+      "state": "pending",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "7",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "uz",
+      "state": "gap",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "7",
+        "cover": false,
+        "sceneEnabled": true,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "ru",
+      "state": "running",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "7",
+        "cover": false,
+        "sceneEnabled": true,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "ru",
+      "state": "zero",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "0",
+        "cover": false,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "ru",
+      "state": "paused",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "ru",
+      "state": "stopped",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "ru",
+      "state": "blocked",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "ru",
+      "state": "unknown",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "ru",
+      "state": "pending",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "7",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "ru",
+      "state": "gap",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "7",
+        "cover": false,
+        "sceneEnabled": true,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "en",
+      "state": "running",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "7",
+        "cover": false,
+        "sceneEnabled": true,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "en",
+      "state": "zero",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "0",
+        "cover": false,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "en",
+      "state": "paused",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "en",
+      "state": "stopped",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "en",
+      "state": "blocked",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "en",
+      "state": "unknown",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "en",
+      "state": "pending",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "7",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "en",
+      "state": "gap",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "7",
+        "cover": false,
+        "sceneEnabled": true,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "uz",
+      "state": "running",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "7",
+        "cover": false,
+        "sceneEnabled": true,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "uz",
+      "state": "zero",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "0",
+        "cover": false,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "uz",
+      "state": "paused",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "uz",
+      "state": "stopped",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "uz",
+      "state": "blocked",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "uz",
+      "state": "unknown",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "uz",
+      "state": "pending",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "7",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "uz",
+      "state": "gap",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "7",
+        "cover": false,
+        "sceneEnabled": true,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "ru",
+      "state": "running",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "7",
+        "cover": false,
+        "sceneEnabled": true,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "ru",
+      "state": "zero",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "0",
+        "cover": false,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "ru",
+      "state": "paused",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "ru",
+      "state": "stopped",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "ru",
+      "state": "blocked",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "ru",
+      "state": "unknown",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "ru",
+      "state": "pending",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "7",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "ru",
+      "state": "gap",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "7",
+        "cover": false,
+        "sceneEnabled": true,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "en",
+      "state": "running",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "7",
+        "cover": false,
+        "sceneEnabled": true,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "en",
+      "state": "zero",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "0",
+        "cover": false,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "en",
+      "state": "paused",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "en",
+      "state": "stopped",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "en",
+      "state": "blocked",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "en",
+      "state": "unknown",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "en",
+      "state": "pending",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "7",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "en",
+      "state": "gap",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "7",
+        "cover": false,
+        "sceneEnabled": true,
+        "undefinedText": false
+      }
+    },
+    {
+      "crossing": {
+        "count": "8",
+        "entered": "25",
+        "animations": [
+          {
+            "target": "crossing-person",
+            "duration": 1000
+          },
+          {
+            "target": "line-pulse",
+            "duration": 420
+          }
+        ]
+      }
+    },
+    {
+      "stop": {
+        "count": "8",
+        "status": "Ishlayapti",
+        "note": "Soʻrov yuborildi · qurilma tasdigʻi kutilmoqda (namuna)",
+        "disabled": true
+      }
+    },
+    {
+      "reducedMotion": {
+        "count": "8",
+        "animations": 0,
+        "note": "Chiziqdan 1 kishi oʻtdi · +1"
+      }
+    },
+    {
+      "d": "c",
+      "pendingFrom": "zero",
+      "preserved": true
+    },
+    {
+      "d": "c",
+      "pendingFrom": "paused",
+      "preserved": true
+    },
+    {
+      "d": "c",
+      "pendingFrom": "gap",
+      "preserved": true
+    },
+    {
+      "d": "c",
+      "count": 10,
+      "noOverflow": true
+    },
+    {
+      "d": "c",
+      "count": 100,
+      "noOverflow": true
+    },
+    {
+      "d": "c",
+      "count": 999,
+      "noOverflow": true
+    },
+    {
+      "d": "c",
+      "text200": {
+        "width": 360,
+        "scroll": 360
+      }
+    },
+    {
+      "d": "c",
+      "reflow320": {
+        "width": 320,
+        "scroll": 320
+      }
+    },
+    {
+      "d": "c",
+      "keyboard": [
+        {
+          "tag": "A",
+          "id": "",
+          "text": "Vazifaga oʻtish",
+          "outline": "solid"
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "text": "C",
+          "outline": "solid"
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "text": "D",
+          "outline": "solid"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "theme",
+          "text": "Tungi",
+          "outline": "solid"
+        },
+        {
+          "tag": "SELECT",
+          "id": "language",
+          "text": "OʻzbekРусскийEnglish",
+          "outline": "solid"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "crossing",
+          "text": "Oʻtishni koʻrsatish",
+          "outline": "solid"
+        },
+        {
+          "tag": "SUMMARY",
+          "id": "",
+          "text": "Maketni tekshirish",
+          "outline": "solid"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "stop",
+          "text": "Vazifani toʻxtatish",
+          "outline": "solid"
+        }
+      ]
+    },
+    {
+      "d": "c",
+      "theme": "light",
+      "contrast": {
+        "text": 14.57,
+        "muted": 5.65,
+        "running": 6.48,
+        "warning": 5.98,
+        "stop": 6.73,
+        "accent": 6.35,
+        "countingLine": 5.58
+      }
+    },
+    {
+      "d": "c",
+      "theme": "dark",
+      "contrast": {
+        "text": 15.51,
+        "muted": 9.19,
+        "running": 10.82,
+        "warning": 10.76,
+        "stop": 9.04,
+        "accent": 8.76,
+        "countingLine": 6.47
+      }
+    },
+    {
+      "d": "d",
+      "pendingFrom": "zero",
+      "preserved": true
+    },
+    {
+      "d": "d",
+      "pendingFrom": "paused",
+      "preserved": true
+    },
+    {
+      "d": "d",
+      "pendingFrom": "gap",
+      "preserved": true
+    },
+    {
+      "d": "d",
+      "count": 10,
+      "noOverflow": true
+    },
+    {
+      "d": "d",
+      "count": 100,
+      "noOverflow": true
+    },
+    {
+      "d": "d",
+      "count": 999,
+      "noOverflow": true
+    },
+    {
+      "d": "d",
+      "text200": {
+        "width": 360,
+        "scroll": 360
+      }
+    },
+    {
+      "d": "d",
+      "reflow320": {
+        "width": 320,
+        "scroll": 320
+      }
+    },
+    {
+      "d": "d",
+      "keyboard": [
+        {
+          "tag": "A",
+          "id": "",
+          "text": "Vazifaga oʻtish",
+          "outline": "solid"
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "text": "C",
+          "outline": "solid"
+        },
+        {
+          "tag": "A",
+          "id": "",
+          "text": "D",
+          "outline": "solid"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "theme",
+          "text": "Tungi",
+          "outline": "solid"
+        },
+        {
+          "tag": "SELECT",
+          "id": "language",
+          "text": "OʻzbekРусскийEnglish",
+          "outline": "solid"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "crossing",
+          "text": "Oʻtishni koʻrsatish",
+          "outline": "solid"
+        },
+        {
+          "tag": "SUMMARY",
+          "id": "",
+          "text": "Maketni tekshirish",
+          "outline": "solid"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "stop",
+          "text": "Vazifani toʻxtatish",
+          "outline": "solid"
+        }
+      ]
+    },
+    {
+      "d": "d",
+      "theme": "light",
+      "contrast": {
+        "text": 16.35,
+        "muted": 5.89,
+        "running": 6.28,
+        "warning": 5.81,
+        "stop": 6.73,
+        "accent": 6.16,
+        "countingLine": 9.26
+      }
+    },
+    {
+      "d": "d",
+      "theme": "dark",
+      "contrast": {
+        "text": 16.64,
+        "muted": 9.78,
+        "running": 11.67,
+        "warning": 11.61,
+        "stop": 9.04,
+        "accent": 10.55,
+        "countingLine": 5.57
+      }
+    }
+  ]
+}

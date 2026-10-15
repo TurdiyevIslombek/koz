@@ -1,0 +1,24 @@
+[
+  {
+    "direction": "a",
+    "skipVisible": true,
+    "focusVisible": true,
+    "keyboardTheme": true,
+    "narrow320NoOverflow": true
+  },
+  {
+    "direction": "a",
+    "fileURLWorks": true
+  },
+  {
+    "direction": "b",
+    "skipVisible": true,
+    "focusVisible": true,
+    "keyboardTheme": true,
+    "narrow320NoOverflow": true
+  },
+  {
+    "direction": "b",
+    "fileURLWorks": true
+  }
+]

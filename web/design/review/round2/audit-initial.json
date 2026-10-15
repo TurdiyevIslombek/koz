@@ -1,0 +1,1060 @@
+{
+  "errors": [],
+  "report": [
+    {
+      "d": "c",
+      "theme": "light",
+      "width": 360,
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "smallTargets": [],
+        "count": {
+          "x": 20,
+          "y": 509.828125,
+          "width": 99.359375,
+          "height": 151.1875,
+          "top": 509.828125,
+          "right": 119.359375,
+          "bottom": 661.015625,
+          "left": 20
+        },
+        "dock": {
+          "x": 0,
+          "y": 676.609375,
+          "width": 360,
+          "height": 123.390625,
+          "top": 676.609375,
+          "right": 360,
+          "bottom": 800,
+          "left": 0
+        }
+      },
+      "axe": [
+        {
+          "id": "region",
+          "impact": "moderate",
+          "nodes": [
+            {
+              "target": [
+                ".design-bar > span"
+              ],
+              "summary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "d": "c",
+      "theme": "light",
+      "width": 1280,
+      "layout": {
+        "width": 1280,
+        "scroll": 1280,
+        "smallTargets": [],
+        "count": {
+          "x": 762.03125,
+          "y": 333.015625,
+          "width": 124.1875,
+          "height": 189,
+          "top": 333.015625,
+          "right": 886.21875,
+          "bottom": 522.015625,
+          "left": 762.03125
+        },
+        "dock": {
+          "x": 0,
+          "y": 697,
+          "width": 1280,
+          "height": 103,
+          "top": 697,
+          "right": 1280,
+          "bottom": 800,
+          "left": 0
+        }
+      },
+      "axe": [
+        {
+          "id": "region",
+          "impact": "moderate",
+          "nodes": [
+            {
+              "target": [
+                ".design-bar > span"
+              ],
+              "summary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "d": "c",
+      "theme": "dark",
+      "width": 360,
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "smallTargets": [],
+        "count": {
+          "x": 20,
+          "y": 509.828125,
+          "width": 99.359375,
+          "height": 151.1875,
+          "top": 509.828125,
+          "right": 119.359375,
+          "bottom": 661.015625,
+          "left": 20
+        },
+        "dock": {
+          "x": 0,
+          "y": 676.609375,
+          "width": 360,
+          "height": 123.390625,
+          "top": 676.609375,
+          "right": 360,
+          "bottom": 800,
+          "left": 0
+        }
+      },
+      "axe": [
+        {
+          "id": "region",
+          "impact": "moderate",
+          "nodes": [
+            {
+              "target": [
+                ".design-bar > span"
+              ],
+              "summary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "d": "c",
+      "theme": "dark",
+      "width": 1280,
+      "layout": {
+        "width": 1280,
+        "scroll": 1280,
+        "smallTargets": [],
+        "count": {
+          "x": 762.03125,
+          "y": 333.015625,
+          "width": 124.1875,
+          "height": 189,
+          "top": 333.015625,
+          "right": 886.21875,
+          "bottom": 522.015625,
+          "left": 762.03125
+        },
+        "dock": {
+          "x": 0,
+          "y": 697,
+          "width": 1280,
+          "height": 103,
+          "top": 697,
+          "right": 1280,
+          "bottom": 800,
+          "left": 0
+        }
+      },
+      "axe": [
+        {
+          "id": "region",
+          "impact": "moderate",
+          "nodes": [
+            {
+              "target": [
+                ".design-bar > span"
+              ],
+              "summary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "d": "d",
+      "theme": "light",
+      "width": 360,
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "smallTargets": [],
+        "count": {
+          "x": 20,
+          "y": 513.796875,
+          "width": 126.953125,
+          "height": 184,
+          "top": 513.796875,
+          "right": 146.953125,
+          "bottom": 697.796875,
+          "left": 20
+        },
+        "dock": {
+          "x": 0,
+          "y": 676.609375,
+          "width": 360,
+          "height": 123.390625,
+          "top": 676.609375,
+          "right": 360,
+          "bottom": 800,
+          "left": 0
+        }
+      },
+      "axe": [
+        {
+          "id": "region",
+          "impact": "moderate",
+          "nodes": [
+            {
+              "target": [
+                ".design-bar > span"
+              ],
+              "summary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "d": "d",
+      "theme": "light",
+      "width": 1280,
+      "layout": {
+        "width": 1280,
+        "scroll": 1280,
+        "smallTargets": [],
+        "count": {
+          "x": 787.546875,
+          "y": 318.390625,
+          "width": 154.546875,
+          "height": 224,
+          "top": 318.390625,
+          "right": 942.09375,
+          "bottom": 542.390625,
+          "left": 787.546875
+        },
+        "dock": {
+          "x": 0,
+          "y": 697,
+          "width": 1280,
+          "height": 103,
+          "top": 697,
+          "right": 1280,
+          "bottom": 800,
+          "left": 0
+        }
+      },
+      "axe": [
+        {
+          "id": "region",
+          "impact": "moderate",
+          "nodes": [
+            {
+              "target": [
+                ".design-bar > span"
+              ],
+              "summary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "d": "d",
+      "theme": "dark",
+      "width": 360,
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "smallTargets": [],
+        "count": {
+          "x": 20,
+          "y": 513.796875,
+          "width": 126.953125,
+          "height": 184,
+          "top": 513.796875,
+          "right": 146.953125,
+          "bottom": 697.796875,
+          "left": 20
+        },
+        "dock": {
+          "x": 0,
+          "y": 676.609375,
+          "width": 360,
+          "height": 123.390625,
+          "top": 676.609375,
+          "right": 360,
+          "bottom": 800,
+          "left": 0
+        }
+      },
+      "axe": [
+        {
+          "id": "region",
+          "impact": "moderate",
+          "nodes": [
+            {
+              "target": [
+                ".design-bar > span"
+              ],
+              "summary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "d": "d",
+      "theme": "dark",
+      "width": 1280,
+      "layout": {
+        "width": 1280,
+        "scroll": 1280,
+        "smallTargets": [],
+        "count": {
+          "x": 787.546875,
+          "y": 318.390625,
+          "width": 154.546875,
+          "height": 224,
+          "top": 318.390625,
+          "right": 942.09375,
+          "bottom": 542.390625,
+          "left": 787.546875
+        },
+        "dock": {
+          "x": 0,
+          "y": 697,
+          "width": 1280,
+          "height": 103,
+          "top": 697,
+          "right": 1280,
+          "bottom": 800,
+          "left": 0
+        }
+      },
+      "axe": [
+        {
+          "id": "region",
+          "impact": "moderate",
+          "nodes": [
+            {
+              "target": [
+                ".design-bar > span"
+              ],
+              "summary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "d": "c",
+      "lang": "uz",
+      "state": "running",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "7",
+        "cover": false,
+        "sceneEnabled": true,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "uz",
+      "state": "zero",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "0",
+        "cover": false,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "uz",
+      "state": "paused",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "uz",
+      "state": "stopped",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "uz",
+      "state": "blocked",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "uz",
+      "state": "unknown",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "uz",
+      "state": "pending",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "7",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "uz",
+      "state": "gap",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "7",
+        "cover": false,
+        "sceneEnabled": true,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "ru",
+      "state": "running",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "7",
+        "cover": false,
+        "sceneEnabled": true,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "ru",
+      "state": "zero",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "0",
+        "cover": false,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "ru",
+      "state": "paused",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "ru",
+      "state": "stopped",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "ru",
+      "state": "blocked",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "ru",
+      "state": "unknown",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "ru",
+      "state": "pending",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "7",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "ru",
+      "state": "gap",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "7",
+        "cover": false,
+        "sceneEnabled": true,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "en",
+      "state": "running",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "7",
+        "cover": false,
+        "sceneEnabled": true,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "en",
+      "state": "zero",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "0",
+        "cover": false,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "en",
+      "state": "paused",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "en",
+      "state": "stopped",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "en",
+      "state": "blocked",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "en",
+      "state": "unknown",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "en",
+      "state": "pending",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "7",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "c",
+      "lang": "en",
+      "state": "gap",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "7",
+        "cover": false,
+        "sceneEnabled": true,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "uz",
+      "state": "running",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "7",
+        "cover": false,
+        "sceneEnabled": true,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "uz",
+      "state": "zero",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "0",
+        "cover": false,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "uz",
+      "state": "paused",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "uz",
+      "state": "stopped",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "uz",
+      "state": "blocked",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "uz",
+      "state": "unknown",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "uz",
+      "state": "pending",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "7",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "uz",
+      "state": "gap",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "7",
+        "cover": false,
+        "sceneEnabled": true,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "ru",
+      "state": "running",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "7",
+        "cover": false,
+        "sceneEnabled": true,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "ru",
+      "state": "zero",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "0",
+        "cover": false,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "ru",
+      "state": "paused",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "ru",
+      "state": "stopped",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "ru",
+      "state": "blocked",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "ru",
+      "state": "unknown",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "ru",
+      "state": "pending",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "7",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "ru",
+      "state": "gap",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "7",
+        "cover": false,
+        "sceneEnabled": true,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "en",
+      "state": "running",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "7",
+        "cover": false,
+        "sceneEnabled": true,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "en",
+      "state": "zero",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "0",
+        "cover": false,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "en",
+      "state": "paused",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "en",
+      "state": "stopped",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "en",
+      "state": "blocked",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "en",
+      "state": "unknown",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "—",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "en",
+      "state": "pending",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": true,
+        "count": "7",
+        "cover": true,
+        "sceneEnabled": false,
+        "undefinedText": false
+      }
+    },
+    {
+      "d": "d",
+      "lang": "en",
+      "state": "gap",
+      "layout": {
+        "width": 360,
+        "scroll": 360,
+        "stopDisabled": false,
+        "count": "7",
+        "cover": false,
+        "sceneEnabled": true,
+        "undefinedText": false
+      }
+    },
+    {
+      "crossing": {
+        "count": "8",
+        "entered": "25",
+        "animations": [
+          {
+            "target": "crossing-person",
+            "duration": 1000
+          },
+          {
+            "target": "line-pulse",
+            "duration": 420
+          }
+        ]
+      }
+    },
+    {
+      "stop": {
+        "count": "8",
+        "status": "Ishlayapti",
+        "note": "Soʻrov yuborildi · qurilma tasdigʻi kutilmoqda (namuna)",
+        "disabled": true
+      }
+    },
+    {
+      "reducedMotion": {
+        "count": "8",
+        "animations": 0,
+        "note": "Chiziqdan 1 kishi oʻtdi · +1"
+      }
+    }
+  ]
+}
