@@ -48,9 +48,9 @@ class Runner:
         width, height = (int(n) for n in recipe.data["camera"]["size"].split("x"))
         self.size = (width, height)
         self._mask = setup.mask(width, height)
-        self.strict = setup.strict
+        self.strict = setup.strict or recipe.school   # school mode is always strict (rule 6)
         self.guard = (scene_checker if scene_checker is not None
-                      else GuardCheck(PlacesSceneChecker(), PrivateObjects(), setup.strict, clock=clock,
+                      else GuardCheck(PlacesSceneChecker(), PrivateObjects(), self.strict, clock=clock,
                                       watch_changes=setup.mount == "fixed"))
         self._gate = PrivacyGate(self.guard, clock)
         self._blur = FaceBlur({}, detector=face_detector)

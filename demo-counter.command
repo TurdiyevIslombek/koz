@@ -1,5 +1,5 @@
 #!/bin/bash
-# Double-click to run Ko'z on this MacBook's camera: people counter in school mode.
+# Double-click to run Ko'z on this MacBook's camera: people counter.
 # Runs anywhere; stops on a bed, a toilet, a sink in a bathroom, a covered lens or a clearly private room.
 # Nothing is saved or sent. Press q in the window to quit.
 cd "$(dirname "$0")" || exit 1
@@ -10,5 +10,5 @@ if [ ! -x .venv/bin/python ]; then
   finish 1
 fi
 .venv/bin/python scripts/fetch_models.py || finish 1
-.venv/bin/python scripts/live_demo.py --i-own-this-camera --job counter --school
+.venv/bin/python scripts/live_demo.py --i-own-this-camera --job counter
 finish $?

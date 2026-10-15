@@ -19,8 +19,9 @@ class LocalSetup:
     school: bool = False     # asked explicitly during setup
     mount: str = "fixed"     # "fixed" or "moving" (the car)
     # Strict mode (--strict, for schools and public cameras): the privacy guard approves only
-    # listed public places (policy.ALLOWED_SCENES). Default: run anywhere, stop on what it
-    # sees (koz/privacy.py). Local only: never in a recipe, so it can't be imported or sent.
+    # listed public places (policy.ALLOWED_SCENES). School mode always implies it (runner).
+    # Default: run anywhere, stop on what it sees (koz/privacy.py). Local only: never in a
+    # recipe, so it can't be imported or sent.
     strict: bool = False
 
     def check(self):

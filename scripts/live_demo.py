@@ -188,7 +188,7 @@ def main():
     parser.add_argument("--hue", type=int, default=0, help="colour to find, OpenCV hue 0..179 (0 = red)")
     parser.add_argument("--line", default="0.5,0,0.5,1",
                         help="counting line ax,ay,bx,by, 0..1; crossing right-to-left of A->B counts as 'in'")
-    parser.add_argument("--school", action="store_true", help="school mode: counts only")
+    parser.add_argument("--school", action="store_true", help="school mode: counts only, and always --strict")
     parser.add_argument("--strict", action="store_true",
                         help="strict mode for schools and public cameras: run only in listed public places "
                              "(classroom, shop, office...). Default: run anywhere, stop on what the guard sees")

@@ -91,3 +91,4 @@ def test_one_launcher_per_job_both_using_the_default_guard():
             for name in ("demo-blur.command", "demo-counter.command")}
     assert all("--strict" not in a and "--owner-workspace" not in a for a in args.values())
     assert "--job counter" in args["demo-counter.command"] and "--job counter" not in args["demo-blur.command"]
+    assert "--school" not in args["demo-counter.command"]   # school mode is strict: it wouldn't start at home

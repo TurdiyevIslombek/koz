@@ -320,3 +320,13 @@ def test_the_default_guard_gets_the_strict_setting(test_video):
     default = Runner(check_recipe(color_recipe()), LocalSetup(True, FULL_FRAME), FileCamera(test_video),
                      EventLog(list().append), face_detector=FakeFaces())
     assert default.guard.strict is False   # live test #3: run anywhere, stop on what you see
+
+
+@pytest.mark.parametrize("school_in", ["recipe", "local setup"])
+def test_school_mode_is_always_strict(test_video, school_in):
+    from helpers import ScriptedPeople, classroom_recipe
+    recipe = classroom_recipe(school=school_in == "recipe")
+    setup = LocalSetup(True, FULL_FRAME, school=school_in == "local setup")
+    runner = Runner(check_recipe(recipe), setup, FileCamera(test_video), EventLog(list().append),
+                    scene_checker=Approve(), face_detector=FakeFaces(), person_detector=ScriptedPeople([]))
+    assert runner.strict is True
