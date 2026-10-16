@@ -344,6 +344,27 @@ together 0.29 at the end). The view or light changed around 100 s; the numbers c
 So at this desk 0.55 is not enough on its own when the room looks this much like a bedroom: it
 depends on what is in view.
 
+## Fly-brain car: how the ball reaches the brain (Oct 16)
+
+**Decision (Islombek): option B, the fly brain does the chasing.** Time box: if it doesn't chase
+the ball reliably by **Oct 19**, switch to option A (the brain avoids obstacles, a hand-written pull
+steers toward the ball) and say so in the report.
+
+**Measured on the brain itself** (the original `brain_driver.py`, 2 s per input): looming on the
+left eye turns the car right (wheels 69 / -143 at 100 Hz), on the right eye left (-150 / 134);
+nothing seen drives straight (130 / 130); both eyes back it up slowly. Below about 20 Hz it doesn't
+turn, 40 Hz curves, 60 Hz and more spins. So Ko'z puts looming on the eye **opposite** the ball:
+ball on the left → right eye → the brain turns left.
+
+**In a simple simulation only** (`tests/test_flybrain_block.py`; car speeds assumed: 130 wheel
+units = 65 cm/s): from 2 m it reached the ball in about 3 s from 0, ±25 and +40 degrees (+40 = out
+of view on the left). A ball never seen on the right is found late (still 101 cm away after 6 s):
+the search turns left first. It had the ball in the middle 26–37% of the time (it zig-zags). **Not
+measured on the car yet.**
+
+**Still to measure on the car** (in this order): `firmware/stop_test` (speed cap, stopping distance),
+then 10 chase trials.
+
 ## Fly-brain car (demo 1) and classroom counter (demo 2)
 
 To be written.

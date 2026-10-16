@@ -12,25 +12,26 @@ import json
 import re
 
 from ..errors import CODES
-from .planner import HUES, Plan, colour_recipe, counter_recipe, language_of, plan_message, refused
+from .planner import HUES, Plan, chase_recipe, colour_recipe, counter_recipe, language_of, plan_message, refused
 
 REFUSAL_CODES = {"IDENTITY_FORBIDDEN", "PROFILING_FORBIDDEN", "VIEW_FORBIDDEN", "AUDIO_FORBIDDEN",
                  "SOLE_PROTECTION_FORBIDDEN", "MOTOR_TARGET_FORBIDDEN", "ACTUATOR_FORBIDDEN",
                  "UNSUPPORTED_CAPABILITY", "PRIVATE_BATHROOM", "PRIVATE_TOILET", "PRIVATE_BEDROOM",
                  "PRIVATE_CHANGING_ROOM"}
-JOBS = ("find_colour", "count_people", "refuse")
+JOBS = ("find_colour", "chase_colour", "count_people", "refuse")
 SYSTEM = f"""You set up Ko'z, a privacy-first camera. Read the owner's request (Uzbek, Russian or English)
 and reply with ONE JSON object and nothing else:
-{{"job": "find_colour" | "count_people" | "refuse",
+{{"job": "find_colour" | "chase_colour" | "count_people" | "refuse",
  "colour": {" | ".join(f'"{c}"' for c in HUES)} | null,
  "school": true | false,
  "refusal": null | one of {sorted(REFUSAL_CODES)}}}
 Ko'z can only: find one coloured object and say if it is left, center or right ("find_colour");
+drive the owner's robot car toward one coloured ball with its fruit-fly brain ("chase_colour");
 or count people crossing a line in the middle of the view ("count_people"; "school": true for
 classes and pupils). Faces are always blurred and nothing is saved. Refuse ("job": "refuse") anything
 else, and always refuse: identifying or following a person, number plates, guessing age, gender,
 emotion or ethnicity, judging people, hidden cameras, sound, bathrooms, toilets, bedrooms, changing
-rooms, being the only protection for a child, and robots chasing people or animals."""
+rooms, being the only protection for a child, and robots chasing or hitting people or animals."""
 
 # The same menu as a JSON schema, for models that can be held to one (Ollama "format").
 CHOICE_SCHEMA = {
@@ -81,9 +82,10 @@ def plan_from_choice(text, choice, source):
     if choice["job"] == "refuse" or choice["refusal"] is not None:   # any refusal wins (Codex review)
         code = choice["refusal"] if choice["refusal"] in REFUSAL_CODES else "UNSUPPORTED_CAPABILITY"
         return refused(text, code, source)
-    if choice["job"] == "find_colour":
+    if choice["job"] in ("find_colour", "chase_colour"):
         colour = choice["colour"] or "red"
-        return Plan(language, "find_colour", colour_recipe(colour, language), None,
-                    plan_message("find_colour", language, colour=colour), source)
+        make = chase_recipe if choice["job"] == "chase_colour" else colour_recipe
+        return Plan(language, choice["job"], make(colour, language), None,
+                    plan_message(choice["job"], language, colour=colour), source)
     return Plan(language, "count_people", counter_recipe(choice["school"], language), None,
                 plan_message("count_people", language, school=choice["school"]), source)

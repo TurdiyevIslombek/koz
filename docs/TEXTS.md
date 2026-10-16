@@ -50,6 +50,44 @@ What Ko'z says it will do, in the language of the job. A colour plan with each c
 - UZ: Yumaloq binafsha narsani (masalan, koptokni) qidiraman va u chapda, o'rtada yoki o'ngda ekanini aytaman. Yuzlar xiralashtiriladi, hech narsa saqlanmaydi.
 - [ ] Russian OK   - [ ] Uzbek OK
 
+### Chase a coloured ball (the fly-brain car)
+
+**red**
+- EN: I will look for a round red object, like a ball, and the fly brain will drive the car toward it. Arm the motors on this computer first; the car stops by itself close to obstacles. Faces are blurred and nothing is saved.
+- RU: Я буду искать круглый красный предмет, например мяч, и мозг мухи поведёт машинку к нему. Сначала включите моторы на этом компьютере; у препятствий машинка остановится сама. Лица размываются, ничего не сохраняется.
+- UZ: Yumaloq qizil narsani (masalan, koptokni) qidiraman, pashsha miyasi mashinani unga qarab haydaydi. Avval motorlarni shu kompyuterda yoqing; to'siq oldida mashina o'zi to'xtaydi. Yuzlar xiralashtiriladi, hech narsa saqlanmaydi.
+- [ ] Russian OK   - [ ] Uzbek OK
+
+**orange**
+- EN: I will look for a round orange object, like a ball, and the fly brain will drive the car toward it. Arm the motors on this computer first; the car stops by itself close to obstacles. Faces are blurred and nothing is saved.
+- RU: Я буду искать круглый оранжевый предмет, например мяч, и мозг мухи поведёт машинку к нему. Сначала включите моторы на этом компьютере; у препятствий машинка остановится сама. Лица размываются, ничего не сохраняется.
+- UZ: Yumaloq to'q sariq narsani (masalan, koptokni) qidiraman, pashsha miyasi mashinani unga qarab haydaydi. Avval motorlarni shu kompyuterda yoqing; to'siq oldida mashina o'zi to'xtaydi. Yuzlar xiralashtiriladi, hech narsa saqlanmaydi.
+- [ ] Russian OK   - [ ] Uzbek OK
+
+**yellow**
+- EN: I will look for a round yellow object, like a ball, and the fly brain will drive the car toward it. Arm the motors on this computer first; the car stops by itself close to obstacles. Faces are blurred and nothing is saved.
+- RU: Я буду искать круглый жёлтый предмет, например мяч, и мозг мухи поведёт машинку к нему. Сначала включите моторы на этом компьютере; у препятствий машинка остановится сама. Лица размываются, ничего не сохраняется.
+- UZ: Yumaloq sariq narsani (masalan, koptokni) qidiraman, pashsha miyasi mashinani unga qarab haydaydi. Avval motorlarni shu kompyuterda yoqing; to'siq oldida mashina o'zi to'xtaydi. Yuzlar xiralashtiriladi, hech narsa saqlanmaydi.
+- [ ] Russian OK   - [ ] Uzbek OK
+
+**green**
+- EN: I will look for a round green object, like a ball, and the fly brain will drive the car toward it. Arm the motors on this computer first; the car stops by itself close to obstacles. Faces are blurred and nothing is saved.
+- RU: Я буду искать круглый зелёный предмет, например мяч, и мозг мухи поведёт машинку к нему. Сначала включите моторы на этом компьютере; у препятствий машинка остановится сама. Лица размываются, ничего не сохраняется.
+- UZ: Yumaloq yashil narsani (masalan, koptokni) qidiraman, pashsha miyasi mashinani unga qarab haydaydi. Avval motorlarni shu kompyuterda yoqing; to'siq oldida mashina o'zi to'xtaydi. Yuzlar xiralashtiriladi, hech narsa saqlanmaydi.
+- [ ] Russian OK   - [ ] Uzbek OK
+
+**blue**
+- EN: I will look for a round blue object, like a ball, and the fly brain will drive the car toward it. Arm the motors on this computer first; the car stops by itself close to obstacles. Faces are blurred and nothing is saved.
+- RU: Я буду искать круглый синий предмет, например мяч, и мозг мухи поведёт машинку к нему. Сначала включите моторы на этом компьютере; у препятствий машинка остановится сама. Лица размываются, ничего не сохраняется.
+- UZ: Yumaloq ko'k narsani (masalan, koptokni) qidiraman, pashsha miyasi mashinani unga qarab haydaydi. Avval motorlarni shu kompyuterda yoqing; to'siq oldida mashina o'zi to'xtaydi. Yuzlar xiralashtiriladi, hech narsa saqlanmaydi.
+- [ ] Russian OK   - [ ] Uzbek OK
+
+**purple**
+- EN: I will look for a round purple object, like a ball, and the fly brain will drive the car toward it. Arm the motors on this computer first; the car stops by itself close to obstacles. Faces are blurred and nothing is saved.
+- RU: Я буду искать круглый фиолетовый предмет, например мяч, и мозг мухи поведёт машинку к нему. Сначала включите моторы на этом компьютере; у препятствий машинка остановится сама. Лица размываются, ничего не сохраняется.
+- UZ: Yumaloq binafsha narsani (masalan, koptokni) qidiraman, pashsha miyasi mashinani unga qarab haydaydi. Avval motorlarni shu kompyuterda yoqing; to'siq oldida mashina o'zi to'xtaydi. Yuzlar xiralashtiriladi, hech narsa saqlanmaydi.
+- [ ] Russian OK   - [ ] Uzbek OK
+
 ### Count people
 
 - EN: I will count people crossing the line in the middle of the view (right to left = in). Faces are blurred; only the numbers are kept.

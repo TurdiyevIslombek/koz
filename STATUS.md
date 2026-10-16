@@ -18,6 +18,10 @@ Updated Oct 16, after stop logging and Islombek's sentences. 341 tests pass, 1 s
 | Agent loop (`koz/agent/`) | Words → plan → try 3 s → check the OpenCV numbers → change one setting → try again (3 tries at most) → run. Each step is an event (observation → decision → new revision → result) and one printed line. Refusals stop before the camera opens. On recorded clips: red asked, ball looks orange-red → hue 0 → 13, found; with the real models, green asked for a teal ball → hue 60 → 77, found. **Not yet tried on your camera.** |
 | Planners (`koz/agent/`) | **Default: the rule planner** (Nebius first if a key exists). Uzbek in both alphabets. Islombek's 20 fresh sentences: **20/20 before any fix, but 4 of 7 refusals only because nothing matched**; after new refusal rules 20/20 with all refusals by a rule (tuned on that set). The AI only picks job / colour / school / refusal; any refusal wins. Gemma 4 on this Mac: 14/20, removed (in the Trash). |
 | Runner WebSocket (`koz/server.py`) | `ws://127.0.0.1:8765` for the web app: every event as JSON, the 4 commands, trials → `trial_result` with the agent's changes. Refuses browser connections. `--window` shows each job's blurred camera view. |
+| Firmware (`firmware/`) | `motor_listener`: USB `ARM / DISARM / STOP / M,L,R`; starts disarmed; a fault (250 ms without commands, forward into an obstacle, forward while blind) disarms until armed by hand; speed caps. Safety rules tested on the Mac (31 checks); both sketches compile for the Uno. `stop_test` + README to measure the speed cap and stopping distance. **Not yet on the car.** |
+| Fly brain (`koz/brains/flybrain/`) | Copy of the original simulation (same spikes), the driver (same wheels), and option B steering. Simulation only: reaches the ball in ~3 s from most starts. **Time box: chasing reliably by Oct 19, else option A.** |
+| Motors (`koz/actions/motors.py`) | Serial link + mock; speed = the lower of the recipe's 0.25 and the local cap (0.15 until measured); stops on stale frames and during privacy checks; disarms at job end; armed only by a person (Enter / A key). |
+| Cameras | `--camera slot=source`: this Mac, the ESP32-CAM MJPEG stream, a phone (MJPEG or RTSP). The web can pick a slot once Codex adds it (`.collab/specs/web-camera-choice.md`). |
 | One launcher (`start-koz.command`) | Runner + web app, opens Setup. Tested on a recorded clip: typed "Yashil koptokni top" in Setup → trying → running; the Trials tab showed the chain (not found → hue 60 → 77 → left). Closing Terminal (HUP) or TERM stops both, nothing left running. |
 | Texts (`docs/TEXTS.md`) | Every Uzbek and Russian plan, refusal and stop text, made from the code and the contract (a test keeps it up to date). **Waiting for your check.** |
 | Cameras (`koz/capture.py`) | Recorded video (mock camera); live reader for the MacBook camera that drops the first second (too dark). **ESP32-CAM stream: not tried yet.** |
@@ -47,11 +51,10 @@ python3.13 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
 
 ## What's next
 
-1. You: try `start-koz.command` with a red ball on the camera; live test #5 with `demo-blur.command`; the privacy trials in `docs/TRIALS.md`; the face clip; check `docs/TEXTS.md`.
-2. Codex: `.collab/specs/web-planner-and-live.md` (show `status.planner`, the Setup privacy line, the colour job's Live view). Then Claude turns on `--report-planner` in `start-koz.command`.
-3. Oct 19–20 with the AWS work: the AI planner on AWS Bedrock (same fixed menu), measured on the same 20 sentences plus a fresh set.
-4. Fly-brain block + `firmware/motor_listener/` (car demo): the stage 1–3 files are copied into `koz/brains/flybrain/original/` (checksummed, backup in `~/AI/competitions/_backups/`); the plan waits for Islombek's OK.
-5. Trials: car and classroom lists to write in `docs/TRIALS.md`.
+1. You: `firmware/stop_test` on the car (its README, ~20 min); send Claude the MOVED and RESULT lines. Then upload `motor_listener` and try `agent_demo.py --motors auto ... "Qizil koptokni quv"`.
+2. You: 10 chase trials by Oct 19 (option B time box); then the classroom and privacy trials.
+3. Codex: `.collab/specs/web-camera-choice.md` and `web-planner-and-live.md`.
+4. Oct 19–20: AWS (eu-central-1) and the AI planner on Bedrock.
 
 ## Known limits
 

@@ -45,6 +45,9 @@ def main(argv=None):
                         help="auto: Nemotron on Nebius if NEBIUS_API_KEY is in .env, else the rule planner; "
                              "ollama: Gemma 4 on this Mac (14/20 on Oct 15, see docs/TRIALS.md)")
     parser.add_argument("--strict", action="store_true", help="strict mode for schools and public cameras")
+    parser.add_argument("--motors", metavar="PORT", help="the car's motor_listener board on USB, or auto")
+    parser.add_argument("--motor-cap", type=float, default=0.15,
+                        help="the car's tested speed cap, 0..0.25 (measure it: firmware/stop_test)")
     parser.add_argument("--seconds", type=float, help="stop this many seconds after the job starts running")
     parser.add_argument("--no-window", action="store_true", help="terminal only")
     args = parser.parse_args(argv)
@@ -52,7 +55,16 @@ def main(argv=None):
 
     planner = make_planner(args.planner)
     setup = LocalSetup(owner_confirmed=args.i_own_this_camera,
-                       allowed_area=(((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)),), strict=args.strict)
+                       allowed_area=(((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)),), strict=args.strict,
+                       mount="moving" if args.motors else "fixed", motor_cap=args.motor_cap)
+    link = None
+    if args.motors:
+        from koz.actions.motors import open_motor_board
+        try:
+            link = open_motor_board(args.motors)
+        except (KozError, OSError) as error:
+            print(f"The motor board can't be reached ({getattr(error, 'code', type(error).__name__)}).")
+            return 1
     messages = all_messages("en")
     latest, shown = {}, {"line": None}
     chain = ChainLog()
@@ -89,7 +101,15 @@ def main(argv=None):
         print(f"\nPlan ({plan.language}): {plan.message}\n", flush=True)
 
     print(f"Planners, in order: {planner.name}")
-    agent = Agent(planner, setup, open_camera, events, on_frame=on_frame, on_plan=on_plan)
+    if link is not None:   # contract 3: a person arms the motors, here, by hand
+        try:
+            input("Motors are disarmed. Clear the floor, hand on the switch, then press Enter to arm them: ")
+        except (KeyboardInterrupt, EOFError):
+            link.close()
+            return 1
+        link.arm_by_hand()
+        time.sleep(0.3)   # the board's next report says it is armed
+    agent = Agent(planner, setup, open_camera, events, on_frame=on_frame, on_plan=on_plan, motor_link=link)
     try:
         result = agent.run(args.job)
     except KozError as error:
@@ -126,6 +146,9 @@ def main(argv=None):
         c = change["change"]
         print(f"Adjusted: {c['setting']} {c['before']} -> {c['after']} "
               f"({change['check']}: {change['before_label']} -> {change['after_label']}, {change['after_result']})")
+    if link is not None:
+        link.disarm()
+        link.close()
     if not args.no_window:
         cv2.destroyAllWindows()
     return 0 if result.state in ("running", "idle") else 2

@@ -183,3 +183,18 @@ class MotorsAction:
             except KozError:
                 pass   # the board can't be reached: its watchdog stops the motors by itself
             self.status = "disarmed"
+
+
+ARDUINO_USB_IDS = {0x2341, 0x2A03, 0x1A86, 0x0403, 0x10C4}   # Arduino, Arduino.org, CH340, FTDI, CP210x
+
+
+def open_motor_board(port):
+    """The board on the USB cable: `port` like "/dev/cu.usbmodem1101", or "auto" (the one Arduino found)."""
+    if port == "auto":
+        from serial.tools import list_ports
+        found = [p.device for p in list_ports.comports() if p.vid in ARDUINO_USB_IDS]
+        if len(found) != 1:
+            raise KozError("MOTOR_SAFETY_STOP", "found %d Arduino boards; give the port" % len(found))
+        port = found[0]
+    return SerialMotorLink(port)
+

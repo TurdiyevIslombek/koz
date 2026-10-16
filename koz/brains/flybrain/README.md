@@ -23,5 +23,5 @@ A full backup of the original folder (without `.venv`) and the checksums of all 
 | `arduino/car/car.ino`, `PINS.txt` | The car sketch (stage 1 rules, serial protocol, 300 ms watchdog) and the wiring |
 | `requirements.txt` | What the original needs |
 
-Credits still to write in the main README before submission: Shiu et al. 2024 (model) and the
-FlyWire connectome (data); their licence terms are to be checked.
+Licences (checked Oct 16): the Shiu et al. 2024 model code is MIT (Philip Shiu and Nico Spiller); the
+FlyWire data the circuit comes from is CC BY-NC 4.0 (attribution, non-commercial). Credits: main README.

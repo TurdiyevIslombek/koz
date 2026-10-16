@@ -44,6 +44,17 @@ def colour_recipe(colour, language):
             "brain": {"type": "none"}, "actions": [{"type": "dashboard"}], "privacy": {"school": False}}
 
 
+def chase_recipe(colour, language):
+    """The fly-brain car (CLAUDE.md demo 1): the colour finder feeds the fly brain, the brain drives
+    the motors (option B, koz/brains/flybrain/steering.py). max_speed_ratio 0.25 is the contract's
+    top; the runner uses the lower of it and the car's tested cap (LocalSetup.motor_cap)."""
+    recipe = colour_recipe(colour, language)
+    recipe["camera"] = {"source": "device_camera", "size": "320x240", "fps": 15}   # small: the brain keeps up
+    recipe["brain"] = {"type": "flybrain", "settings": {"turn_gain": 1.0, "deadband": 0.1}}
+    recipe["actions"] = [{"type": "dashboard"}, {"type": "motors", "max_speed_ratio": 0.25}]
+    return recipe
+
+
 def counter_recipe(school, language):
     return {"version": 1, "language": language, "camera": dict(CAMERA),
             "blocks": copy.deepcopy(LOCKED) + [
@@ -71,6 +82,17 @@ PLAN_TEXT = {
         "uz": "Yumaloq {colour} narsani (masalan, koptokni) qidiraman va u chapda, o'rtada yoki o'ngda ekanini "
               "aytaman. Yuzlar xiralashtiriladi, hech narsa saqlanmaydi.",
     },
+    "chase_colour": {
+        "en": "I will look for a round {colour} object, like a ball, and the fly brain will drive the car "
+              "toward it. Arm the motors on this computer first; the car stops by itself close to obstacles. "
+              "Faces are blurred and nothing is saved.",
+        "ru": "Я буду искать круглый {colour} предмет, например мяч, и мозг мухи поведёт машинку к нему. "
+              "Сначала включите моторы на этом компьютере; у препятствий машинка остановится сама. "
+              "Лица размываются, ничего не сохраняется.",
+        "uz": "Yumaloq {colour} narsani (masalan, koptokni) qidiraman, pashsha miyasi mashinani unga qarab "
+              "haydaydi. Avval motorlarni shu kompyuterda yoqing; to'siq oldida mashina o'zi to'xtaydi. "
+              "Yuzlar xiralashtiriladi, hech narsa saqlanmaydi.",
+    },
     "count_people": {
         "en": "I will count people crossing the line in the middle of the view (right to left = in). "
               "Faces are blurred; only the numbers are kept.",
@@ -91,7 +113,7 @@ PLAN_TEXT = {
 
 
 def plan_message(job, language, colour=None, school=False):
-    if job == "find_colour":
+    if job in ("find_colour", "chase_colour"):
         word = COLOUR_WORDS[colour][language]
         text = PLAN_TEXT[job][language].format(colour=word)
         return text[0].upper() + text[1:]
@@ -126,7 +148,7 @@ def readable(text):
 # shares, such as "kamera").
 UZBEK_IN_CYRILLIC = (r"\b(sana\w*|koptok\w*|to'p\w*|topib|toping|top|narsa\w*|rang\w*|kirgan\w*|odam\w*|"
                      r"mijoz\w*|yashirin\w*|kim|mening|uchun|sinf\w*|o'quvchi\w*|sariq|yashil|binafsha\w*|ber|"
-                     r"izla\w*|qidir\w*|tani\w*|va)\b")
+                     r"izla\w*|qidir\w*|tani\w*|quv\w*|mushuk\w*|va)\b")
 
 
 def language_of(text):
@@ -136,7 +158,7 @@ def language_of(text):
                         or re.search(UZBEK_IN_CYRILLIC, t.translate(CYRILLIC_TO_LATIN))) else "ru"
     uzbek = (r"o'|g'|\b(sana\w*|qizil|koptok\w*|top|topib|toping|sinf\w*|yuz\w*|xiralashtir\w*|kirgan\w*|"
              r"o'quvchi\w*|odam\w*|mijoz\w*|narsa\w*|rang\w*|yashirin\w*|kim\w*|va|uchun|mening|kamera\w*|"
-             r"sariq|yashil|ko'k|qil\w*|ber\w*)\b")
+             r"sariq|yashil|ko'k|qil\w*|ber\w*|quv\w*|mushuk\w*|hayvon\w*|ortidan\w*|izla\w*|qidir\w*)\b")
     return "uz" if re.search(uzbek, t) else "en"
 
 
@@ -186,15 +208,24 @@ REFUSALS = [
         r"\b(baby|child|kid)\b.*\balone\b", r"\bfire alarm\b", r"\b(medical|diagnos\w*)\b",
         r"\b(chaqaloq|bola)\w*.*\byolg'iz\w*", r"\byong'in\w*",
         r"(реб[её]н\w*|малыш\w*).*(один|одна|одного)", r"пожар\w*"]),
-    ("MOTOR_TARGET_FORBIDDEN", [
-        r"\b(chase|hunt)\w* (the |a |my )?(person|people|man|woman|kid|child|cat|dog|animal|bird)\w*",
-        r"\b(odam|bola|mushuk|hayvon)\w*\b.*\bquv\w*", r"(догон|преследу)\w*"]),
-    ("UNSUPPORTED_CAPABILITY", [   # not built yet: alerts, motion zones, the car
-        r"\b(alert\w*|notify\w*|notification\w*|telegram|sms|e-?mail\w*|motion|car|robot\w*|drive|motor\w*|alarm\w*)\b",
-        r"\b(xabar ber\w*|ogohlantir\w*|telegram|harakat\w*|mashina\w*|robot\w*)\b",
-        r"(оповест\w*|уведом\w*|телеграм\w*|движени\w*|машин\w*|робот\w*)"]),
+    ("MOTOR_TARGET_FORBIDDEN", [   # the car chases balls, never people or animals (rule 11)
+        r"\b(chase|hunt|follow|catch|run after|run over|ram|hit|drive (at|into|after))\w* (the |a |my |that |this )?"
+        r"(little |big |small )?(person|people|man|men|woman|women|kid|child|children|boy|girl|baby|cat|dog|animal|"
+        r"bird|him|her|them|someone|somebody|neighbou?r|me|us|brother|sister|son|daughter|friend|mom|mum|dad|"
+        r"mother|father|grandma|grandpa)\b",
+        r"\binto (the |a |my |that |this )?(person|people|man|woman|kid|child|baby|cat|dog|animal|bird|someone)\b",
+        r"\b(odam|bola|mushuk|hayvon|it|kuchuk|qush|meni|uni|ularni)\w*\b.*\bquv\w*",
+        r"(догон\w*|догнат\w*|преследу\w*|гонись|гоня\w*)[^.?!]{0,25}(человек|люд|ребён|ребен|дет|кошк|кот|"
+        r"собак|животн|птиц|\bего\b|\bеё\b|\bее\b|\bих\b|\bменя\b)\w*"]),
+    ("UNSUPPORTED_CAPABILITY", [   # not built yet: alerts and motion zones
+        r"\b(alert\w*|notify\w*|notification\w*|telegram|sms|e-?mail\w*|motion|alarm\w*)\b",
+        r"\b(xabar ber\w*|ogohlantir\w*|telegram|harakat\w*)\b",
+        r"(оповест\w*|уведом\w*|телеграм\w*|движени\w*)"]),
 ]
 
+CHASE_WORDS = [r"\b(chase|catch|follow|go (to|toward|towards|after)|drive (to|toward|towards|after)|run (to|after))\b",
+               r"\b(quv\w*|ortidan\w*|yetib ol\w*|tomon(ga)? (bor|yur|hayda)\w*)",
+               r"(догон\w*|догнат\w*|езжай|поезжай|следуй|гонись|двигайся к|едь к)"]
 COUNT_WORDS = [r"\b(count\w*|how many|people|students|pupils|customers|visitors)\b",
                r"\b(sana\w*|nechta|o'quvchi\w*|odam\w*|mijoz\w*|xaridor\w*|tashrif\w*)\b",
                r"(посчита\w*|счита\w*|сколько|люд\w*|учени\w*|покупател\w*|посетител\w*|клиент\w*|сана\w*|ўқувчи\w*)"]
@@ -246,6 +277,9 @@ class FakePlanner:
                         plan_message("count_people", language, school=school))
         if _any(COLOUR_JOB_WORDS, t) or any(_any(p, t) for _, p in COLOURS):
             colour = next((name for name, patterns in COLOURS if _any(patterns, t)), "red")
+            if _any(CHASE_WORDS, t):   # "chase the red ball": the fly-brain car
+                return Plan(language, "chase_colour", chase_recipe(colour, language), None,
+                            plan_message("chase_colour", language, colour=colour))
             return Plan(language, "find_colour", colour_recipe(colour, language), None,
                         plan_message("find_colour", language, colour=colour))
         return refused(text, "UNSUPPORTED_CAPABILITY")

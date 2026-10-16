@@ -198,6 +198,13 @@ class Hub:
         """The current or last job's Agent (its plan and runner), or None."""
         return self._agent
 
+    def arm_motors_by_hand(self):
+        """A person armed the motors on this computer (A in the runner window, or Enter in its
+        terminal). Contract 3: arming is local and by hand; no command from the web can do this."""
+        if self.motor_link is not None:
+            self.motor_link.arm_by_hand()
+            self.say("Motors armed by hand.")
+
     def stop_local(self):
         """Stop the current job from this computer (q in the window): the same as stop_job."""
         with self.lock:
@@ -471,7 +478,9 @@ def show_window(hub, alive):
             if runner is not None and (runner.state in ("checking", "evaluating", "running") or "fault" in latest):
                 if runner.preview is not None and runner.preview is not last:
                     frames, last = frames + 1, runner.preview
-                note = f"plan by {planned_by(agent.plan, hub.planner)}" if agent.plan is not None else None
+                note = f"plan by {planned_by(agent.plan, hub.planner)}" if agent.plan is not None else ""
+                if hub.motor_link is not None:
+                    note += f"   motors: {motor_state(hub.motor_link)} (a = arm)"
                 view = draw(runner, latest, messages, frames / max(time.monotonic() - since, 1e-6),
                             latest.get("line"), note)
             elif hub.busy:
@@ -481,15 +490,26 @@ def show_window(hub, alive):
                 view = screen(["Refused", messages.get(code, code), f"({code})"])
             else:
                 frames, since = 0, time.monotonic()
-                view = screen(["Ko'z is ready", "Type the job in the web app (Setup).",
-                               "This window shows what the camera sees, faces blurred."])
+                lines = ["Ko'z is ready", "Type the job in the web app (Setup).",
+                         "This window shows what the camera sees, faces blurred."]
+                if hub.motor_link is not None:
+                    lines.append(f"Motors: {motor_state(hub.motor_link)}. Press A to arm them by hand.")
+                view = screen(lines)
         except Exception:   # the job thread changed the frame while drawing: skip this one
             time.sleep(0.01)
             continue
         cv2.imshow(title, view)
-        if cv2.waitKey(30) & 0xFF in (ord("q"), 27):
+        key = cv2.waitKey(30) & 0xFF
+        if key in (ord("q"), 27):
             hub.stop_local()
+        elif key in (ord("a"), ord("A")):
+            hub.arm_motors_by_hand()
     cv2.destroyAllWindows()
+
+
+def motor_state(link):
+    fault = link.fault
+    return f"fault {fault}" if fault else ("armed" if link.armed else "disarmed")
 
 
 def main(argv=None):
@@ -512,6 +532,12 @@ def main(argv=None):
                         help="left,top,right,bottom of the allowed area, 0..1 (default: whole frame)")
     parser.add_argument("--school", action="store_true", help="school mode: counts only, and always strict")
     parser.add_argument("--strict", action="store_true", help="strict mode for schools and public cameras")
+    parser.add_argument("--motors", metavar="PORT",
+                        help="the car's motor_listener board on USB, e.g. /dev/cu.usbmodem1101, or auto")
+    parser.add_argument("--motor-cap", type=float, default=0.15,
+                        help="the car's tested speed cap, 0..0.25 of full speed (measure: firmware/stop_test)")
+    parser.add_argument("--mount", choices=("fixed", "moving"),
+                        help="fixed camera, or moving (the car); default: moving with --motors")
     parser.add_argument("--planner", choices=CHOICES, default="auto",
                         help="auto: Nemotron on Nebius if NEBIUS_API_KEY is in .env, else the rule planner; "
                              "ollama: Gemma 4 on this Mac (14/20 on Oct 15, see docs/TRIALS.md)")
@@ -525,7 +551,8 @@ def main(argv=None):
     left, top, right, bottom = (float(v) for v in args.allowed_area.split(","))
     setup = LocalSetup(owner_confirmed=args.i_own_this_camera,
                        allowed_area=(((left, top), (right, top), (right, bottom), (left, bottom)),),
-                       school=args.school, strict=args.strict)
+                       school=args.school, strict=args.strict, mount=args.mount or ("moving" if args.motors else "fixed"),
+                       motor_cap=args.motor_cap)
     try:
         setup.check()
     except KozError as error:
@@ -546,9 +573,23 @@ def main(argv=None):
         cameras = {}
     else:
         open_camera, capabilities = next(iter(cameras.values())), ()
+    link = None
+    if args.motors:
+        from .actions.motors import open_motor_board
+        try:
+            link = open_motor_board(args.motors)
+        except (KozError, OSError) as error:
+            print(f"Ko'z did not start: the motor board can't be reached ({getattr(error, 'code', type(error).__name__)}).")
+            return 1
+        print("Motors: disarmed. Arm them by hand: press A in the runner window, or Enter here.", flush=True)
     hub = Hub(setup, open_camera, planner, capabilities=capabilities, report_planner=args.report_planner,
               cameras=cameras, report_cameras=args.report_cameras,
-              say=lambda text: print(text, flush=True))
+              say=lambda text: print(text, flush=True), motor_link=link)
+    if link is not None and sys.stdin.isatty():
+        def enter_arms():   # Enter in this terminal = a person arming the motors here
+            for _ in sys.stdin:
+                hub.arm_motors_by_hand()
+        threading.Thread(target=enter_arms, name="koz-arm-by-hand", daemon=True).start()
 
     def interrupted(signum, frame):   # closing the Terminal window (HUP) or the launcher (TERM): stop cleanly
         raise KeyboardInterrupt
@@ -578,6 +619,12 @@ def main(argv=None):
         hub.stop_local()
         if hub._thread is not None:
             hub._thread.join(STOP_WAIT_S)
+        if link is not None:
+            try:
+                link.disarm()
+            except KozError:
+                pass
+            link.close()
     if failed:
         print(f"Ko'z runner could not listen on port {args.port}: is another runner already running?")
         return 1

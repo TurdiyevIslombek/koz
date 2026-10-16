@@ -65,7 +65,31 @@ at `ws://127.0.0.1:8765` (this computer only) that sends every event exactly as 
 `contracts/events.md` and accepts the 4 commands. Browsers can't connect to it directly; the
 web app's own server does.
 
+## The fly-brain car (demo 1)
+
+Islombek's robot car (Arduino Uno + L298N, ESP32-CAM) chases a coloured ball with a simulation of
+2,282 real fruit-fly neurons. Ko'z shows the brain a "threat" on the side without the ball, so the
+fly's own escape turn steers it toward the ball (`koz/brains/flybrain/`).
+
+1. Measure the speed cap and the stopping distance once: `firmware/stop_test/README.md`.
+2. Upload `firmware/motor_listener` (its README). It starts disarmed and stops by itself.
+3. Run, with the board on the USB cable and the ESP32-CAM stream:
+   ```bash
+   .venv/bin/python scripts/agent_demo.py --i-own-this-camera --camera http://192.168.4.1:81/stream --motors auto "Qizil koptokni quv"
+   ```
+   It asks you to press Enter to arm the motors (only a person at this computer can). Or start
+   the runner with `--motors auto --camera esp32_cam=http://192.168.4.1:81/stream --window` and
+   press A in its window to arm; then type the job in the web app.
+
 ## Models and credits
+
+**Fruit-fly brain.** The neuron model and its constants come from Shiu et al. 2024, "A Drosophila
+computational brain model reveals sensorimotor processing" (*Nature*); their code
+(github.com/philshiu/Drosophila_brain_model) is under the MIT License, copyright (c) 2023 Philip Shiu
+and Nico Spiller. The wiring (`koz/brains/flybrain/original/brain/locomotion/`, a 2,282-neuron circuit)
+is derived from the FlyWire connectome v783 (Dorkenwald et al. 2024, Schlegel et al. 2024, *Nature*),
+whose published data is under **CC BY-NC 4.0** (attribution; non-commercial use only). The
+simulation itself is Islombek's numpy version for the car.
 
 **Face detection: YuNet**, from OpenCV Zoo (`models/face_detection_yunet`).
 MIT License, copyright (c) 2020 Shiqi Yu. In this repo as

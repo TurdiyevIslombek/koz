@@ -23,4 +23,4 @@ def test_texts_file_is_up_to_date():
 def test_texts_file_has_every_code_and_every_plan():
     text = load().render()
     assert all(f"### `{code}`" in text for code in CODES)
-    assert text.count("- [ ] Russian OK") == len(CODES) + 6 + 2   # 38 messages, 6 colours, 2 counter plans
+    assert text.count("- [ ] Russian OK") == len(CODES) + 6 + 6 + 2   # 38 messages, 6 find + 6 chase colours, 2 counters

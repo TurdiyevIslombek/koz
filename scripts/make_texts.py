@@ -39,11 +39,11 @@ def render():
 
     lines += ["## 1. Plans", "",
               "What Ko'z says it will do, in the language of the job. A colour plan with each colour:", ""]
-    for job, title in (("find_colour", "Find a colour"), ("count_people", "Count people"),
-                       ("count_school", "Count pupils (school mode)")):
+    for job, title in (("find_colour", "Find a colour"), ("chase_colour", "Chase a coloured ball (the fly-brain car)"),
+                       ("count_people", "Count people"), ("count_school", "Count pupils (school mode)")):
         lines.append(f"### {title}")
         lines.append("")
-        if job == "find_colour":
+        if job in ("find_colour", "chase_colour"):
             for colour in HUES:
                 lines.append(f"**{COLOUR_WORDS[colour]['en']}**")
                 check(lines, {lang: plan_message(job, lang, colour=colour) for lang in ("en", "ru", "uz")})

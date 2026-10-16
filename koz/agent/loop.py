@@ -39,6 +39,8 @@ class JobResult:
 
 def job_kind(recipe):
     types = {b["type"] for b in recipe["blocks"]}
+    if recipe["brain"]["type"] == "flybrain":
+        return "chase_colour"
     return "find_colour" if "color_finder" in types else "count_people" if "person_detector" in types else "other"
 
 
@@ -47,7 +49,16 @@ def judge(job, observations):
 
     find_colour: unknown if fewer than half of the observations have a known answer; otherwise
     pass if the target was left/center/right in at least half of the known ones, else fail.
-    count_people: pass if the latest counts are known (the detector and line counter work)."""
+    count_people: pass if the latest counts are known (the detector and line counter work).
+    chase_colour (the car): first target_visible as above; once the ball is seen, target_centered:
+    pass if the brain had it in the middle in at least a third of the known observations (the car
+    swings around the ball while it drives; observations come about once a second)."""
+    if job == "chase_colour":
+        check, result, label = judge("find_colour", observations)
+        if result != "pass":
+            return check, result, label
+        known = [o["target"] for o in observations if o["privacy"] == "approved" and o["target"] in POSITIONS]
+        return "target_centered", "pass" if 3 * known.count("center") >= len(known) else "fail", label
     if job == "find_colour":
         known = [o["target"] for o in observations if o["privacy"] == "approved" and o["target"] not in (None, "unknown")]
         if not known or 2 * len(known) < len(observations):
@@ -114,6 +125,13 @@ class Agent:
         try:
             self.setup.check()
             checked = check_recipe(recipe, local_school=self.setup.school)
+            if any(a["type"] == "motors" for a in checked.data["actions"]):   # the car: before the camera
+                if self.motor_link is None:
+                    raise KozError("UNSUPPORTED_CAPABILITY", "no motor board set up on this computer")
+                if self.motor_link.fault is not None:
+                    raise KozError("MOTOR_SAFETY_STOP")
+                if not self.motor_link.armed:
+                    raise KozError("MOTOR_NOT_ARMED")   # a person arms them here, by hand
             camera = self.open_camera()   # only now: refused jobs never open the camera
         except KozError as error:
             return self._refuse(plan, error.code)
