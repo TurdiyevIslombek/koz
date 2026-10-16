@@ -20,10 +20,11 @@ Run:  python -m koz.server --i-own-this-camera [--camera 0 | --video clip.mp4] [
 import argparse
 import asyncio
 import json
+import os
 import sys
 import threading
 import time
-from collections import OrderedDict, deque
+from collections import OrderedDict
 from http import HTTPStatus
 
 from . import policy
@@ -35,8 +36,6 @@ from .events import CAMERA_SLOTS, ID_PATTERN, MAX_MESSAGE_BYTES, EventLog, count
 from .runner import OPENCV_MAJOR, print_stops
 
 HOST, PORT = "127.0.0.1", 8765
-OFFLINE_QUEUE = 200
-KEEP_OFFLINE = frozenset({"recipe", "decision", "fault", "command_result", "trial_result"})
 ENVELOPE = frozenset({"v", "type", "command_id", "session_id", "job_id", "trial_id", "expires_at", "command", "data"})
 COMMANDS = ("start_job", "stop_job", "begin_trial", "finish_trial")
 DEMOS = ("red_ball", "classroom", "privacy_guard")
@@ -182,6 +181,14 @@ class Hub:
                 if data["entered"]["state"] != "known" or data["coverage"] != "complete":
                     trial["gap"] = trial["gap"] or data["unknown_reason"] or "FRAME_STALE"
                 trial["entered"] = data["entered"]
+
+    def went_offline(self):
+        """Nobody is connected: the events the web misses now leave a gap in the running job's
+        coverage (contract 5: status and observations aren't queued)."""
+        agent = self._agent
+        runner = agent.runner if agent is not None else None
+        if runner is not None and runner.state in ("evaluating", "running"):
+            runner.coverage = "gapped"
 
     def mark_lost(self):
         """An event was dropped from the offline queue: the open trial's evidence is incomplete."""
@@ -374,36 +381,14 @@ class Hub:
 
 
 async def serve(hub, host=HOST, port=PORT, started=None):
-    """Serve `hub` until cancelled. `started` (an asyncio.Event) is set once it listens."""
+    """Serve `hub` on this computer until cancelled (the local web app connects in). `started`
+    (an asyncio.Event) is set once it listens. Delivery: koz/cloud.py's Outbox."""
     from websockets.asyncio.server import broadcast
     from websockets.asyncio.server import serve as ws_serve
 
-    loop = asyncio.get_running_loop()
-    clients, joining, queue = set(), {}, deque()
+    from .cloud import Outbox, heartbeat
 
-    def send_all(event):   # always on the event loop, in seq order
-        text = json.dumps(event, allow_nan=False)
-        joiner = joining.pop(event["seq"], None)
-        if clients:
-            broadcast(set(clients), text)
-        elif joiner is None and event["type"] in KEEP_OFFLINE:
-            if len(queue) == OFFLINE_QUEUE:
-                queue.popleft()
-                hub.mark_lost()
-            queue.append(text)
-        if joiner is not None:   # its first message is this fresh status, then what waited
-            broadcast([joiner], text)
-            while queue:
-                broadcast([joiner], queue.popleft())
-            clients.add(joiner)
-
-    def deliver(event):   # from any thread
-        try:
-            loop.call_soon_threadsafe(send_all, event)
-        except RuntimeError:   # the server already stopped
-            pass
-
-    hub.deliver = deliver
+    outbox = Outbox(hub, asyncio.get_running_loop(), broadcast)
 
     def refuse_browsers(connection, request):
         if request.headers.get("Origin") is not None:
@@ -411,7 +396,7 @@ async def serve(hub, host=HOST, port=PORT, started=None):
         return None
 
     async def connected(connection):
-        joining[hub.emit_status()["seq"]] = connection   # no await between: send_all hasn't run yet
+        outbox.join(connection)
         try:
             async for message in connection:
                 if not isinstance(message, str):
@@ -423,16 +408,11 @@ async def serve(hub, host=HOST, port=PORT, started=None):
                     await connection.close(1008, "INVALID_COMMAND")
                     return
         finally:
-            clients.discard(connection)
-
-    async def beat():
-        while True:
-            await asyncio.sleep(0.25)
-            hub.heartbeat()
+            outbox.leave(connection)
 
     async with ws_serve(connected, host, port, process_request=refuse_browsers, max_size=MAX_MESSAGE_BYTES,
                         compression=None):
-        beating = asyncio.create_task(beat())
+        beating = asyncio.create_task(heartbeat(hub))
         if started is not None:
             started.set()
         try:
@@ -544,6 +524,9 @@ def main(argv=None):
     parser.add_argument("--window", action="store_true", help="show the camera view (faces blurred) of each job")
     parser.add_argument("--no-report-planner", dest="report_planner", action="store_false",
                         help="don't send status.planner (contract 8.1; the web app accepts it since Oct 16)")
+    parser.add_argument("--cloud", metavar="WSS_URL",
+                        help="connect out to the cloud web app instead of listening here, e.g. "
+                             "wss://WEB-IP/v1/runner (token: KOZ_RUNNER_TOKEN in .env)")
     parser.add_argument("--port", type=int, default=PORT)
     args = parser.parse_args(argv)
     print_stops()   # every stop says why, with the last privacy check
@@ -596,13 +579,32 @@ def main(argv=None):
     for sig in (signal.SIGTERM, signal.SIGHUP):
         signal.signal(sig, interrupted)
 
-    print(f"Ko'z runner on ws://{HOST}:{args.port}. The web app connects here. Ctrl+C stops.", flush=True)
+    token = None
+    if args.cloud:
+        from .agent.choose import load_env
+        from .cloud import check_cloud_url
+        token = {**load_env(), **os.environ}.get("KOZ_RUNNER_TOKEN")
+        try:
+            check_cloud_url(args.cloud)
+        except ValueError:
+            print("Ko'z did not start: --cloud must be a wss:// address.")
+            return 1
+        if not token:
+            print("Ko'z did not start: put KOZ_RUNNER_TOKEN=... in .env (from the web app's Runner token page).")
+            return 1
+        print("Ko'z runner: connecting out to the cloud web app. Ctrl+C stops.", flush=True)
+    else:
+        print(f"Ko'z runner on ws://{HOST}:{args.port}. The web app connects here. Ctrl+C stops.", flush=True)
     print(f"Planners, in order: {planner.name}", flush=True)
     failed = []
 
     def run_server():
         try:
-            asyncio.run(serve(hub, port=args.port))
+            if args.cloud:
+                from .cloud import link_cloud
+                asyncio.run(link_cloud(hub, args.cloud, token))
+            else:
+                asyncio.run(serve(hub, port=args.port))
         except OSError as error:   # most often: another runner already uses the port
             failed.append(error)
 
