@@ -519,7 +519,8 @@ def main(argv=None):
     parser.add_argument("--mount", choices=("fixed", "moving"),
                         help="fixed camera, or moving (the car); default: moving with --motors")
     parser.add_argument("--planner", choices=CHOICES, default="auto",
-                        help="auto: Nemotron on Nebius if NEBIUS_API_KEY is in .env, else the rule planner; "
+                        help="auto: Nemotron on Nebius if NEBIUS_API_KEY is in .env, then Amazon Nova 2 Lite on "
+                             "Bedrock if AWS_BEARER_TOKEN_BEDROCK is, else the rule planner; "
                              "ollama: Gemma 4 on this Mac (14/20 on Oct 15, see docs/TRIALS.md)")
     parser.add_argument("--window", action="store_true", help="show the camera view (faces blurred) of each job")
     parser.add_argument("--no-report-planner", dest="report_planner", action="store_false",

@@ -1,6 +1,6 @@
 # Ko'z status
 
-Updated Oct 16, after stop logging and Islombek's sentences. 341 tests pass, 1 skipped (it needs your face clip):
+Updated Oct 16, after the AWS bundle and the Bedrock planner. 425 tests pass, 1 skipped (it needs your face clip):
 `.venv/bin/python -m pytest -q`
 
 ## What works
@@ -8,7 +8,7 @@ Updated Oct 16, after stop logging and Islombek's sentences. 341 tests pass, 1 s
 | Part | State |
 |---|---|
 | Recipe checks (`koz/recipe.py`) | Strict parsing → contract schema → extra checks → "is it built?". Tested. |
-| Privacy guard (`koz/privacy.py`, `koz/scene.py`) | **Default (every job): run anywhere, stop on what it sees**: darkness or a covered lens, a bed or toilet (NanoDet ≥ 0.40 in 2 of 3 checks), a sink in what looks like a bathroom, or a confident private room (top guess ≥ 0.50, or ≥ 0.40 together). **`--strict`** (schools, public cameras): only listed public places run. Objects checked every 0.5 s, the room every 3 s, and on the next frame when the camera moves; stops 0.07 s after a toilet or bed comes into view on recorded clips (target 1 s); one line per check, with timings. On 71 real photos: default runs every desk without a bed, kitchen, classroom and shop, and lets 3 of 23 bathroom/bedroom photos through (limit); strict stops all 23. **Live stop time: to measure (live test #5).** |
+| Privacy guard (`koz/privacy.py`, `koz/scene.py`) | **Default (every job): run anywhere, stop on what it sees**: darkness or a covered lens, a bed or toilet (NanoDet ≥ 0.40 in 2 of 3 checks), a sink in what looks like a bathroom, or a confident private room (top guess ≥ 0.50, or ≥ 0.55 together). **`--strict`** (schools, public cameras): only listed public places run. Objects checked every 0.5 s, the room every 3 s, and on the next frame when the camera moves; stops 0.07 s after a toilet or bed comes into view on recorded clips (target 1 s); one line per check, with timings. On 71 real photos: default runs every desk without a bed, kitchen, classroom and shop, and lets 4 of 23 bathroom/bedroom photos through (limit); strict stops all 23. **Room guard tuning stopped (Oct 16): demos are filmed outside the bedroom.** **Live stop time: to measure (live test #5).** |
 | Face blur (`koz/blocks/face_blur.py`) | YuNet on OpenCV 5, heavy pixelation, fails closed. **No real-face test yet** (waiting for your clip in `tests/fixtures/private/face.mp4`). |
 | Colour finder (`koz/blocks/color_finder.py`) | The biggest **round** patch of one colour (roundness ≥ 0.65, fills ≥ 0.70 of its circle, radius ≥ 8 px; fixed in code) → left / center / right / lost. Measured on drawn shapes: finds balls (small, highlighted, a quarter hidden, a third out of the frame); rejects squares, rectangles, triangles, long ovals and the orange-lit classroom that fooled it. **Not yet tried on a real ball on camera.** |
 | Person detector (`koz/blocks/person_detector.py`) | NanoDet-Plus on OpenCV 5, "person" class only; boxes stay local, only the number of people is sent. Decoding tested with exact fake outputs. **Not yet measured on real people.** |
@@ -16,8 +16,9 @@ Updated Oct 16, after stop logging and Islombek's sentences. 341 tests pass, 1 s
 | Runner (`koz/runner.py`) | mask → privacy → blur → blocks → events; stale or slow frames → `unknown` with a reason. School mode allows the counter only. |
 | Events (`koz/events.py`) | All 7 types (status, recipe, observation, decision, command_result, fault, trial_result), checked against `contracts/events.md` before sending. |
 | Agent loop (`koz/agent/`) | Words → plan → try 3 s → check the OpenCV numbers → change one setting → try again (3 tries at most) → run. Each step is an event (observation → decision → new revision → result) and one printed line. Refusals stop before the camera opens. On recorded clips: red asked, ball looks orange-red → hue 0 → 13, found; with the real models, green asked for a teal ball → hue 60 → 77, found. **Not yet tried on your camera.** |
-| Planners (`koz/agent/`) | **Default: the rule planner** (Nebius first if a key exists). Uzbek in both alphabets. Islombek's 20 fresh sentences: **20/20 before any fix, but 4 of 7 refusals only because nothing matched**; after new refusal rules 20/20 with all refusals by a rule (tuned on that set). The AI only picks job / colour / school / refusal; any refusal wins. Gemma 4 on this Mac: 14/20, removed (in the Trash). |
-| Runner WebSocket (`koz/server.py`) | `ws://127.0.0.1:8765` for the web app: every event as JSON, the 4 commands, trials → `trial_result` with the agent's changes. Refuses browser connections. `--window` shows each job's blurred camera view. |
+| Planners (`koz/agent/`) | **Default: the rule planner** (Nebius first if a key exists, then Amazon Nova 2 Lite on Bedrock if `AWS_BEARER_TOKEN_BEDROCK` is in `.env`; Bedrock tested with a fake network only, real score on Oct 19). Uzbek in both alphabets. Islombek's 20 fresh sentences: **20/20 before any fix, but 4 of 7 refusals only because nothing matched**; after new refusal rules 20/20 with all refusals by a rule (tuned on that set). The AI only picks job / colour / school / refusal; any refusal wins. Gemma 4 on this Mac: 14/20, removed (in the Trash). |
+| Runner WebSocket (`koz/server.py`) | `ws://127.0.0.1:8765` for the web app: every event as JSON, the 4 commands, trials → `trial_result` with the agent's changes. Refuses browser connections. `--window` shows each job's blurred camera view. `--cloud wss://IP/v1/runner` connects out to the web app on AWS (contract section 5: status first, offline queue, no replay); tested against the web app's token mode on this Mac. |
+| AWS (`deploy/`) | One CloudFormation stack: t3.micro in Frankfurt, Nginx + Let's Encrypt IP certificate, DynamoDB with auto-delete, owner password generated in Secrets Manager, no SSH. Click list: `docs/AWS_DAY.md`. **Not run on AWS yet** (Oct 19); needs a public GitHub repo and Codex's `web/server/cloud.mjs`. |
 | Firmware (`firmware/`) | `motor_listener`: USB `ARM / DISARM / STOP / M,L,R`; starts disarmed; a fault (250 ms without commands, forward into an obstacle, forward while blind) disarms until armed by hand; speed caps. Safety rules tested on the Mac (31 checks); both sketches compile for the Uno. `stop_test` + README to measure the speed cap and stopping distance. **Not yet on the car.** |
 | Fly brain (`koz/brains/flybrain/`) | Copy of the original simulation (same spikes), the driver (same wheels), and option B steering. Simulation only: reaches the ball in ~3 s from most starts. **Time box: chasing reliably by Oct 19, else option A.** |
 | Motors (`koz/actions/motors.py`) | Serial link + mock; speed = the lower of the recipe's 0.25 and the local cap (0.15 until measured); stops on stale frames and during privacy checks; disarms at job end; armed only by a person (Enter / A key). |
@@ -54,12 +55,12 @@ python3.13 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
 1. You: `firmware/stop_test` on the car (its README, ~20 min); send Claude the MOVED and RESULT lines. Then upload `motor_listener` and try `agent_demo.py --motors auto ... "Qizil koptokni quv"`.
 2. You: 10 chase trials by Oct 19 (option B time box); then the classroom and privacy trials.
 3. Codex: `.collab/specs/web-camera-choice.md` and `web-planner-and-live.md`.
-4. Oct 19–20: AWS (eu-central-1) and the AI planner on Bedrock.
+4. Oct 19: `docs/AWS_DAY.md` ($1 budget first). Before it: make the GitHub repo public (your decision) and Codex builds `.collab/specs/aws-review.md`.
 
 ## Known limits
 
 - Privacy limits were set on 46 Places365 photos, not yet on your rooms; face-blur and tracker settings are still proposals.
-- The default guard lets 3 of 23 private photos through: it sees no bed or toilet and isn't sure of the room, so it runs (trial 7 checks your bathroom). A bed mostly out of view can be missed. `--strict` stops all 23.
+- The default guard lets 4 of 23 private photos through: it sees no bed or toilet and isn't sure of the room, so it runs (trial 7 checks your bathroom). A bed mostly out of view can be missed. `--strict` stops all 23.
 - Strict mode shows only in the live window and terminal, not in events (no contract field yet).
 - The stricter guard stops more often by mistake ("uncertain"); the trials measure how often.
 - Places365 has no toilet class; a toilet stall is trial #3.
@@ -70,8 +71,8 @@ python3.13 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
 - The agent can only adjust the settings the contract lists (colour and detector numbers). The counting line's position is geometry, which the contract doesn't allow an adjustment to change; moving it needs a new start (or a contract change).
 - "Target visible" now needs a round blob, but any round thing of that colour counts (a red plate, a red lamp). A ball more than half out of the frame, or stretched more than about 1.5 : 1 by motion blur, counts as lost.
 - The plan texts in Uzbek and Russian need your check (`koz/agent/planner.py`).
-- The web app talks to the runner on this computer (`ws://127.0.0.1:8765`, no login). The contract's cloud connection (runner → web with a runner token, section 5) comes with AWS.
-- At Islombek's desk (in a bedroom) the default guard stops often: no bed seen, but the private rooms together score 0.42–0.46, over the 0.40 limit (93 stops in 5 minutes on Oct 16). Every stop now logs why (`docs/TRIALS.md`).
+- The cloud connection (runner → web on AWS with a runner token) is built and tested on this Mac, not yet on AWS.
+- At Islombek's desk (in a bedroom) the default guard still stops when the room looks very like a bedroom (with the 0.55 limit: 43 stops in the first 100 s, then 191 s without a stop). Every stop logs why (`docs/TRIALS.md`).
 - The rule planner's 20/20 after the Cyrillic fix is on the sentences that showed the gap: a fresh set of real sentences is needed before claiming a number.
 - Recorded clips (`--video`) now play at their own speed, like a camera.
 

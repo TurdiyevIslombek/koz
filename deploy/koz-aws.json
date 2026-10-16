@@ -1,0 +1,293 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Ko'z web app on AWS (eu-central-1): one small server, one DynamoDB table, one fixed IP, HTTPS. The camera, OpenCV, privacy guard and motors stay on the owner's Mac; only contract JSON events reach AWS. Delete this stack after judging to remove everything.",
+  "Parameters": {
+    "UbuntuAmi": {
+      "Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
+      "Default": "/aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id",
+      "Description": "Canonical's official Ubuntu 24.04 LTS image (leave as it is)."
+    },
+    "RepoUrl": {
+      "Type": "String",
+      "Default": "https://github.com/TurdiyevIslombek/koz.git",
+      "AllowedPattern": "^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$",
+      "Description": "The public GitHub repository of Ko'z."
+    },
+    "RepoRef": {
+      "Type": "String",
+      "Default": "main",
+      "AllowedPattern": "^[A-Za-z0-9._/-]{1,64}$",
+      "Description": "Branch or tag to install."
+    },
+    "CertEmail": {
+      "Type": "String",
+      "Default": "",
+      "AllowedPattern": "^$|^[^@\\s]+@[^@\\s]+$",
+      "Description": "Optional: an email for Let's Encrypt certificate notices. Empty is fine."
+    }
+  },
+  "Resources": {
+    "OwnerPassword": {
+      "Type": "AWS::SecretsManager::Secret",
+      "Properties": {
+        "Description": "The Ko'z web app owner password (made by AWS, never typed or shown in user data). Read it in Secrets Manager: Retrieve secret value.",
+        "GenerateSecretString": {
+          "PasswordLength": 24,
+          "ExcludePunctuation": true
+        }
+      }
+    },
+    "Table": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "TableName": "koz-web",
+        "TableClass": "STANDARD",
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "pk",
+            "AttributeType": "S"
+          },
+          {
+            "AttributeName": "sk",
+            "AttributeType": "S"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "pk",
+            "KeyType": "HASH"
+          },
+          {
+            "AttributeName": "sk",
+            "KeyType": "RANGE"
+          }
+        ],
+        "BillingMode": "PROVISIONED",
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": 5,
+          "WriteCapacityUnits": 5
+        },
+        "TimeToLiveSpecification": {
+          "AttributeName": "expires_at",
+          "Enabled": true
+        }
+      }
+    },
+    "Role": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "RoleName": "koz-web-ec2",
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ec2.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+        ],
+        "Policies": [
+          {
+            "PolicyName": "koz-web-table-and-password",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "dynamodb:GetItem",
+                    "dynamodb:PutItem",
+                    "dynamodb:UpdateItem",
+                    "dynamodb:DeleteItem",
+                    "dynamodb:Query",
+                    "dynamodb:BatchGetItem",
+                    "dynamodb:BatchWriteItem",
+                    "dynamodb:TransactWriteItems",
+                    "dynamodb:DescribeTable"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::GetAtt": [
+                        "Table",
+                        "Arn"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "secretsmanager:GetSecretValue"
+                  ],
+                  "Resource": [
+                    {
+                      "Ref": "OwnerPassword"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "InstanceProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Roles": [
+          {
+            "Ref": "Role"
+          }
+        ]
+      }
+    },
+    "SecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupName": "koz-web",
+        "GroupDescription": "Ko'z web: HTTPS (and HTTP for the certificate check) only. No SSH: use Session Manager.",
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 80,
+            "ToPort": 80,
+            "CidrIp": "0.0.0.0/0",
+            "Description": "Let's Encrypt check and redirect to HTTPS"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "CidrIp": "0.0.0.0/0",
+            "Description": "Dashboard and the runner's outbound WebSocket"
+          }
+        ]
+      }
+    },
+    "LaunchTemplate": {
+      "Type": "AWS::EC2::LaunchTemplate",
+      "Properties": {
+        "LaunchTemplateData": {
+          "MetadataOptions": {
+            "HttpTokens": "required",
+            "HttpEndpoint": "enabled",
+            "HttpPutResponseHopLimit": 1
+          },
+          "BlockDeviceMappings": [
+            {
+              "DeviceName": "/dev/sda1",
+              "Ebs": {
+                "VolumeSize": 8,
+                "VolumeType": "gp3",
+                "Encrypted": true,
+                "DeleteOnTermination": true
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ElasticIp": {
+      "Type": "AWS::EC2::EIP",
+      "Properties": {
+        "Domain": "vpc",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "koz-web"
+          }
+        ]
+      }
+    },
+    "Instance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "ImageId": {
+          "Ref": "UbuntuAmi"
+        },
+        "InstanceType": "t3.micro",
+        "CreditSpecification": {
+          "CPUCredits": "standard"
+        },
+        "Monitoring": false,
+        "IamInstanceProfile": {
+          "Ref": "InstanceProfile"
+        },
+        "SecurityGroupIds": [
+          {
+            "Fn::GetAtt": [
+              "SecurityGroup",
+              "GroupId"
+            ]
+          }
+        ],
+        "LaunchTemplate": {
+          "LaunchTemplateId": {
+            "Ref": "LaunchTemplate"
+          },
+          "Version": {
+            "Fn::GetAtt": [
+              "LaunchTemplate",
+              "LatestVersionNumber"
+            ]
+          }
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "koz-web"
+          }
+        ],
+        "UserData": {
+          "Fn::Base64": {
+            "Fn::Sub": "#!/bin/bash\nset -eu\nexec >>/var/log/koz-install.log 2>&1\n# Wait for the Elastic IP first: attaching it changes the address, which would cut a download.\nfor i in $(seq 1 120); do\n  T=$(curl -fsS -X PUT http://169.254.169.254/latest/api/token -H 'X-aws-ec2-metadata-token-ttl-seconds: 60' || true)\n  [ \"$(curl -fsS -H \"X-aws-ec2-metadata-token: $T\" http://169.254.169.254/latest/meta-data/public-ipv4 || true)\" = '${ElasticIp}' ] && break\n  sleep 5\ndone\napt-get update -y\napt-get install -y git\ngit clone --depth 1 --branch '${RepoRef}' '${RepoUrl}' /opt/koz\nbash /opt/koz/deploy/install.sh --ip '${ElasticIp}' --secret '${OwnerPassword}' --region '${AWS::Region}' --table '${Table}' --email '${CertEmail}'\n"
+          }
+        }
+      }
+    },
+    "IpAssociation": {
+      "Type": "AWS::EC2::EIPAssociation",
+      "Properties": {
+        "AllocationId": {
+          "Fn::GetAtt": [
+            "ElasticIp",
+            "AllocationId"
+          ]
+        },
+        "InstanceId": {
+          "Ref": "Instance"
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "WebUrl": {
+      "Value": {
+        "Fn::Sub": "https://${ElasticIp}/"
+      },
+      "Description": "Open this about 10 minutes after the stack is complete."
+    },
+    "RunnerUrl": {
+      "Value": {
+        "Fn::Sub": "wss://${ElasticIp}/v1/runner"
+      },
+      "Description": "For the Mac: koz.server --cloud this-address"
+    },
+    "OwnerPasswordSecret": {
+      "Value": {
+        "Ref": "OwnerPassword"
+      },
+      "Description": "Secrets Manager -> the secret named OwnerPassword-... -> Retrieve secret value"
+    },
+    "InstallLog": {
+      "Value": "/var/log/koz-install.log",
+      "Description": "If something fails: EC2 -> koz-web -> Connect -> Session Manager -> sudo tail -50 /var/log/koz-install.log"
+    }
+  }
+}

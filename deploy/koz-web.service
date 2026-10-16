@@ -1,0 +1,21 @@
+[Unit]
+Description=Ko'z web app (cloud mode, behind Nginx)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=koz
+Group=koz
+WorkingDirectory=/opt/koz/web
+EnvironmentFile=/etc/koz/env
+ExecStart=/usr/local/bin/node server/cloud.mjs
+Restart=always
+RestartSec=2
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/koz
+
+[Install]
+WantedBy=multi-user.target
