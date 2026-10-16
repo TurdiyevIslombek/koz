@@ -1,3 +1,13 @@
+import { escapeHTML as esc } from './i18n.js';
+
+// This is a coarse position indicator, never a camera frame or an invented location.
+export function targetSVG(target,label=''){
+ const x={left:80,center:180,right:280}[target];
+ return `<svg class="eye-view target-view" data-target="${x?target:target==='lost'?'lost':'unknown'}" viewBox="0 0 360 200" role="img" aria-label="${esc(label)}">
+ <path class="eye-ground" d="M2 100C50-18 310-18 358 100C310 218 50 218 2 100Z"/>
+ <path class="target-axis" d="M55 100h250M80 94v12M180 91v18M280 94v12"/>
+ ${x?`<circle class="target-ring" cx="${x}" cy="100" r="26"/><circle class="target-dot" cx="${x}" cy="100" r="8"/>`:''}</svg>`;
+}
 export function sceneSVG(empty=false,available=true,label=''){
  return `<svg class="eye-view" viewBox="0 0 360 200" role="img" aria-label="${label}" ${available?'':'aria-hidden="true"'}>
  <defs><clipPath id="eye-window"><path d="M2 100C50-18 310-18 358 100C310 218 50 218 2 100Z"/></clipPath><g id="anonymous-person"><circle class="silhouette" cx="0" cy="0" r="10"/><path class="silhouette" d="M-7 11C-18 12-23 25-22 37C-22 43-16 45-13 39L-11 30C-10 42-15 54-10 61C-6 66 1 64 2 58L3 43C5 49 3 58 7 62C13 67 18 62 16 55L13 30C16 36 17 42 22 40C27 37 21 24 18 19C15 12 6 10-7 11Z"/><rect class="face-mask" x="-11" y="-8" width="22" height="15" rx="3"/></g></defs>

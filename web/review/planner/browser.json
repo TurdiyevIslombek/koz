@@ -1,0 +1,11 @@
+{
+  "results": [
+    "uz: all planner labels and disclosures",
+    "ru: all planner labels and disclosures",
+    "en: all planner labels and disclosures",
+    "360px light/dark: left, center, right, lost, unknown; no counting diagram or overflow",
+    "same tab recovered after web restart, kept draft, waited for fresh count, then displayed measured zero",
+    "restart with password required sign-in and resumed after login"
+  ],
+  "jsErrors": []
+}

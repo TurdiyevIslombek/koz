@@ -1,5 +1,16 @@
 export const languages = ['uz','ru','en'];
 const rows = {
+ plannerLabel:['Rejani tuzdi','План составил','Plan by'],
+ planner_rules:['qoidalar','правила','rules'],planner_ollama:['Gemma (shu kompyuterda)','Gemma (на этом компьютере)','Gemma (on this computer)'],planner_nebius:['Nemotron (Nebius)','Nemotron (Nebius)','Nemotron (Nebius)'],
+ plannerNotReported:['xabar berilmagan','не сообщено','not reported'],plannerUnset:['belgilanmagan','не определено','not determined'],
+ plannerLocal:['Matn shu kompyuterda qayta ishlanadi.','Текст обрабатывается на этом компьютере.','Text is processed on this computer.'],
+ plannerDepends:['Matn qayerda qayta ishlanishi reja tuzuvchiga bogʻliq: qoidalar va Gemma — shu kompyuterda; Nemotron — xorijdagi Nebius xizmatida.','Где обрабатывается текст, зависит от планировщика: правила и Gemma — на этом компьютере; Nemotron — в зарубежном сервисе Nebius.','Where text is processed depends on the planner: rules and Gemma use this computer; Nemotron uses Nebius abroad.'],
+ targetTitle:['Rangli nishon','Цветная цель','Colour target'],targetDiagram:['Nishon joylashuvi','Положение цели','Target position'],
+ targetNote:['Nuqta nishonning taxminiy joyini koʻrsatadi. Bu kamera tasviri emas.','Точка показывает примерное положение цели. Это не изображение с камеры.','The dot shows the target’s coarse position. This is not a camera image.'],
+ localFrames:['Kadrlar qurilmada qoladi. Shaxs aniqlanmaydi.','Кадры остаются на устройстве. Личности не определяются.','Frames stay on the device. People are never identified.'],
+ webReconnecting:['Veb-server bilan aloqa uzildi. Qayta ulanyapmiz. Tiklanmasa, sahifani yangilang.','Связь с веб-сервером прервана. Подключаемся снова. Если связь не восстановится, обновите страницу.','The web server connection was lost. Reconnecting. If it does not recover, reload the page.'],
+ sessionEnded:['Kirish seansi tugadi. Davom etish uchun qayta kiring.','Сеанс завершён. Войдите снова, чтобы продолжить.','Your session ended. Sign in again to continue.'],
+ reloadPage:['Sahifani yangilash','Обновить страницу','Reload page'],
  replayTitle:['Yozuvni qayta koʻrish','Воспроизвести запись','Replay recording'], replayAgain:['Qayta koʻrsatish','Повторить запись','Replay again'],
  replayStop:['Yozuvni uzish','Отключить запись','Disconnect replay'], replayLabel:['Sinov yozuvi · kamera ulanmagan','Тестовая запись · без камеры','Recorded fixture · no camera'],
  replayHint:['Nol, kirishlar, maxfiylik toʻxtatishi va agent oʻzgarishi yozilgan namuna. Haqiqiy kamera sinovi emas.','Пример записи: ноль, входы, остановка приватности и корректировка агента. Не испытание реальной камеры.','A recorded example: zero, entries, a privacy stop, and an agent adjustment. Not a real camera trial.'],

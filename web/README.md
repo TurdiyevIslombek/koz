@@ -32,6 +32,8 @@ The web server is now a WebSocket **client** of `ws://127.0.0.1:8765`; browser u
 - The runner sends a contract `status` first, then a heartbeat every second. All seven event types use the existing strict decoder, schema and fixed messages.
 - `start_job`, `stop_job`, `begin_trial` and `finish_trial` go back on **the same WebSocket**, with web-generated IDs, the current session and a ten-second expiry. Accepted means delivery, not applied state.
 - Socket close or browser event-stream failure clears live readings immediately. Three seconds without status also clears them. Heading: **Unknown**; reason: **Offline — job state unknown**. The recipe/history can remain available, but old live numbers cannot return when the socket reconnects. A new observation is required.
+- After a web restart, the browser renews its local owner session and fetches a fresh snapshot automatically. If a password is configured, it asks you to sign in again. While reconnecting it shows Unknown and a **Reload page** fallback; Setup drafts remain in the tab.
+- Optional `status.planner` accepts `rules`, `ollama`, `nebius`, or `null`, alongside older statuses without the field. Other unknown fields and non-enum values are rejected. Missing means **not reported**, never rules. The latest report appears on Setup and Live. `--report-planner` can now be enabled in the runner.
 - Retry is once per second. There is no command queue, replay on reconnect, automatic job start or motor re-arm.
 - The original token-authenticated inbound adapter remains available through `createApplication` for existing integration tests, but normal `npm start` uses the requested outbound local connection.
 
@@ -39,9 +41,9 @@ The fake server reads `fixtures/runner-session.json`, an explicitly **synthetic 
 
 ## What the screens do
 
-- **Setup:** accepts a bounded Uz/Ru/En job description, explains privacy and the Nebius text boundary, imports strict JSON recipes without starting them, shows readable steps and optional JSON, exports the exact recipe. Test sends `start_job`; there is no invented “preview planner” operation. Until a checked recipe arrives, the screen states the safety steps and waits. Previous recipes are labelled **Last checked plan**.
+- **Setup:** accepts a bounded Uz/Ru/En job description, explains privacy and the reported planner’s text boundary (rules/Gemma: local; Nebius: abroad; null/missing/stale: depends on the planner), imports strict JSON recipes without starting them, shows readable steps and optional JSON, exports the exact recipe. Test sends `start_job`; there is no invented “preview planner” operation. Until a checked recipe arrives, the screen states the safety steps and waits. Previous recipes are labelled **Last checked plan**.
 - **Live:** derives state from runner events. A known 0 is a measurement; unknown is a dash. An observation's `unknown_reason` uses the exact fixed message in section 11 of the contract, in the selected language. `null` means not configured. Coverage gaps remain visible. A connection drop clears live values immediately; a silent heartbeat gap does so after three seconds. An accepted Stop command does not claim the job stopped; only a device status can confirm it.
-- **Nigoh scene:** an original SVG diagram with rounded silhouettes, solid face blocks, a wide eye, an entry arrow and a 420 ms crossing pulse. The wire contract forbids images and person positions, so this is explicitly labelled a diagram. A rising entered count pulses the line. Demo mode also offers one illustrative crossing. Reduced motion suppresses animation. No camera images are requested or uploaded.
+- **Nigoh scene:** colour jobs (`color_finder`, including without a robot brain) show a coarse left/center/right target indicator. Lost and Unknown have no target dot; a privacy stop or disconnect clears the position. Only recipes with `line_counter` show the original SVG counting diagram with rounded silhouettes, solid face blocks, a wide eye, an entry arrow and a 420 ms crossing pulse. The wire contract forbids images and person positions, so this is explicitly labelled a diagram. A rising entered count pulses the line. Demo mode also offers one illustrative crossing. Reduced motion suppresses animation. No camera images are requested or uploaded.
 - **Trials:** ten rows per demo, owner-reported pass/fail/unknown, approximate duration in rounded minutes, fixed fault messages, start/finish/cancel, save/delete summaries. The full observation → decision → changed recipe → installed revision → next observation chain is necessary for the “OpenCV output changed the next action” label. Policy stops are separate. The sample chain and results are labelled synthetic.
 
 Camera address, ownership confirmation, allowed-area mask and motor re-arm belong on the device. They cannot be imported through a recipe or set by this dashboard.
@@ -54,7 +56,7 @@ This is a **local implementation**, not an AWS deployment. The localhost runner 
 
 ## Verification and design
 
-Latest runner/launcher pass: **23 tests passed**, build passed, and the 360 px replay browser check has no JavaScript errors, axe violations or horizontal overflow. See `review/runner/REVIEW.md`.
+Latest planner/restart pass: **32 tests passed**, build passed, and real-browser checks passed for all planner values in three languages, target states in both themes at 360 px, and the same tab across a web restart. No JavaScript errors or horizontal overflow. See `review/planner/REVIEW.md`. The earlier replay/launcher accessibility checks remain in `review/runner/REVIEW.md`.
 
 - Node tests cover strict JSON, schema limits, exact unknown messages, state transitions, evidence completeness, auth, token revocation, WebSocket validation, commands and summary CRUD.
 - Browser review covers three screens × two themes × three languages at 360 px, desktop, enlarged text, reduced motion, zero/unknown/offline/Stop, and the complete trial and import/export flow.
@@ -62,3 +64,5 @@ Latest runner/launcher pass: **23 tests passed**, build passed, and the 360 px r
 - `design/` preserves the earlier directions and reference research. D was selected by the owner; the landing page is deferred.
 
 AI contribution: Codex implemented the web UI, local owner/runner adapter, contract-derived validators/messages, demo and tests on 2026-10-15. The owner selected Nigoh and requested its silhouette, eye, direction, pulse and light-theme refinements. Root `AI_LOG.md` is outside this task's edit lane.
+
+AI contribution, 2026-10-16: Codex implemented the agreed planner field, conditional Setup disclosure, colour-target diagram, owner-session restart recovery, and regression checks. Changes remain in `web/`; runner and contracts were read only.

@@ -2,6 +2,14 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import { parseStrict,readRecipe,validateEvent,validateCommandData,CODES,messages,codeMessage } from '../src/protocol.js';
 import { recipeFor,sampleEvidence,known,unknown } from '../src/demo.js';
 const observation=()=>sampleEvidence().find(e=>e.type==='observation');
+test('status accepts the optional planner enum and legacy shape, without opening the contract',()=>{
+ const status=()=>sampleEvidence().find(e=>e.type==='status');
+ const legacy=status();delete legacy.data.planner;assert.doesNotThrow(()=>validateEvent(legacy));assert.equal(Object.hasOwn(legacy.data,'planner'),false);
+ for(const planner of ['rules','ollama','nebius',null]){const e=status();e.data.planner=planner;assert.equal(validateEvent(e).data.planner,planner);}
+ for(const planner of ['unknown','Gemma','Nebius','',false,0,{},[],undefined]){const e=status();e.data.planner=planner;assert.throws(()=>validateEvent(e));}
+ for(const change of [e=>e.data.model='Gemma',e=>e.data.prompt='count people',e=>delete e.data.state,e=>e.planner='rules']){const e=status();e.data.planner='rules';change(e);assert.throws(()=>validateEvent(e));}
+ const e=observation();e.data.planner='rules';assert.throws(()=>validateEvent(e));
+});
 test('strict JSON rejects duplicate keys, non-finite values, invalid syntax, depth and byte limits',()=>{for(const s of ['{"x":1,"x":2}','{"x":1,"\\u0078":2}','1e999','{"a":undefined}','[1,]','\u00a01','{"a":1}tail','['.repeat(14)+'0'+']'.repeat(14)])assert.throws(()=>parseStrict(s));assert.throws(()=>parseStrict('"é"',3));assert.equal(parseStrict('{"safe":0}').safe,0);});
 test('schema and extra contract checks reject unsafe imports and accept three demo recipes',()=>{for(const demo of ['counter','classroom','red_ball','privacy_guard'])assert.equal(readRecipe(JSON.stringify(recipeFor(demo))).version,1);for(const change of [r=>r.extra='x',r=>r.blocks.shift(),r=>r.camera.url='rtsp://camera',r=>r.blocks[3].settings.line=[[0,0],[0,0]],r=>r.actions.push({type:'motors',max_speed_ratio:.9})]){const r=recipeFor();change(r);assert.throws(()=>readRecipe(JSON.stringify(r)));}});
 test('unknown_reason and Count reason are coherent for all 38 fixed codes in all languages',()=>{assert.equal(CODES.length,38);for(const code of CODES){const e=observation();e.data.target='unknown';e.data.occupancy=unknown(code);e.data.unknown_reason=code;assert.doesNotThrow(()=>validateEvent(e));for(const language of ['uz','ru','en'])assert.equal(codeMessage(code,language),messages[code][language]);e.data.unknown_reason=null;assert.throws(()=>validateEvent(e));}});

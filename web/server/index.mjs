@@ -66,7 +66,7 @@ export async function createApplication({password='',dataDir=resolve(root,'.data
     if(url.pathname==='/api/logout'&&req.method==='POST'){sessions.clear();for(const client of subscribers)client.end();subscribers.clear();res.setHeader('Set-Cookie','koz_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');return json(res,200,{ok:true});}
     if(url.pathname==='/api/snapshot'&&req.method==='GET'){
      const rows=model.events.filter(r=>r.expiresAt>Date.now());
-     const latest=model.status&&{event:model.status,receivedAt:model.statusAt};
+     const latest=model.status&&model.statusAt>0&&{event:model.status,receivedAt:model.statusAt};
      return json(res,200,{events:latest?[...rows.filter(r=>r.event!==model.status),latest]:rows,pending:model.pending,statusAt:model.statusAt,activeTrial,saved,transport});
     }
     if(url.pathname==='/api/events'&&req.method==='GET'){

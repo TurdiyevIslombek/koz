@@ -13,7 +13,7 @@ const nullable = test => v => v === null || test(v);
 const id = v => typeof v === 'string' && /^[a-f0-9]{32}$/.test(v);
 const code = one(...CODES);
 const list = (test, min = 0, max = 10) => v => Array.isArray(v) && v.length >= min && v.length <= max && v.every(test);
-const closed = (value, spec) => obj(value) && Object.keys(value).length === Object.keys(spec).length && Object.entries(spec).every(([k,test]) => Object.hasOwn(value,k) && test(value[k]));
+const closed = (value, spec, optional = {}) => obj(value) && Object.keys(value).every(k => Object.hasOwn(spec,k) || Object.hasOwn(optional,k)) && Object.entries(spec).every(([k,test]) => Object.hasOwn(value,k) && test(value[k])) && Object.entries(optional).every(([k,test]) => !Object.hasOwn(value,k) || test(value[k]));
 const checks = one('target_visible','target_centered','counts_available','motion_available','privacy_approved');
 const results = one('pass','fail','unknown');
 const labels = one('left','center','right','lost','detected','clear','risk','approved','blocked','known','unknown');
@@ -73,7 +73,7 @@ const agentChange = v => closed(v,{from_revision:n=>integer(n,1,2),to_revision:n
 const trialResult = d => closed(d,{demo:one('red_ball','classroom','privacy_guard'),index:v=>integer(v,1,10),result:results,basis:one('owner_report'),reason:one('none','missed_target','wrong_direction','count_mismatch','privacy_miss','safety_stop','interrupted','unknown'),expected_count:nullable(integer),observed_count:nullable(isCount),fault_code:nullable(code),evidence:one('complete','incomplete'),agent_changes:list(agentChange,0,2)}) &&
   (d.demo==='classroom'||d.expected_count===null&&d.observed_count===null) && (d.result!=='pass'||d.reason==='none'&&(d.demo==='privacy_guard'||d.observed_count?.state!=='unknown'));
 const specs={
-  status:d=>closed(d,{state:one('idle','planning','checking','evaluating','running','held','refused'),camera_on:v=>typeof v==='boolean',privacy:one('approved','blocked','unknown'),school:v=>typeof v==='boolean',motor:one('not_present','disarmed','enabled','stop_commanded'),opencv_major:one(5,null),capabilities:list(one('rtsp','recorded_fixture','looming','scene_tripwire'),0,4)}),
+  status:d=>closed(d,{state:one('idle','planning','checking','evaluating','running','held','refused'),camera_on:v=>typeof v==='boolean',privacy:one('approved','blocked','unknown'),school:v=>typeof v==='boolean',motor:one('not_present','disarmed','enabled','stop_commanded'),opencv_major:one(5,null),capabilities:list(one('rtsp','recorded_fixture','looming','scene_tripwire'),0,4)},{planner:one('rules','ollama','nebius',null)}),
   recipe:(d,e)=>closed(d,{origin:one('planner','import','adjustment'),caused_by:nullable(v=>integer(v,1,Number.MAX_SAFE_INTEGER)),recipe:r=>{try{validateRecipe(r);return true;}catch{return false;}}})&&(d.origin==='adjustment'?d.caused_by!==null:d.caused_by===null),
   observation,decision,
   command_result:d=>closed(d,{command_id:id,result:one('accepted','rejected'),code:nullable(code)})&&(d.result==='accepted'?d.code===null:d.code!==null),
