@@ -1,0 +1,171 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800" font-family="Helvetica, Arial, sans-serif">
+  <title>Ko'z architecture</title>
+  <desc>A sentence becomes a checked recipe of OpenCV 5 blocks on the owner's computer; frames stay there. AWS gets only contract events; planners get only the typed sentence.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#3A3A3A"/>
+    </marker>
+    <style>
+      .h { font-size: 13px; font-weight: bold; fill: #1F1F1F; }
+      .t { font-size: 11px; fill: #3A3A3A; }
+      .s { font-size: 10px; fill: #5A5A5A; }
+      .zone { font-size: 14px; font-weight: bold; }
+      .box { fill: #FFFFFF; stroke: #6B7C8F; stroke-width: 1.2; }
+      .lock { fill: #FFF1EE; stroke: #A33A2A; stroke-width: 1.6; }
+      .tag { font-size: 9px; font-weight: bold; fill: #A33A2A; letter-spacing: 0.5px; }
+      .aws { fill: #FFFFFF; stroke: #B7791F; stroke-width: 1.2; }
+      .line { stroke: #3A3A3A; stroke-width: 1.4; fill: none; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="800" fill="#FFFFFF"/>
+
+  <text x="20" y="38" font-size="22" font-weight="bold" fill="#1F1F1F">Ko'z: how a sentence becomes a camera job</text>
+  <text x="20" y="60" class="t" font-size="13">Frames stay on the owner's computer. AWS and the planner get only numbers, fixed labels and the typed sentence.</text>
+
+  <!-- Camera -->
+  <rect x="20" y="150" width="170" height="90" rx="8" fill="#F4F4F4" stroke="#6B6B6B"/>
+  <text x="34" y="174" class="h">Camera</text>
+  <text x="34" y="194" class="t">ESP32-CAM (MJPEG)</text>
+  <text x="34" y="210" class="t">phone (RTSP) · laptop</text>
+  <text x="34" y="228" class="s">video only, local network</text>
+  <path d="M190,195 H233" class="line" marker-end="url(#arrow)"/>
+
+  <!-- Owner's computer -->
+  <rect x="215" y="90" width="670" height="550" rx="12" fill="#EEF4FB" stroke="#2B5C8A" stroke-width="1.5"/>
+  <text x="232" y="114" class="zone" fill="#2B5C8A">Owner's computer · koz/ (Python, OpenCV 5.0)</text>
+  <text x="232" y="132" class="s">frames live only in memory; nothing is saved</text>
+  <text x="235" y="160" class="s" font-weight="bold">EVERY FRAME, IN THIS FIXED ORDER</text>
+
+  <rect x="235" y="168" width="270" height="54" rx="6" class="box"/>
+  <text x="248" y="189" class="h">1  Capture</text>
+  <text x="248" y="207" class="t">VideoCapture · imdecode · newest frame only</text>
+  <path d="M370,222 V232" class="line" marker-end="url(#arrow)"/>
+
+  <rect x="235" y="234" width="270" height="54" rx="6" class="box"/>
+  <text x="248" y="255" class="h">2  Allowed-area mask</text>
+  <text x="248" y="273" class="t">fillPoly + bitwise_and: outside is black</text>
+  <path d="M370,288 V298" class="line" marker-end="url(#arrow)"/>
+
+  <rect x="235" y="300" width="270" height="54" rx="6" class="lock"/>
+  <text x="248" y="318" class="h">3  Privacy guard</text>
+  <text x="452" y="318" class="tag">LOCKED</text>
+  <text x="248" y="334" class="t">Places365 room + NanoDet bed / toilet / sink</text>
+  <text x="248" y="348" class="s">only approved frames go on; an error stops</text>
+  <path d="M370,354 V364" class="line" marker-end="url(#arrow)"/>
+
+  <rect x="235" y="366" width="270" height="54" rx="6" class="lock"/>
+  <text x="248" y="387" class="h">4  Face blur</text>
+  <text x="452" y="387" class="tag">LOCKED</text>
+  <text x="248" y="405" class="t">YuNet (FaceDetectorYN) → heavy pixelation</text>
+  <path d="M370,420 V430" class="line" marker-end="url(#arrow)"/>
+
+  <rect x="235" y="432" width="270" height="54" rx="6" class="box"/>
+  <text x="248" y="453" class="h">5  Blocks</text>
+  <text x="248" y="471" class="t">colour finder (HSV, contours) · people · line</text>
+  <path d="M370,486 V496" class="line" marker-end="url(#arrow)"/>
+
+  <rect x="235" y="498" width="270" height="54" rx="6" class="box"/>
+  <text x="248" y="519" class="h">6  Fly brain (the car)</text>
+  <text x="248" y="537" class="t">2,282 FlyWire neurons: looming → turn</text>
+  <path d="M370,552 V562" class="line" marker-end="url(#arrow)"/>
+
+  <rect x="235" y="564" width="270" height="54" rx="6" class="box"/>
+  <text x="248" y="585" class="h">7  Actions</text>
+  <text x="248" y="603" class="t">contract events · wheel speeds</text>
+
+  <!-- Agent side -->
+  <rect x="615" y="168" width="250" height="84" rx="6" class="box"/>
+  <text x="628" y="189" class="h">Planner</text>
+  <text x="628" y="206" class="t">sees only the typed sentence</text>
+  <text x="628" y="222" class="t">rules (default) · Nemotron · Nova 2 Lite</text>
+  <text x="628" y="240" class="s">picks job / colour / refusal; refusal wins</text>
+  <path d="M740,252 V266" class="line" marker-end="url(#arrow)"/>
+
+  <rect x="615" y="268" width="250" height="152" rx="6" class="box"/>
+  <text x="628" y="289" class="h">Agent loop (koz/agent/)</text>
+  <text x="628" y="310" class="t">1  plan from fixed templates</text>
+  <text x="628" y="328" class="t">2  try the recipe 3 s on live frames</text>
+  <text x="628" y="346" class="t">3  check the OpenCV numbers</text>
+  <text x="628" y="364" class="t">4  fail: change one setting from them</text>
+  <text x="628" y="382" class="t">5  at most 3 tries, then it stays off</text>
+  <text x="628" y="400" class="t">6  pass: run</text>
+  <path d="M740,420 V434" class="line" marker-end="url(#arrow)"/>
+
+  <rect x="615" y="436" width="250" height="64" rx="6" class="lock"/>
+  <text x="628" y="457" class="h">Recipe check (recipe.py)</text>
+  <text x="628" y="474" class="t">allowlist · ranges · locked blocks</text>
+  <text x="628" y="490" class="s">rejects code, URLs, files, models</text>
+
+  <rect x="615" y="548" width="250" height="70" rx="6" class="box"/>
+  <text x="628" y="569" class="h">Cloud link (cloud.py)</text>
+  <text x="628" y="586" class="t">outbound wss · runner token</text>
+  <text x="628" y="603" class="s">contract JSON only; offline = unknown</text>
+
+  <!-- arrows between the two columns -->
+  <path d="M615,468 H507" class="line" marker-end="url(#arrow)"/>
+  <text x="560" y="462" class="s" text-anchor="middle">checked recipe</text>
+  <path d="M505,444 L613,380" class="line" marker-end="url(#arrow)"/>
+  <text x="556" y="402" class="s" text-anchor="middle" transform="rotate(-30 556 402)">OpenCV numbers</text>
+  <path d="M505,591 H613" class="line" marker-end="url(#arrow)"/>
+  <text x="560" y="585" class="s" text-anchor="middle">events</text>
+
+  <!-- Motor board -->
+  <path d="M370,618 V668" class="line" marker-end="url(#arrow)"/>
+  <text x="380" y="658" class="s">left, right speed · USB</text>
+  <rect x="235" y="670" width="270" height="80" rx="8" fill="#F4F4F4" stroke="#6B6B6B"/>
+  <text x="248" y="691" class="h">Motor board (motor_listener)</text>
+  <text x="248" y="709" class="t">Arduino Uno + L298N · starts disarmed</text>
+  <text x="248" y="725" class="t">250 ms watchdog · obstacle stop</text>
+  <text x="248" y="741" class="s">armed only by a person at the computer</text>
+
+  <!-- Nebius -->
+  <rect x="915" y="80" width="265" height="56" rx="8" fill="#F4F4F4" stroke="#6B6B6B"/>
+  <text x="928" y="102" class="h">Nebius Token Factory</text>
+  <text x="928" y="120" class="t">Nemotron planner (optional, abroad)</text>
+  <path d="M865,190 L913,118" class="line" marker-end="url(#arrow)"/>
+
+  <!-- AWS -->
+  <rect x="905" y="150" width="285" height="430" rx="12" fill="#FFF6E8" stroke="#B7791F" stroke-width="1.5"/>
+  <text x="920" y="173" class="zone" fill="#8A5A12">AWS · eu-central-1 (Frankfurt)</text>
+  <text x="920" y="190" class="s">one CloudFormation stack (deploy/)</text>
+
+  <rect x="920" y="202" width="255" height="56" rx="6" class="aws"/>
+  <text x="933" y="224" class="h">Amazon Bedrock · EU Regions</text>
+  <text x="933" y="242" class="t">Nova 2 Lite planner (optional)</text>
+  <path d="M865,222 L918,228" class="line" marker-end="url(#arrow)"/>
+
+  <rect x="920" y="272" width="255" height="52" rx="6" class="aws"/>
+  <text x="933" y="293" class="h">Secrets Manager</text>
+  <text x="933" y="311" class="t">generated owner password</text>
+
+  <rect x="920" y="338" width="255" height="56" rx="6" class="aws"/>
+  <text x="933" y="360" class="h">DynamoDB · koz-web</text>
+  <text x="933" y="378" class="t">auto-delete: events 7 days, totals 30</text>
+  <path d="M1047,408 V396" class="line" marker-end="url(#arrow)"/>
+
+  <rect x="920" y="410" width="255" height="80" rx="6" class="aws"/>
+  <text x="933" y="431" class="h">Web app (web/, Node 22)</text>
+  <text x="933" y="449" class="t">login · setup chat · live view</text>
+  <text x="933" y="465" class="t">trials · recipe export / import</text>
+  <text x="933" y="481" class="s">checks every event against the contract</text>
+  <path d="M1047,504 V492" class="line" marker-end="url(#arrow)"/>
+
+  <rect x="920" y="506" width="255" height="58" rx="6" class="aws"/>
+  <text x="933" y="528" class="h">Nginx · HTTPS</text>
+  <text x="933" y="546" class="t">Let's Encrypt IP certificate</text>
+
+  <path d="M865,575 L918,548" class="line" marker-end="url(#arrow)"/>
+
+  <!-- Browser -->
+  <path d="M1047,668 V566" class="line" marker-end="url(#arrow)"/>
+  <rect x="915" y="670" width="265" height="80" rx="8" fill="#F4F4F4" stroke="#6B6B6B"/>
+  <text x="928" y="692" class="h">Owner's and judges' browser</text>
+  <text x="928" y="710" class="t">HTTPS · numbers and labels only</text>
+  <text x="928" y="726" class="t">owner login for commands</text>
+  <text x="928" y="742" class="s">no video route exists</text>
+
+  <!-- Never sent -->
+  <rect x="20" y="768" width="1160" height="24" rx="6" fill="#FFF1EE" stroke="#A33A2A"/>
+  <text x="600" y="785" text-anchor="middle" font-size="12" font-weight="bold" fill="#A33A2A">Never sent anywhere: frames · audio · faces · names · track numbers · text read from the camera</text>
+</svg>

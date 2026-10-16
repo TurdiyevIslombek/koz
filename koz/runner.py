@@ -7,9 +7,9 @@ When something can't be trusted (frame too old, processing too slow), outputs sa
 "unknown", never 0 or an old value. When privacy or blur fails, or anything
 unexpected goes wrong, the job stops.
 
-Built so far: the privacy guard, face blur, color_finder, person_detector,
-line_counter, and the dashboard action (= the observation events). The fly brain, motors and the other blocks come later; recipes
-that need them are refused in koz.recipe with UNSUPPORTED_CAPABILITY."""
+Built so far: the privacy guard, face blur, color_finder, person_detector, line_counter, the
+fly brain, and the dashboard (= the observation events) and motors actions. Recipes that need
+anything else are refused in koz.recipe with UNSUPPORTED_CAPABILITY."""
 import logging
 import sys
 import time

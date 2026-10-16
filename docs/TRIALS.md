@@ -365,6 +365,21 @@ measured on the car yet.**
 **Still to measure on the car** (in this order): `firmware/stop_test` (speed cap, stopping distance),
 then 10 chase trials.
 
+## Agent loop: check and adjust on test clips (Oct 15, re-run Oct 16)
+
+**Drawn clips** (a coloured disc moving on grey, made by `tests/test_agent.py`; not a camera),
+job "find the red ball", the rule planner, re-run on Oct 16:
+
+| Clip | Round 1 | Change (from what OpenCV measured) | Round 2 | End |
+|---|---|---|---|---|
+| Orange-red ball | not found | `hue_center` 0 → 13 | found | runs |
+| No ball at all | not found | `saturation_min` 120 → 80 | not found | stopped: `CHECK_FAILED` (no allowed change left) |
+| A tuner whose changes never help (test) | not found | +5 each round | not found | stopped after 3 rounds: `ADJUSTMENT_LIMIT` |
+
+**One run from the Setup page** (`start-koz.command`, a recorded clip, real models, Oct 15, recorded
+in STATUS.md): typed "Yashil koptokni top" (find the green ball) → not found → `hue_center` 60 → 77 →
+found on the left. **Not yet run on a live camera.**
+
 ## Fly-brain car (demo 1) and classroom counter (demo 2)
 
 To be written.
