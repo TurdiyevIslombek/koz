@@ -118,6 +118,35 @@ int main() {
     out(m, (uint32_t)200, l, r);                             // 296 ms later, after the wrap
     CHECK(l == 0 && m.reason == WATCHDOG);
   }
+  {  // 9. security review: a reversing turn that the caps would make creep forward -> a pure spin
+    MotorLogic m(settings());
+    m.arm();
+    m.echo(20);                                              // obstacle ahead
+    m.command(200, -250, 0);                                 // caps: (120, -90): would drift forward
+    out(m, 1, l, r);
+    CHECK(l == -r && l > 0 && m.reason == RUNNING);          // spins on the spot, no forward drift
+    CHECK(l == liftToPwm(90, 80));
+    m.command(255, 0, 2);                                    // a forward pivot: stopped
+    out(m, 3, l, r);
+    CHECK(l == 0 && r == 0 && m.reason == OBSTACLE);
+    m.echo(200);                                             // clear again: the command as capped
+    m.command(200, -250, 4);
+    out(m, 5, l, r);
+    CHECK(l == liftToPwm(120, 80) && r == liftToPwm(-90, 80));
+  }
+  {  // 10. security review: tens of thousands of missing echoes never let forward through again
+    MotorLogic m(settings());
+    m.arm();
+    m.echo(200);
+    for (long i = 0; i < 70000; i++) m.echo(0);              // > 32767: an int would have wrapped
+    CHECK(m.missing_echoes == 3 && m.distance_cm == -1);
+    m.command(100, 100, 0);
+    out(m, 1, l, r);
+    CHECK(l == 0 && r == 0 && m.reason == NO_ECHO);
+    m.echo(150);                                             // a real echo again: forward allowed
+    out(m, 2, l, r);
+    CHECK(l > 0 && m.reason == RUNNING);
+  }
   std::printf("all %d checks passed\n", checks);
   return 0;
 }

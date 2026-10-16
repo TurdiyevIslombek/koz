@@ -63,7 +63,10 @@ struct MotorLogic {
   // One ultrasonic ping: cm > 0, or 0 for "no echo".
   void echo(int cm) {
     if (cm <= 0) {
-      missing_echoes++;
+      // Count up to the limit only: an int is 16 bits on the Uno and would wrap after ~27 minutes
+      // of missing echoes, which would allow forward again (security review, Oct 16).
+      if (missing_echoes < s.missing_echoes_block) missing_echoes++;
+      if (missing_echoes >= s.missing_echoes_block) distance_cm = -1;   // the old distance is no use now
     } else {
       missing_echoes = 0;
       distance_cm = cm;
@@ -77,10 +80,19 @@ struct MotorLogic {
     if (!have_command || now_ms - last_command_ms > s.watchdog_ms) { reason = WATCHDOG; return; }
     int left = clampInt(want_left, -s.reverse_cap, s.speed_cap);
     int right = clampInt(want_right, -s.reverse_cap, s.speed_cap);
-    if (want_left + want_right > 0) {   // asked to move forward overall (judged before the caps:
-                                        // a spin on the spot (100, -100) must stay a spin)
-      if (missing_echoes >= s.missing_echoes_block || distance_cm < 0) { reason = NO_ECHO; return; }
-      if (distance_cm < s.stop_cm) { reason = OBSTACLE; return; }
+    bool blind = missing_echoes >= s.missing_echoes_block || distance_cm < 0;
+    if ((blind || distance_cm < s.stop_cm) && left + right > 0) {
+      // Forward is refused, judged on what the motors would really get (after the caps). One side
+      // forward and one backwards becomes a pure spin on the spot (the smaller of the two), so the
+      // car can still turn away but can't creep forward (security review, Oct 16).
+      if ((left > 0) != (right > 0) && left != 0 && right != 0) {
+        int a = absInt(left) < absInt(right) ? absInt(left) : absInt(right);
+        left = left > 0 ? a : -a;
+        right = right > 0 ? a : -a;
+      } else {
+        reason = blind ? NO_ECHO : OBSTACLE;
+        return;
+      }
     }
     *pwm_left = liftToPwm(left, s.min_pwm);
     *pwm_right = liftToPwm(right, s.min_pwm);
