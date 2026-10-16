@@ -4,7 +4,10 @@
 (`~/Downloads/flybrain_car`, the stage 1–3 car in his maker portfolio), copied on Oct 16, 2026.
 Their SHA-256 checksums are in `original/ORIGINALS.sha256`, and `tests/test_flybrain_copy.py`
 fails if any of them changes. **Never edit `original/`, and never write to the original folder.**
-Ko'z's own fly-brain block is built next to it, from these copies.
+Ko'z's own fly-brain block is built next to it, from these copies: `brain.py` (the simulation, same spikes as
+the original), `driver.py` (eyes → brain → wheels, same wheels as `brain_driver.py`) and `steering.py`
+(option B: the ball's side becomes looming on the *other* eye, so the fly's own escape turn steers it
+toward the ball).
 
 A full backup of the original folder (without `.venv`) and the checksums of all 187 original files are in
 `~/AI/competitions/_backups/flybrain_car_2026-10-16.zip` and `.sha256`.
