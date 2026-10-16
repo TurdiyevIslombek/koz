@@ -1,4 +1,5 @@
-"""Which planner makes the plan: Nemotron on Nebius if there is a key, else the rule planner.
+"""Which planner makes the plan: Nemotron on Nebius if there is a key, else Amazon Bedrock if there is
+a Bedrock API key (AWS_BEARER_TOKEN_BEDROCK), else the rule planner.
 Gemma 4 on this Mac (Ollama) only when asked for (--planner ollama): measured Oct 15 with the
 camera running, it got 14 of 20 test sentences right (the rule planner 18) and refused every
 people-counting job (docs/TRIALS.md, "Planner on this Mac"). Asked again for every job. If an AI planner fails (PLANNER_UNAVAILABLE), the
@@ -8,11 +9,12 @@ import os
 
 from .. import ROOT
 from ..errors import KozError
+from .bedrock import BedrockPlanner
 from .nebius import NebiusPlanner
 from .ollama import OllamaPlanner
 from .planner import FakePlanner
 
-CHOICES = ("auto", "rules", "fake", "ollama", "nebius")   # "fake" = "rules" (older name)
+CHOICES = ("auto", "rules", "fake", "ollama", "nebius", "bedrock")   # "fake" = "rules" (older name)
 
 
 def load_env(path=None):
@@ -58,13 +60,15 @@ class AutoPlanner:
 
 
 def make_planner(choice="auto", env=None, say=print):
-    """`auto`: Nebius (if NEBIUS_API_KEY) -> rules. `rules` / `ollama` / `nebius`: only that
-    one (ollama and nebius still fall back to rules, and say so)."""
+    """`auto`: Nebius (if NEBIUS_API_KEY) -> Bedrock (if AWS_BEARER_TOKEN_BEDROCK) -> rules.
+    `rules` / `ollama` / `nebius` / `bedrock`: only that one (the AI ones still fall back to rules)."""
     env = {**load_env(), **os.environ} if env is None else env
     rules = FakePlanner()
     nebius = NebiusPlanner(env["NEBIUS_API_KEY"], model=env.get("NEBIUS_MODEL") or None) \
         if env.get("NEBIUS_API_KEY") else None
     ollama = OllamaPlanner(env.get("OLLAMA_MODEL") or None)
+    bedrock = BedrockPlanner(env["AWS_BEARER_TOKEN_BEDROCK"], env.get("BEDROCK_MODEL") or None,
+                             env.get("AWS_REGION") or None) if env.get("AWS_BEARER_TOKEN_BEDROCK") else None
     if choice in ("rules", "fake"):
         return rules
     if choice == "nebius":
@@ -73,9 +77,13 @@ def make_planner(choice="auto", env=None, say=print):
         return AutoPlanner([p for p in (nebius, rules) if p is not None], say)
     if choice == "ollama":
         return AutoPlanner([ollama, rules], say)
-    if nebius is None:
+    if choice == "bedrock":
+        if bedrock is None:
+            say("AWS_BEARER_TOKEN_BEDROCK is not set in .env, so the rule planner is used.")
+        return AutoPlanner([p for p in (bedrock, rules) if p is not None], say)
+    if nebius is None and bedrock is None:
         return rules   # Gemma on this Mac fell short of 18/20 (Oct 15): use --planner ollama to try it
-    return AutoPlanner([nebius, rules], say)
+    return AutoPlanner([p for p in (nebius, bedrock, rules) if p is not None], say)
 
 
 def planned_by(plan, planner):

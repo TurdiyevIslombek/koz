@@ -13,6 +13,8 @@ Changes since then (both lanes agreed):
 - Oct 15: optional `status.planner` (section 8.1), so the dashboard can show who made the
   plan. Proposed by Codex and Claude independently. Rollout: web accepts both shapes first,
   then the runner sends it on every status (on since Oct 16).
+- Oct 16: `status.planner` may also be `bedrock` (Amazon Bedrock, the AWS planner); the web must
+  accept it before a runner with a Bedrock key sends it.
 - Oct 16: choosing a camera: optional `status.cameras` (section 8.1) and optional
   `start_job.data.camera_id` (section 10), fixed slots only. Proposed by Codex and Claude
   independently. Rollout: web accepts both first; the runner sends `cameras` only after that.
@@ -275,7 +277,7 @@ never a person.
 | `motor` | `not_present` · `disarmed` · `enabled` · `stop_commanded` |
 | `opencv_major` | 5, or null before OpenCV starts |
 | `capabilities` | list from `rtsp`, `recorded_fixture`, `looming`, `scene_tripwire`; may be empty |
-| `planner` | optional: `rules` · `ollama` · `nebius` · null — who made this job's plan |
+| `planner` | optional: `rules` · `ollama` · `nebius` · `bedrock` · null — who made this job's plan |
 | `cameras` | optional: the camera slots set up on this runner, from `mac_camera` · `esp32_cam` · `phone_ip_camera`, each once; may be empty |
 
 `planner` names the planner whose answer was used, after any fallback (Nebius → Ollama →

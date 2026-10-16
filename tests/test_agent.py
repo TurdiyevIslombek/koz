@@ -454,5 +454,5 @@ def test_islombeks_sentences_are_planned_and_every_refusal_is_a_rule():
     spec.loader.exec_module(score)
     rows = score.score(Path(__file__).parent / "fixtures" / "sentences_islombek.txt")
     assert len(rows) == 20
-    assert [s for s, expected, got, _, _ in rows if got != expected] == []
-    assert [s for s, _, _, plan, by_rule in rows if plan.refusal and not by_rule] == []
+    assert [s for s, expected, got, *_ in rows if got != expected] == []
+    assert [s for s, _, _, plan, by_rule, _ in rows if plan.refusal and not by_rule] == []

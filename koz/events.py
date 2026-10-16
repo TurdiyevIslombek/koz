@@ -63,7 +63,7 @@ def _capabilities(v):
 
 
 _PRIVACY = ("approved", "blocked", "unknown")
-PLANNERS = ("rules", "ollama", "nebius")
+PLANNERS = ("rules", "ollama", "nebius", "bedrock")
 _STATUS_PLANNER = _words(*PLANNERS, nullable=True)   # optional status field (contract 8.1, Oct 15)
 # Fixed camera slots (contract 8.1 and 10, Oct 16). The runner's command line binds each to a
 # source; addresses and names never appear in events or commands.
