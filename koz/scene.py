@@ -82,6 +82,12 @@ class PlacesSceneChecker:
         return decide(probabilities, strict)
 
     @staticmethod
+    def private_total(probabilities):
+        """All private rooms together (the default guard stops at DEFAULT_PRIVATE_SUM_BLOCKS)."""
+        p = np.asarray(probabilities, dtype=np.float64).reshape(-1)
+        return float(sum(p[i] for scenes in policy.PRIVATE_SCENES.values() for i, _ in scenes))
+
+    @staticmethod
     def top(probabilities, n=3):
         """[(name, probability)] of the n likeliest places."""
         return [(NAMES[i], float(probabilities[i])) for i in np.argsort(probabilities)[::-1][:n]]

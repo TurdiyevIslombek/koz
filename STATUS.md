@@ -1,6 +1,6 @@
 # Ko'z status
 
-Updated Oct 15, after measuring Gemma on this Mac. 335 tests pass, 1 skipped (it needs your face clip):
+Updated Oct 16, after stop logging and Islombek's sentences. 339 tests pass, 1 skipped (it needs your face clip):
 `.venv/bin/python -m pytest -q`
 
 ## What works
@@ -16,7 +16,7 @@ Updated Oct 15, after measuring Gemma on this Mac. 335 tests pass, 1 skipped (it
 | Runner (`koz/runner.py`) | mask → privacy → blur → blocks → events; stale or slow frames → `unknown` with a reason. School mode allows the counter only. |
 | Events (`koz/events.py`) | All 7 types (status, recipe, observation, decision, command_result, fault, trial_result), checked against `contracts/events.md` before sending. |
 | Agent loop (`koz/agent/`) | Words → plan → try 3 s → check the OpenCV numbers → change one setting → try again (3 tries at most) → run. Each step is an event (observation → decision → new revision → result) and one printed line. Refusals stop before the camera opens. On recorded clips: red asked, ball looks orange-red → hue 0 → 13, found; with the real models, green asked for a teal ball → hue 60 → 77, found. **Not yet tried on your camera.** |
-| Planners (`koz/agent/`) | **Default: the rule planner** (Nebius first if a key exists). Uzbek is read in both alphabets. The AI only picks job / colour / school / refusal (`menu.py`); recipe and plan text from templates; any refusal wins. **Gemma 4 on this Mac (Ollama, `--planner ollama`): 14/20 with the camera running, 5.5 s median / 10.9 s max per plan; it refused every counting job. Rule planner: 18/20 (Cyrillic-Uzbek yellow and green missed, fixed after; not re-measured fairly).** Nebius blocked (Uzbekistan not in its sign-up list). |
+| Planners (`koz/agent/`) | **Default: the rule planner** (Nebius first if a key exists). Uzbek in both alphabets. Islombek's 20 fresh sentences: **20/20 before any fix, but 4 of 7 refusals only because nothing matched**; after new refusal rules 20/20 with all refusals by a rule (tuned on that set). The AI only picks job / colour / school / refusal; any refusal wins. Gemma 4 on this Mac: 14/20, removed (in the Trash). |
 | Runner WebSocket (`koz/server.py`) | `ws://127.0.0.1:8765` for the web app: every event as JSON, the 4 commands, trials → `trial_result` with the agent's changes. Refuses browser connections. `--window` shows each job's blurred camera view. |
 | One launcher (`start-koz.command`) | Runner + web app, opens Setup. Tested on a recorded clip: typed "Yashil koptokni top" in Setup → trying → running; the Trials tab showed the chain (not found → hue 60 → 77 → left). Closing Terminal (HUP) or TERM stops both, nothing left running. |
 | Texts (`docs/TEXTS.md`) | Every Uzbek and Russian plan, refusal and stop text, made from the code and the contract (a test keeps it up to date). **Waiting for your check.** |
@@ -68,7 +68,7 @@ python3.13 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
 - "Target visible" now needs a round blob, but any round thing of that colour counts (a red plate, a red lamp). A ball more than half out of the frame, or stretched more than about 1.5 : 1 by motion blur, counts as lost.
 - The plan texts in Uzbek and Russian need your check (`koz/agent/planner.py`).
 - The web app talks to the runner on this computer (`ws://127.0.0.1:8765`, no login). The contract's cloud connection (runner → web with a runner token, section 5) comes with AWS.
-- This Mac (MacBook Air, M3, 8 GB) swapped while Gemma ran next to the camera (swap 2.3 → 3.7 GB). Ollama and the model stay installed (`/Applications/Ollama.app`, 4.3 GB) but aren't used by default; delete them to free the disk if not needed.
+- At Islombek's desk (in a bedroom) the default guard stops often: no bed seen, but the private rooms together score 0.42–0.46, over the 0.40 limit (93 stops in 5 minutes on Oct 16). Every stop now logs why (`docs/TRIALS.md`).
 - The rule planner's 20/20 after the Cyrillic fix is on the sentences that showed the gap: a fresh set of real sentences is needed before claiming a number.
 - Recorded clips (`--video`) now play at their own speed, like a camera.
 

@@ -26,6 +26,7 @@ from koz.events import EventLog  # noqa: E402
 from koz.local_setup import LocalSetup  # noqa: E402
 from koz.messages import all_messages, message  # noqa: E402
 from koz.preview import WINDOW, draw, draw_banner, quit_pressed, startup_banner  # noqa: E402
+from koz.runner import print_stops  # noqa: E402
 
 
 def counting_line(recipe):
@@ -47,6 +48,7 @@ def main(argv=None):
     parser.add_argument("--seconds", type=float, help="stop this many seconds after the job starts running")
     parser.add_argument("--no-window", action="store_true", help="terminal only")
     args = parser.parse_args(argv)
+    print_stops()   # every stop says why, with the last privacy check
 
     planner = make_planner(args.planner)
     setup = LocalSetup(owner_confirmed=args.i_own_this_camera,

@@ -152,16 +152,28 @@ REFUSALS = [
         r"\bkim(ligini|ligi| ekan\w*| kirdi\w*| kirganini)\b", r"\btani(b|y|sh|sa|ng|ydi)\w*", r"\bshaxs\w*",
         r"\bmashina raqam\w*", r"\bkuzatib bor\w*",
         r"кто (это|он|она|вош[её]л|пришёл|пришел)", r"(распозна|опозна|идентифиц)\w*", r"узна(ть|й) кто",
-        r"номер\w* (машин|авто)\w*", r"номерн\w* знак\w*", r"след(и|ить) за (ним|ней)", r"\bким\b", r"тани\w*"]),
+        r"номер\w* (машин|авто)\w*", r"номерн\w* знак\w*", r"след(и|ить) за (ним|ней)", r"\bким\b", r"тани\w*",
+        # watching one person (Oct 16, Islombek's sentences): "watch my coworker", "when he leaves"
+        r"\b(watch|monitor|spy on|keep an eye on|keep track of)\b (my|the|this|that|our) (co-?worker|colleague|"
+        r"employee|worker|staff|boss|wife|husband|girlfriend|boyfriend|neighbou?r|child|son|daughter|kid|student|"
+        r"pupil|teacher|man|woman|person|guy|girl|boy|friend|roommate)\w*",
+        r"\bwhen (he|she) (leaves|comes|arrives|returns|goes)\b",
+        r"когда (он|она) (уйд|уход|прид|приход|верн|вернё)\w*", r"\bu qachon (ketsa|kelsa|qaytsa|chiqsa)\b"]),
     ("PROFILING_FORBIDDEN", [
         r"\b(age|ages|how old|gender|male or female|emotion\w*|mood|ethnic\w*|race|religio\w*|lazy|suspicious|"
         r"cheat\w*|paying attention)\b",
         r"\b(yoshi\w*|necha yosh\w*|jinsi\w*|kayfiyat\w*|hissiyot\w*|millati\w*|dangasa\w*|shubhali\w*)\b",
         r"(возраст\w*|сколько (им |ему |ей )?лет|мужчин\w* или женщин\w*|эмоци\w*|настроени\w*|национальн\w*|"
-        r"ленив\w*|подозрительн\w*)"]),
+        r"ленив\w*|подозрительн\w*)",
+        # gender with words in between, and emotions by name (Oct 16, Islombek's sentences)
+        r"мужчин\w*[^.?!]{0,30}женщин\w*|женщин\w*[^.?!]{0,30}мужчин\w*",
+        r"\b(man|male|boy) or (a )?(woman|female|girl)\b", r"\berkak\w*[^.?!]{0,20}ayol\w*",
+        r"\b(angry|happy|sad|upset|crying|scared|afraid|nervous|bored|stressed|frowning|smiling)\b",
+        r"(зл(ой|ая|ые|ится|ятся)|сердит\w*|груст\w*|весел\w*|улыба\w*|плач\w*|испуга\w*)",
+        r"\b(jahl\w*|xafa\w*|xursand\w*|g'amgin\w*|yig'la\w*|qo'rq\w*)"]),
     ("VIEW_FORBIDDEN", [
         r"\b(hidden|secret\w*|spy\w*|neighbou?r\w*)\b", r"\bwithout (them|him|her) knowing\b",
-        r"\b(yashirin\w*|sezdirmay\w*|bildirmay\w*|qo'shni\w*)\b",
+        r"\b(yashir\w*|sezdirma\w*|bildirma\w*|qo'shni\w*)\b",   # yashirin, yashirib; sezdirmay, sezdirmasdan
         r"(скрыт\w*|тайн\w*|незаметн\w*|шпион\w*|сосед\w*)"]),
     ("AUDIO_FORBIDDEN", [
         r"\b(sound|audio|voice|microphone|listen\w*)\b", r"\b(ovoz\w*|tovush\w*|eshit\w*)\b",

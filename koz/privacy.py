@@ -143,6 +143,9 @@ class GuardCheck:
         if self.last_probabilities is None:
             return "check: not yet"
         rooms = ", ".join(f"{name} {p:.2f}" for name, p in self.scene.top(self.last_probabilities, 3))
+        total = getattr(self.scene, "private_total", None)   # stand-ins in tests may not have it
+        if total is not None:
+            rooms += f" (private rooms together {total(self.last_probabilities):.2f})"
         seen = ", ".join(f"{name} {score:.2f}" for name, score in sorted(self.last_found.items())) or "nothing"
         result = self.last_result.state + (" (confirming)" if self.last_result.confirming else "")
         if self.last_result.state == BLOCKED and self.stop_delay is not None:

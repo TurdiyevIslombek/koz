@@ -10,6 +10,8 @@ unexpected goes wrong, the job stops.
 Built so far: the privacy guard, face blur, color_finder, person_detector,
 line_counter, and the dashboard action (= the observation events). The fly brain, motors and the other blocks come later; recipes
 that need them are refused in koz.recipe with UNSUPPORTED_CAPABILITY."""
+import logging
+import sys
 import time
 
 import cv2
@@ -23,6 +25,20 @@ from .recipe import CheckedRecipe, check_recipe
 from .scene import PlacesSceneChecker
 
 OPENCV_MAJOR = int(cv2.__version__.split(".")[0])
+
+# Every stop logs one line: why, and the privacy guard's last check (room guesses, objects seen).
+# Codes and numbers only, never a frame (CLAUDE.md rules 8 and 12). Scripts call print_stops().
+STOPS = logging.getLogger("koz.stops")
+
+
+def print_stops(stream=None):
+    """Show every stop's reason in the terminal (once per process)."""
+    if not STOPS.handlers:
+        handler = logging.StreamHandler(stream or sys.stdout)
+        handler.setFormatter(logging.Formatter("%(message)s"))
+        STOPS.addHandler(handler)
+        STOPS.setLevel(logging.INFO)
+        STOPS.propagate = False
 
 
 class Runner:
@@ -63,6 +79,7 @@ class Runner:
         self._settings = {b["type"]: b["settings"] for b in recipe.data["blocks"][2:]}
 
         self.state = None           # set to "checking" on the first step
+        self.stop_reason = None     # why it stopped: an error code, "stop_job", or "end of video / camera closed"
         self.coverage = "complete"  # becomes "gapped" after any stale or slow frame, and stays so
         self.preview = None         # the latest fresh, masked, blurred frame, for a local window only
         self.local_results = {}     # that frame's block results (e.g. where the target is); local only
@@ -85,7 +102,7 @@ class Runner:
     def stop(self):
         """Stop on the owner's command (stop_job): close the camera, status idle."""
         if self.state in ("checking", "evaluating", "running"):
-            self._stop("idle")
+            self._stop("idle", "stop_job")
 
     def hold(self, code):
         """The agent loop decided to stop (its decision event carries the same code): outputs
@@ -93,7 +110,7 @@ class Runner:
         if self.state in ("checking", "evaluating", "running"):
             self._drop_preview()
             self.events.emit("fault", {"code": code, "effect": "held"}, revision=self.revision)
-            self._stop("held")
+            self._stop("held", code)
 
     @property
     def models(self):
@@ -119,18 +136,20 @@ class Runner:
             return self._process_next_frame()
         except Exception as error:   # fail closed: anything unexpected stops the job
             code = error.code if isinstance(error, KozError) else "INTERNAL_ERROR"
+            detail = "" if isinstance(error, KozError) else f" ({type(error).__name__})"
             try:
-                self._fault(code)
+                self._fault(code, detail=detail)
             except Exception:        # even reporting failed: still stop
                 self._drop_preview()
                 self.camera.close()
                 self.state = "held" if self._was_running else "refused"
+                self._log_stop(code, detail + " (and the stop could not be reported)")
             return False
 
     def _process_next_frame(self):
         frame = self.camera.read()
-        if frame is None:   # the recording ended
-            self._stop("idle")
+        if frame is None:   # the recording ended, or the camera closed
+            self._stop("idle", "end of video / camera closed")
             return False
         if self._clock() - frame.t > policy.MAX_FRAME_AGE_S:
             self._unknown("FRAME_STALE")
@@ -205,18 +224,26 @@ class Runner:
             "motion": None, "looming": None, "alert": None, "unknown_reason": reason,
         }, revision=self.revision)
 
-    def _fault(self, code, privacy=None):
+    def _fault(self, code, privacy=None, detail=""):
         """Stop the job. Outputs become unknown first. "off" if it never ran, "held" if it was running."""
         self._drop_preview()
         self._observe(privacy or self._privacy_state(), None, code)
         self.events.emit("fault", {"code": code, "effect": "held" if self._was_running else "off"},
                          revision=self.revision)
-        self._stop("held" if self._was_running else "refused")
+        self._stop("held" if self._was_running else "refused", code, detail)
 
-    def _stop(self, state):
+    def _stop(self, state, reason, detail=""):
         self.camera.close()
         self._drop_preview()
         self._set_state(state)
+        self._log_stop(reason, detail)
+
+    def _log_stop(self, reason, detail=""):
+        self.stop_reason = reason
+        last = getattr(self.guard, "last_result", None)
+        seen = f", saw {last.seen}" if getattr(last, "seen", None) else ""
+        STOPS.info("Ko'z stopped (%s): %s%s%s | %s", self.state, reason, detail, seen,
+                   getattr(self.guard, "line", "no privacy check line"))
 
     def _drop_preview(self):
         self.preview, self.local_results = None, {}

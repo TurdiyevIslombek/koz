@@ -27,7 +27,7 @@ from koz.errors import KozError  # noqa: E402
 from koz.events import EventLog  # noqa: E402
 from koz.local_setup import LocalSetup  # noqa: E402
 from koz.recipe import check_recipe  # noqa: E402
-from koz.runner import Runner  # noqa: E402
+from koz.runner import Runner, print_stops  # noqa: E402
 from koz.preview import (WINDOW, check_line, count_text, draw, draw_banner, put_centred,  # noqa: E402,F401
                          quit_pressed, startup_banner, stop_banner)
 
@@ -74,6 +74,7 @@ def main():
     parser.add_argument("--no-window", action="store_true", help="print the status instead of showing a window")
     parser.add_argument("--frames", type=int, help="stop after this many frames")
     args = parser.parse_args()
+    print_stops()   # every stop says why, with the last privacy check
 
     messages = english_messages()
     left, top, right, bottom = (float(v) for v in args.allowed_area.split(","))

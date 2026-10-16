@@ -441,3 +441,18 @@ def test_normal_running_starts_its_line_counts_at_zero():
     assert first["data"]["entered"] == {"state": "known", "value": 0, "reason": None}
     assert first["data"]["coverage"] == "complete"
     result.runner.stop()
+
+
+def test_islombeks_sentences_are_planned_and_every_refusal_is_a_rule():
+    """tests/fixtures/sentences_islombek.txt (Oct 16). The rule planner was TUNED on this set after
+    scoring it (docs/TRIALS.md), so this only guards against going backwards; it is not a fair score."""
+    import importlib.util
+    from pathlib import Path
+    script = Path(__file__).resolve().parent.parent / "scripts" / "score_sentences.py"
+    spec = importlib.util.spec_from_file_location("score_sentences", script)
+    score = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(score)
+    rows = score.score(Path(__file__).parent / "fixtures" / "sentences_islombek.txt")
+    assert len(rows) == 20
+    assert [s for s, expected, got, _, _ in rows if got != expected] == []
+    assert [s for s, _, _, plan, by_rule in rows if plan.refusal and not by_rule] == []

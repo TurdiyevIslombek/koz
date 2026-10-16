@@ -330,3 +330,67 @@ def test_school_mode_is_always_strict(test_video, school_in):
     runner = Runner(check_recipe(recipe), setup, FileCamera(test_video), EventLog(list().append),
                     scene_checker=Approve(), face_detector=FakeFaces(), person_detector=ScriptedPeople([]))
     assert runner.strict is True
+
+
+# --- every stop logs its reason (Oct 16: the guard stopped a camera job 4 times, unexplained) ---
+
+def test_every_stop_records_and_logs_its_reason(test_video, caplog):
+    import logging
+
+    from helpers import Approve, FakeClock, FakeFaces, Refuse, TickingCamera, color_recipe
+    from koz.capture import FileCamera
+    from koz.events import EventLog
+    from koz.local_setup import LocalSetup
+    from koz.recipe import check_recipe
+    from koz.runner import Runner
+
+    setup = LocalSetup(owner_confirmed=True, allowed_area=FULL_FRAME)
+
+    def runner(guard):
+        clock = FakeClock()
+        return Runner(check_recipe(color_recipe()), setup, TickingCamera(FileCamera(test_video, clock), clock, 0.1),
+                      EventLog(lambda e: None), scene_checker=guard, face_detector=FakeFaces(), clock=clock)
+
+    caplog.set_level(logging.INFO, logger="koz.stops")
+    blocked = runner(Refuse("PRIVATE_BEDROOM"))
+    blocked.run()
+    assert blocked.stop_reason == "PRIVATE_BEDROOM"
+    ended = runner(Approve())
+    ended.run()
+    assert ended.stop_reason == "end of video / camera closed"
+    stopped = runner(Approve())
+    stopped.step()
+    stopped.stop()
+    assert stopped.stop_reason == "stop_job"
+    held = runner(Approve())
+    held.step()
+    held.hold("ADJUSTMENT_LIMIT")
+    assert held.stop_reason == "ADJUSTMENT_LIMIT"
+    lines = [r.getMessage() for r in caplog.records if r.name == "koz.stops"]
+    assert len(lines) == 4
+    assert lines[0].startswith("Ko'z stopped (refused): PRIVATE_BEDROOM")
+    assert "end of video" in lines[1] and "stop_job" in lines[2] and "ADJUSTMENT_LIMIT" in lines[3]
+
+
+def test_a_failed_block_is_logged_without_its_error_text(test_video, caplog):
+    import logging
+
+    from helpers import Approve, FakeClock, TickingCamera, color_recipe
+    from koz.capture import FileCamera
+    from koz.events import EventLog
+    from koz.local_setup import LocalSetup
+    from koz.recipe import check_recipe
+    from koz.runner import Runner
+
+    class Crash:
+        def detect(self, image):
+            raise ZeroDivisionError("secret detail")
+
+    caplog.set_level(logging.INFO, logger="koz.stops")
+    clock = FakeClock()
+    r = Runner(check_recipe(color_recipe()), LocalSetup(owner_confirmed=True, allowed_area=FULL_FRAME),
+               TickingCamera(FileCamera(test_video, clock), clock, 0.1), EventLog(lambda e: None),
+               scene_checker=Approve(), face_detector=Crash(), clock=clock)
+    r.run()
+    line = [rec.getMessage() for rec in caplog.records if rec.name == "koz.stops"][-1]
+    assert r.stop_reason == "BLUR_UNAVAILABLE" and "secret detail" not in line

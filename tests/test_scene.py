@@ -138,3 +138,18 @@ def test_real_model_gives_valid_answers_on_recorded_video(test_video):
             p = checker.probabilities(frame.image)
             assert p.shape == (CLASSES,) and abs(p.sum() - 1) < 1e-3
             assert checker.check(frame.image).state in ("approved", "blocked", "unknown")
+
+
+def test_private_total_is_what_the_default_guard_adds_up():
+    import numpy as np
+
+    from koz import policy
+    from koz.scene import PlacesSceneChecker, decide
+    p = np.full(365, 0.0)
+    (bedroom, _), (other, _) = policy.PRIVATE_SCENES["PRIVATE_BEDROOM"][0], policy.PRIVATE_SCENES["PRIVATE_BEDROOM"][1]
+    p[bedroom], p[other] = 0.25, 0.20          # no single room is sure (< 0.50), together 0.45
+    private = [i for scenes in policy.PRIVATE_SCENES.values() for i, _ in scenes]
+    rest = [i for i in range(365) if i not in private]
+    p[rest] = 0.55 / len(rest)                 # everything else goes to non-private places
+    assert abs(PlacesSceneChecker.private_total(p) - 0.45) < 1e-9
+    assert decide(p).code == "PRIVATE_BEDROOM"   # the "private rooms together >= 0.40" rule

@@ -32,7 +32,7 @@ from .agent.choose import CHOICES, planned_by
 from .agent.planner import MAX_TEXT
 from .errors import CODES, KozError
 from .events import ID_PATTERN, MAX_MESSAGE_BYTES, EventLog, count_unknown
-from .runner import OPENCV_MAJOR
+from .runner import OPENCV_MAJOR, print_stops
 
 HOST, PORT = "127.0.0.1", 8765
 OFFLINE_QUEUE = 200
@@ -500,6 +500,7 @@ def main(argv=None):
                         help="send status.planner (contract 8.1); only once the web app accepts it")
     parser.add_argument("--port", type=int, default=PORT)
     args = parser.parse_args(argv)
+    print_stops()   # every stop says why, with the last privacy check
 
     left, top, right, bottom = (float(v) for v in args.allowed_area.split(","))
     setup = LocalSetup(owner_confirmed=args.i_own_this_camera,

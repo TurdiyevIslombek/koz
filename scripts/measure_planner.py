@@ -31,7 +31,7 @@ from koz.errors import KozError  # noqa: E402
 from koz.events import EventLog  # noqa: E402
 from koz.local_setup import LocalSetup  # noqa: E402
 from koz.recipe import check_recipe  # noqa: E402
-from koz.runner import Runner  # noqa: E402
+from koz.runner import Runner, print_stops  # noqa: E402
 
 # (sentence, language, expected): ("find_colour", colour) / ("count_people", school) / ("refuse", code)
 SENTENCES = [
@@ -91,7 +91,7 @@ class CameraLoad(threading.Thread):
                     self.frames.append(time.monotonic())
             camera.close()
             if self.running:   # the guard stopped it (or the clip ended): note why and start again
-                self.stops.append(runner.state)
+                self.stops.append(runner.stop_reason)
                 time.sleep(0.5)
 
     def fps(self, start, end):
@@ -149,6 +149,7 @@ def main():
     parser.add_argument("--video", help="a recorded clip instead of the camera (played at its own speed)")
     parser.add_argument("--model", help="the Ollama model (default: OLLAMA_MODEL or gemma4:e2b-it-qat)")
     args = parser.parse_args()
+    print_stops()   # every stop of the camera job says why
     setup = LocalSetup(owner_confirmed=args.i_own_this_camera,
                        allowed_area=(((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)),))
     open_camera = ((lambda: FileCamera(args.video, realtime=True)) if args.video
