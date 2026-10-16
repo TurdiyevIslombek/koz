@@ -121,11 +121,12 @@ class Hub:
 
     def __init__(self, setup, open_camera, planner, capabilities=(), deliver=None, clock=time.monotonic,
                  wall_clock=time.time, eval_seconds=policy.AGENT_EVAL_S, models=None, report_planner=False,
-                 say=lambda text: None, cameras=None, report_cameras=False):
+                 say=lambda text: None, cameras=None, report_cameras=False, motor_link=None):
         """`open_camera` opens the default camera. `cameras` ({slot: open function}, optional) are
         the cameras a start_job may pick by camera_id; `report_cameras` lists their slots in status."""
         self.setup, self._open_camera, self.planner = setup, open_camera, planner
         self.cameras = dict(cameras or {})
+        self.motor_link = motor_link   # the car's board (--motors PORT); armed only by a person here
         self._job_camera = open_camera
         self.capabilities = sorted(capabilities)
         self.deliver = deliver or (lambda event: None)
@@ -243,7 +244,8 @@ class Hub:
         self._answer(command)
         self._job_result, self._camera, self._running_job = None, None, command["job_id"]
         self._agent = Agent(self.planner, self.setup, self._opened_camera, self.events, clock=self.clock,
-                            eval_seconds=self.eval_seconds, models=self.models, on_plan=self._planned)
+                            eval_seconds=self.eval_seconds, models=self.models, on_plan=self._planned,
+                            motor_link=self.motor_link)
         self._thread = threading.Thread(target=self._work, args=(self._agent, command["job_id"], command["data"]),
                                         name="koz-job", daemon=True)
         self._thread.start()

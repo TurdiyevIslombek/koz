@@ -72,11 +72,12 @@ class Agent:
     by stop_job) ends it, and a planner answer that arrives after it never starts the job."""
 
     def __init__(self, planner, setup, open_camera, events, clock=time.monotonic,
-                 eval_seconds=policy.AGENT_EVAL_S, models=None, on_frame=None, on_plan=None):
+                 eval_seconds=policy.AGENT_EVAL_S, models=None, on_frame=None, on_plan=None, motor_link=None):
         self.planner, self.setup, self.open_camera, self.events = planner, setup, open_camera, events
         self.clock, self.eval_seconds, self.models = clock, eval_seconds, models or {}
         self.on_frame = on_frame   # called with the runner after each frame (the demo's window)
         self.on_plan = on_plan     # called with the plan as soon as there is one (the demo prints it)
+        self.motor_link = motor_link   # the car's motor board (local hardware), for recipes with motors
         self.stop_requested = False
         self.phase = None    # planning | trying | done (the server reads it)
         self.plan = None     # the plan, once there is one
@@ -125,8 +126,8 @@ class Agent:
         for number in range(1, policy.AGENT_MAX_ROUNDS + 1):
             try:
                 runner = Runner(checked, self.setup, camera, self.events, revision=revision,
-                                evaluation_round=number, clock=self.clock, **models)
-            except KozError as error:   # a model file missing or changed: nothing runs
+                                evaluation_round=number, clock=self.clock, motor_link=self.motor_link, **models)
+            except KozError as error:   # a model file missing or changed, or no motor board: nothing runs
                 camera.close()
                 return self._refuse(plan, error.code)
             self.runner, models = runner, {**runner.models, **self.models}

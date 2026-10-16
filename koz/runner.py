@@ -17,7 +17,9 @@ import time
 import cv2
 
 from . import policy
+from .actions.motors import MotorsAction
 from .blocks import TASK_BLOCKS, FaceBlur, FrameContext, PersonDetector
+from .brains.flybrain.steering import FlyBrainSteering
 from .errors import KozError
 from .events import count_known, count_unknown
 from .privacy import APPROVED, UNKNOWN, GuardCheck, PrivacyGate, PrivateObjects
@@ -50,7 +52,8 @@ class Runner:
     needed model file is missing or changed, the runner refuses to start."""
 
     def __init__(self, recipe, setup, camera, events, scene_checker=None, face_detector=None,
-                 person_detector=None, revision=1, evaluation_round=None, clock=time.monotonic):
+                 person_detector=None, revision=1, evaluation_round=None, clock=time.monotonic,
+                 motor_link=None, brain_driver=None):
         if not isinstance(recipe, CheckedRecipe):
             raise TypeError("Runner needs a CheckedRecipe from koz.recipe")
         if OPENCV_MAJOR != 5:
@@ -77,6 +80,18 @@ class Runner:
                         else TASK_BLOCKS[b["type"]](b["settings"]) for b in recipe.data["blocks"][2:]]
         self._configured = {b["type"] for b in recipe.data["blocks"][2:]}
         self._settings = {b["type"]: b["settings"] for b in recipe.data["blocks"][2:]}
+        # The fly brain (recipe "brain") and the motors action: koz/brains/flybrain/steering.py and
+        # koz/actions/motors.py. The schema allows motors only with the fly brain, and the fly brain
+        # only with color_finder (rule 11). The motor board is local hardware: never from a recipe.
+        brain = recipe.data["brain"]
+        self._brain = FlyBrainSteering(brain["settings"], driver=brain_driver) if brain["type"] == "flybrain" else None
+        if self._brain is not None and brain_driver is not None:
+            brain_driver.reset()   # a new revision starts with a calm brain
+        motors = next((a for a in recipe.data["actions"] if a["type"] == "motors"), None)
+        if motors is not None and motor_link is None:
+            raise KozError("UNSUPPORTED_CAPABILITY", "no motor board set up on this computer")
+        self._motors = MotorsAction(motor_link, motors["max_speed_ratio"], setup.motor_cap) if motors else None
+        self._motors_checked = False
 
         self.state = None           # set to "checking" on the first step
         self.stop_reason = None     # why it stopped: an error code, "stop_job", or "end of video / camera closed"
@@ -117,7 +132,8 @@ class Runner:
         """The loaded checks and models, so the agent's next round reuses them (same camera,
         same setup) instead of loading the files again."""
         people = next((b.detector for b in self._blocks if isinstance(b, PersonDetector)), None)
-        return {"scene_checker": self.guard, "face_detector": self._blur.detector, "person_detector": people}
+        return {"scene_checker": self.guard, "face_detector": self._blur.detector, "person_detector": people,
+                "brain_driver": self._brain.driver if self._brain is not None else None}
 
     def run(self, max_frames=None):
         """Process frames until the job stops (or max_frames). Returns the final state."""
@@ -133,6 +149,9 @@ class Runner:
         if self.state not in ("checking", "evaluating", "running"):
             return False
         try:
+            if self._motors is not None and not self._motors_checked:
+                self._motors.check()   # armed by hand, no fault: else MOTOR_NOT_ARMED before any frame
+                self._motors_checked = True
             return self._process_next_frame()
         except Exception as error:   # fail closed: anything unexpected stops the job
             code = error.code if isinstance(error, KozError) else "INTERNAL_ERROR"
@@ -159,9 +178,11 @@ class Runner:
         image = cv2.bitwise_and(image, image, mask=self._mask)   # black outside the allowed area
         if self._gate.due(image):
             self._drop_preview()   # nothing from before this check stays on screen
+            self._pause_motors()   # contract 3: actions wait during a check
         privacy = self._gate.admit(image)
         if privacy.confirming:   # an object seen once: hold this frame and run no block
             self._set_state("checking")   # contract 8.1: "checking" = before approval or confirming
+            self._pause_motors()
             self._observe(UNKNOWN, None, privacy.code)
             return True
         if privacy.state != APPROVED:
@@ -175,9 +196,13 @@ class Runner:
         self._blur.process(ctx)   # raises BLUR_UNAVAILABLE if it can't blur
         for block in self._blocks:
             block.process(ctx)
+        if self._brain is not None:
+            self._brain.process(ctx)   # the colour target -> the fly brain -> wheel speeds (local only)
         if self._clock() - frame.t > policy.MAX_FRAME_AGE_S:   # processing took too long
             self._unknown("OVERLOADED")
             return True
+        if self._motors is not None:
+            self._motors.drive(ctx.results["flybrain"].wheels)   # raises MOTOR_SAFETY_STOP on a board fault
         self.preview, self.local_results = ctx.image, ctx.results
         self._observe(APPROVED, ctx.results)
         self._heartbeat()
@@ -190,6 +215,7 @@ class Runner:
         that reason, and coverage has a gap."""
         self.coverage = "gapped"
         self._drop_preview()
+        self._pause_motors()   # contract 3: a stale or late frame -> motors stop
         self._observe(self._privacy_state(), None, code)
         self._heartbeat()
 
@@ -232,7 +258,13 @@ class Runner:
                          revision=self.revision)
         self._stop("held" if self._was_running else "refused", code, detail)
 
+    def _pause_motors(self):
+        if self._motors is not None:
+            self._motors.pause()
+
     def _stop(self, state, reason, detail=""):
+        if self._motors is not None:
+            self._motors.end()   # stop + disarm: the next job needs arming by hand
         self.camera.close()
         self._drop_preview()
         self._set_state(state)
@@ -267,7 +299,7 @@ class Runner:
             "camera_on": bool(getattr(self.camera, "is_open", False)),
             "privacy": self._privacy_state(),
             "school": self.recipe.school,
-            "motor": "not_present",
+            "motor": self._motors.status if self._motors is not None else "not_present",
             "opencv_major": OPENCV_MAJOR,
             "capabilities": sorted(getattr(self.camera, "capabilities", ())),
         }, revision=self.revision)

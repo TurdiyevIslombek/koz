@@ -4,10 +4,12 @@
 // rules in motor_logic.h. Islombek's physical power switch is the last safety layer.
 //
 // Laptop -> Arduino (115200 baud, one line each)      Arduino -> laptop
-//   ARM        enable the motors                         READY                 after power-up (disarmed)
-//   DISARM     motors off until the next ARM             S,state,reason,cm     every 100 ms: 0/1, why it is
-//   M,L,R      wheel commands -255..255                                        stopped (RUNNING if not), distance
-//   STOP       motors off now (stays armed)              (cm -1 = no echo yet)
+//   ARM        enable the motors (the laptop sends it     READY                 after power-up (disarmed)
+//              only when a person arms them by hand)    S,state,reason,cm     every 100 ms: 0/1, why it is
+//   DISARM     motors off until the next ARM                                   off (RUNNING if not), distance
+//   M,L,R      wheel commands -255..255                                        (cm -1 = no echo yet)
+//   STOP       motors off now (stays armed)
+// Faults (WATCHDOG, OBSTACLE, NO_ECHO: see motor_logic.h) disarm; only a new ARM enables the motors.
 //
 // The numbers marked MEASURE come from firmware/stop_test (see its README). Until they are
 // measured, these defaults are deliberately slow and careful.

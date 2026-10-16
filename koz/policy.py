@@ -13,8 +13,8 @@ LOCKED_BLOCKS = ("privacy_guard", "face_blur")
 # What is built so far. Anything else is refused with UNSUPPORTED_CAPABILITY
 # instead of being silently skipped.
 BUILT_BLOCKS = frozenset({"privacy_guard", "face_blur", "color_finder", "person_detector", "line_counter"})
-BUILT_BRAINS = frozenset({"none"})
-BUILT_ACTIONS = frozenset({"dashboard"})
+BUILT_BRAINS = frozenset({"none", "flybrain"})
+BUILT_ACTIONS = frozenset({"dashboard", "motors"})
 
 # Strict parsing of recipe text.
 MAX_RECIPE_BYTES = 16 * 1024

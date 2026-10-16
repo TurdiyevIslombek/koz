@@ -23,12 +23,16 @@ class LocalSetup:
     # Default: run anywhere, stop on what it sees (koz/privacy.py). Local only: never in a
     # recipe, so it can't be imported or sent.
     strict: bool = False
+    # The car's tested speed cap, as a share of full speed (contract section 3: motor speed is the
+    # lower of this and the recipe's max_speed_ratio). 0.15 until measured with firmware/stop_test.
+    motor_cap: float = 0.15
 
     def check(self):
         if self.owner_confirmed is not True:
             raise KozError("OWNERSHIP_REQUIRED")
         if self.mount not in ("fixed", "moving") or type(self.school) is not bool \
-                or type(self.strict) is not bool:
+                or type(self.strict) is not bool or type(self.motor_cap) not in (int, float) \
+                or not 0 < self.motor_cap <= 0.25:
             raise KozError("INVALID_COMMAND", "bad local setup")
         if not self.allowed_area or not all(_good_polygon(p) for p in self.allowed_area):
             raise KozError("ALLOWED_AREA_REQUIRED")
