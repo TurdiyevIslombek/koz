@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from koz.agent import Agent, ChainLog, make_planner  # noqa: E402
 from koz.agent.choose import CHOICES, planned_by  # noqa: E402
-from koz.capture import FileCamera, LiveCamera  # noqa: E402
+from koz.capture import FileCamera, open_camera  # noqa: E402
 from koz.errors import KozError  # noqa: E402
 from koz.events import EventLog  # noqa: E402
 from koz.local_setup import LocalSetup  # noqa: E402
@@ -81,7 +81,7 @@ def main(argv=None):
     def open_camera():
         if args.video:
             return FileCamera(args.video, realtime=True)
-        return LiveCamera(int(args.camera) if args.camera.isdigit() else args.camera)
+        return open_camera(args.camera)
 
     def on_plan(plan):
         chain.language = plan.language

@@ -12,7 +12,10 @@ Changes since then (both lanes agreed):
   status, which would have sent about 4 status events per second.
 - Oct 15: optional `status.planner` (section 8.1), so the dashboard can show who made the
   plan. Proposed by Codex and Claude independently. Rollout: web accepts both shapes first,
-  then the runner sends it on every status.
+  then the runner sends it on every status (on since Oct 16).
+- Oct 16: choosing a camera: optional `status.cameras` (section 8.1) and optional
+  `start_job.data.camera_id` (section 10), fixed slots only. Proposed by Codex and Claude
+  independently. Rollout: web accepts both first; the runner sends `cameras` only after that.
 
 `recipe.schema.json` and this file are the contract together.
 **MVP** = built by Oct 26. **stretch** = only if built; the dashboard must not
@@ -273,6 +276,7 @@ never a person.
 | `opencv_major` | 5, or null before OpenCV starts |
 | `capabilities` | list from `rtsp`, `recorded_fixture`, `looming`, `scene_tripwire`; may be empty |
 | `planner` | optional: `rules` · `ollama` · `nebius` · null — who made this job's plan |
+| `cameras` | optional: the camera slots set up on this runner, from `mac_camera` · `esp32_cam` · `phone_ip_camera`, each once; may be empty |
 
 `planner` names the planner whose answer was used, after any fallback (Nebius → Ollama →
 rules): `rules` also when the rule check refused the request before any AI model saw it. It
@@ -280,6 +284,10 @@ is null with no job, while planning, for an imported recipe, and when planning f
 stays the same through the job's adjustments (the tuner is not a planner) and resets with
 each new job. No model names: they are free text. A missing field means "not reported",
 never `rules`.
+
+`cameras` lists what the runner's own command line set up (each slot is bound there to an
+address that never leaves the runner); it doesn't promise the camera is reachable. A missing field
+means a runner that can't choose (it uses its one camera).
 
 `held` = outputs stopped; a new start is needed. `checking` = before the first
 privacy approval, or while the guard confirms an object it saw once (frames held, outputs
@@ -573,6 +581,12 @@ ball; the owner judges the physical result.
     {"input": "recipe", "recipe": { …a complete recipe object… }}
 
 An imported recipe goes through the same checks and the same 3-round evaluation.
+Both forms may add `"camera_id"`: one of the slots in `status.cameras`. Missing → the runner's
+default (its first camera). Not a slot name → `INVALID_COMMAND`. A slot this runner hasn't set
+up → `UNSUPPORTED_CAPABILITY`. A chosen camera that can't be opened or sends no first picture
+→ fault `UNSUPPORTED_CAPABILITY` (the job doesn't run); one that stops sending later → outputs
+`unknown` with `FRAME_STALE`. Never a silent switch to another camera. The recipe's `camera.source` stays `device_camera`:
+recipes and imports never choose a camera.
 
 **stop_job** — `data` is `{}`. Stops at once, before any planner work; cancels
 pending evaluation and planner results; goes idle; sends `command_result` and

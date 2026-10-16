@@ -65,6 +65,13 @@ def _capabilities(v):
 _PRIVACY = ("approved", "blocked", "unknown")
 PLANNERS = ("rules", "ollama", "nebius")
 _STATUS_PLANNER = _words(*PLANNERS, nullable=True)   # optional status field (contract 8.1, Oct 15)
+# Fixed camera slots (contract 8.1 and 10, Oct 16). The runner's command line binds each to a
+# source; addresses and names never appear in events or commands.
+CAMERA_SLOTS = ("mac_camera", "esp32_cam", "phone_ip_camera")
+
+
+def _camera_slots(v):
+    return type(v) is list and len(set(v)) == len(v) and all(type(c) is str and c in CAMERA_SLOTS for c in v)
 CHECKS = ("target_visible", "target_centered", "counts_available", "motion_available", "privacy_approved")
 LABELS = ("left", "center", "right", "lost", "detected", "clear", "risk", "approved", "blocked", "known", "unknown")
 SETTINGS = ("color_finder.hue_center", "color_finder.hue_half_width", "color_finder.saturation_min",
@@ -221,7 +228,8 @@ class EventLog:
     """Numbers the events of one runner session and hands each to `sink`
     (a list's append in tests; the WebSocket later)."""
 
-    def __init__(self, sink, job_id=None, trial_id=None, wall_clock=time.time, report_planner=False):
+    def __init__(self, sink, job_id=None, trial_id=None, wall_clock=time.time, report_planner=False,
+                 cameras=None):
         for given in (job_id, trial_id):
             if given is not None and not (type(given) is str and ID_PATTERN.fullmatch(given)):
                 raise KozError("INVALID_EVENT", "bad job or trial ID")
@@ -235,6 +243,10 @@ class EventLog:
         self.lock = threading.RLock()
         # status.planner (contract 8.1): sent only once the web accepts it (report_planner).
         self.report_planner, self.planner = report_planner, None
+        # status.cameras (contract 8.1): the configured camera slots, sent when given (not None).
+        if cameras is not None and not _camera_slots(list(cameras)):
+            raise KozError("INVALID_EVENT", "unknown camera slot")
+        self.cameras = None if cameras is None else list(cameras)
 
     def emit(self, event_type, data, revision=None):
         with self.lock:
@@ -244,6 +256,8 @@ class EventLog:
         spec = FIELDS.get(event_type)
         if event_type == "status" and self.report_planner and type(data) is dict:
             data, spec = {**data, "planner": self.planner}, {**spec, "planner": _STATUS_PLANNER}
+        if event_type == "status" and self.cameras is not None and type(data) is dict:
+            data, spec = {**data, "cameras": list(self.cameras)}, {**spec, "cameras": _camera_slots}
         if (spec is None or type(data) is not dict or set(data) != set(spec)
                 or not all(spec[name](data[name]) for name in spec)
                 or not _whole(1, 3, nullable=True)(revision)

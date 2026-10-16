@@ -14,7 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from koz.agent.planner import colour_recipe  # noqa: E402
-from koz.capture import LiveCamera  # noqa: E402
+from koz.capture import open_camera  # noqa: E402
 from koz.errors import KozError  # noqa: E402
 from koz.events import EventLog  # noqa: E402
 from koz.local_setup import LocalSetup  # noqa: E402
@@ -35,7 +35,7 @@ def main():
     end = time.monotonic() + args.minutes * 60
     while time.monotonic() < end:
         try:
-            camera = LiveCamera(int(args.camera) if args.camera.isdigit() else args.camera)
+            camera = open_camera(args.camera)
             runner = Runner(recipe, setup, camera, EventLog(lambda e: None), **models)
         except KozError as error:
             print(f"Could not start: {error.code}")

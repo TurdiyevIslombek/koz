@@ -22,7 +22,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from koz import CONTRACTS  # noqa: E402
-from koz.capture import FileCamera, LiveCamera  # noqa: E402
+from koz.capture import FileCamera, open_camera  # noqa: E402
 from koz.errors import KozError  # noqa: E402
 from koz.events import EventLog  # noqa: E402
 from koz.local_setup import LocalSetup  # noqa: E402
@@ -93,7 +93,7 @@ def main():
         if args.video:
             camera = FileCamera(args.video)
         else:
-            camera = LiveCamera(int(args.camera) if args.camera.isdigit() else args.camera)
+            camera = open_camera(args.camera)
         runner = Runner(demo_recipe(args.job, args.hue, line, args.school), setup, camera, EventLog(keep_latest))
     except KozError as error:
         print(f"Ko'z did not start: {error.code}: {messages.get(error.code, '')}")

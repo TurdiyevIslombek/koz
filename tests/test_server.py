@@ -2,6 +2,7 @@
 import asyncio
 import json
 import socket
+import time
 
 import numpy as np
 import pytest
@@ -299,3 +300,38 @@ def test_the_runner_says_who_planned_each_job_and_can_report_it():
     assert said[1] == "Job refused (IDENTITY_FORBIDDEN)"
     assert "Who is this man" not in " ".join(said)   # the job's text is never printed or logged
     assert bench.of("status")[-1]["data"]["planner"] == "rules"
+
+
+# --- picking a camera (contract 8.1 + 10, Oct 16: fixed slots, never an address) ----------------
+
+def test_start_job_picks_a_configured_camera_by_slot():
+    opened = []
+    bench = Bench(lambda clock: opened.append("default") or endless(clock))
+    bench.hub = Hub(SETUP, lambda: opened.append("default") or endless(bench.clock), FakePlanner(),
+                    deliver=bench.sent.append, clock=bench.clock, wall_clock=lambda: NOW, eval_seconds=2.0,
+                    models={"scene_checker": Approve(), "face_detector": FakeFaces()},
+                    cameras={"mac_camera": lambda: opened.append("mac") or endless(bench.clock),
+                             "esp32_cam": lambda: opened.append("esp32") or endless(bench.clock)},
+                    report_cameras=True)
+    assert bench.of("status")[-1]["data"]["cameras"] == ["mac_camera", "esp32_cam"]
+    job = new_id()
+    bench.command("start_job", {"input": "prompt", "language": "en", "text": "find the red ball",
+                                "camera_id": "esp32_cam"}, job_id=job)
+    deadline = time.monotonic() + 5
+    while not opened and time.monotonic() < deadline:   # let the job reach its camera, then stop it
+        time.sleep(0.01)
+    bench.command("stop_job", {}, job_id=job)
+    bench.wait()
+    assert opened == ["esp32"]
+    missing = bench.command("start_job", {"input": "prompt", "language": "en", "text": "find the red ball",
+                                          "camera_id": "phone_ip_camera"}, job_id=new_id())
+    assert bench.result(missing)[0]["code"] == "UNSUPPORTED_CAPABILITY"   # a known slot, not set up here
+    for bad in ("http://192.168.1.9/stream", "kitchen", 1):
+        command = bench.command("start_job", {"input": "prompt", "language": "en", "text": "find the red ball",
+                                              "camera_id": bad}, job_id=new_id())
+        assert bench.result(command)[0]["code"] == "INVALID_COMMAND"
+    assert opened == ["esp32"]
+
+
+def test_cameras_are_not_reported_until_the_web_accepts_them():
+    assert "cameras" not in Bench().of("status")[-1]["data"]

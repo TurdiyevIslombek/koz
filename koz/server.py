@@ -31,7 +31,7 @@ from .agent import Agent, make_planner
 from .agent.choose import CHOICES, planned_by
 from .agent.planner import MAX_TEXT
 from .errors import CODES, KozError
-from .events import ID_PATTERN, MAX_MESSAGE_BYTES, EventLog, count_unknown
+from .events import CAMERA_SLOTS, ID_PATTERN, MAX_MESSAGE_BYTES, EventLog, count_unknown
 from .runner import OPENCV_MAJOR, print_stops
 
 HOST, PORT = "127.0.0.1", 8765
@@ -94,10 +94,14 @@ def command_problem(command, session_id, now):
 
 def _data_ok(name, data):
     if name == "start_job":
+        # optional camera_id: one of the fixed slots (contract 10, Oct 16); never an address
+        if "camera_id" in data and (type(data["camera_id"]) is not str or data["camera_id"] not in CAMERA_SLOTS):
+            return False
+        keys = set(data) - {"camera_id"}
         if data.get("input") == "prompt":
-            return (set(data) == {"input", "language", "text"} and data["language"] in ("uz", "ru", "en")
+            return (keys == {"input", "language", "text"} and data["language"] in ("uz", "ru", "en")
                     and type(data["text"]) is str and 0 < len(data["text"].strip()) and len(data["text"]) <= MAX_TEXT)
-        return data.get("input") == "recipe" and set(data) == {"input", "recipe"} and type(data["recipe"]) is dict
+        return data.get("input") == "recipe" and keys == {"input", "recipe"} and type(data["recipe"]) is dict
     if name == "stop_job":
         return data == {}
     if name == "begin_trial":
@@ -117,13 +121,18 @@ class Hub:
 
     def __init__(self, setup, open_camera, planner, capabilities=(), deliver=None, clock=time.monotonic,
                  wall_clock=time.time, eval_seconds=policy.AGENT_EVAL_S, models=None, report_planner=False,
-                 say=lambda text: None):
+                 say=lambda text: None, cameras=None, report_cameras=False):
+        """`open_camera` opens the default camera. `cameras` ({slot: open function}, optional) are
+        the cameras a start_job may pick by camera_id; `report_cameras` lists their slots in status."""
         self.setup, self._open_camera, self.planner = setup, open_camera, planner
+        self.cameras = dict(cameras or {})
+        self._job_camera = open_camera
         self.capabilities = sorted(capabilities)
         self.deliver = deliver or (lambda event: None)
         self.clock, self.wall_clock, self.eval_seconds, self.models = clock, wall_clock, eval_seconds, models
         self.say = say   # one line per job for the terminal: who planned it and how it ended (no job text)
-        self.events = EventLog(lambda event: self.deliver(event), wall_clock=wall_clock, report_planner=report_planner)
+        self.events = EventLog(lambda event: self.deliver(event), wall_clock=wall_clock, report_planner=report_planner,
+                               cameras=sorted(self.cameras, key=CAMERA_SLOTS.index) if report_cameras else None)
         self.events.listeners.append(self._track)
         self.lock = self.events.lock   # one lock for events and hub state (see EventLog)
         self._results = OrderedDict()  # command_id -> its command_result data
@@ -224,6 +233,10 @@ class Hub:
             return "INVALID_COMMAND"
         if trial is not None and trial["job_id"] is not None:
             return "BUSY"   # one job per trial
+        camera_id = command["data"].get("camera_id")
+        if camera_id is not None and camera_id not in self.cameras:
+            return "UNSUPPORTED_CAPABILITY"   # a known slot, but not set up on this runner
+        self._job_camera = self.cameras[camera_id] if camera_id is not None else self._open_camera
         if trial is not None:
             trial["job_id"] = command["job_id"]
         self.events.bind(command["job_id"], command["trial_id"])
@@ -316,7 +329,7 @@ class Hub:
                  + (f"refused ({plan.refusal})" if plan.refusal else f"{plan.job} ({plan.language})"))
 
     def _opened_camera(self):
-        self._camera = self._open_camera()
+        self._camera = self._job_camera()
         return self._camera
 
     def _work(self, agent, job_id, start):
@@ -480,13 +493,18 @@ def show_window(hub, alive):
 def main(argv=None):
     import signal
 
-    from .capture import FileCamera, LiveCamera
+    from .capture import FileCamera, describe, open_camera as open_source
     from .local_setup import LocalSetup
 
     parser = argparse.ArgumentParser(description="Ko'z runner: the WebSocket the web app connects to")
     parser.add_argument("--i-own-this-camera", action="store_true",
                         help="confirm the camera is yours and you may film this view (rule 7)")
-    parser.add_argument("--camera", default="0", help="0 = this computer's camera, or a stream URL")
+    parser.add_argument("--camera", action="append", metavar="SLOT=SOURCE",
+                        help="a camera the web app can pick: mac_camera=0, esp32_cam=http://192.168.4.1:81/stream, "
+                             "phone_ip_camera=http://PHONE:8080/video or rtsp://...; repeat for several (the first is "
+                             "the default). Plain 0 = mac_camera, a plain URL = esp32_cam. Default: mac_camera=0")
+    parser.add_argument("--report-cameras", action="store_true",
+                        help="send status.cameras (contract 8.1); only once the web app accepts it")
     parser.add_argument("--video", help="play a recorded video file instead of a camera (a new start replays it)")
     parser.add_argument("--allowed-area", default="0,0,1,1",
                         help="left,top,right,bottom of the allowed area, 0..1 (default: whole frame)")
@@ -496,8 +514,8 @@ def main(argv=None):
                         help="auto: Nemotron on Nebius if NEBIUS_API_KEY is in .env, else the rule planner; "
                              "ollama: Gemma 4 on this Mac (14/20 on Oct 15, see docs/TRIALS.md)")
     parser.add_argument("--window", action="store_true", help="show the camera view (faces blurred) of each job")
-    parser.add_argument("--report-planner", action="store_true",
-                        help="send status.planner (contract 8.1); only once the web app accepts it")
+    parser.add_argument("--no-report-planner", dest="report_planner", action="store_false",
+                        help="don't send status.planner (contract 8.1; the web app accepts it since Oct 16)")
     parser.add_argument("--port", type=int, default=PORT)
     args = parser.parse_args(argv)
     print_stops()   # every stop says why, with the last privacy check
@@ -512,12 +530,22 @@ def main(argv=None):
         print(f"Ko'z did not start: {error.code}. Add --i-own-this-camera if this camera is yours.")
         return 1
     planner = make_planner(args.planner)
+    cameras = {}
+    for entry in args.camera or ["0"]:
+        slot, _, source = entry.partition("=") if "=" in entry.split("://")[0] else ("", "", entry)
+        slot = slot or ("mac_camera" if source.strip().isdigit() else "esp32_cam")
+        if slot not in CAMERA_SLOTS or slot in cameras:
+            print(f"Ko'z did not start: camera slot must be one of {', '.join(CAMERA_SLOTS)}, each once.")
+            return 1
+        cameras[slot] = (lambda source=source: open_source(source))
+        print(f"Camera {slot}: {describe(source)}", flush=True)
     if args.video:
         open_camera, capabilities = (lambda: FileCamera(args.video, realtime=True)), ("recorded_fixture",)
+        cameras = {}
     else:
-        source = int(args.camera) if args.camera.isdigit() else args.camera
-        open_camera, capabilities = (lambda: LiveCamera(source)), ()
+        open_camera, capabilities = next(iter(cameras.values())), ()
     hub = Hub(setup, open_camera, planner, capabilities=capabilities, report_planner=args.report_planner,
+              cameras=cameras, report_cameras=args.report_cameras,
               say=lambda text: print(text, flush=True))
 
     def interrupted(signum, frame):   # closing the Terminal window (HUP) or the launcher (TERM): stop cleanly
