@@ -22,7 +22,7 @@ Updated Oct 16, after the AWS bundle and the Bedrock planner. 425 tests pass, 1 
 | Firmware (`firmware/`) | `motor_listener`: USB `ARM / DISARM / STOP / M,L,R`; starts disarmed; a fault (250 ms without commands, forward into an obstacle, forward while blind) disarms until armed by hand; speed caps. Safety rules tested on the Mac (31 checks); both sketches compile for the Uno. `stop_test` + README to measure the speed cap and stopping distance. **Not yet on the car.** |
 | Fly brain (`koz/brains/flybrain/`) | Copy of the original simulation (same spikes), the driver (same wheels), and option B steering. Simulation only: reaches the ball in ~3 s from most starts. **Time box: chasing reliably by Oct 19, else option A.** |
 | Motors (`koz/actions/motors.py`) | Serial link + mock; speed = the lower of the recipe's 0.25 and the local cap (0.15 until measured); stops on stale frames and during privacy checks; disarms at job end; armed only by a person (Enter / A key). |
-| Cameras | `--camera slot=source`: this Mac, the ESP32-CAM MJPEG stream, a phone (MJPEG or RTSP). The web can pick a slot once Codex adds it (`.collab/specs/web-camera-choice.md`). |
+| Cameras | `--camera slot=source`: this Mac, the ESP32-CAM MJPEG stream, a phone (MJPEG or RTSP). `--upside-down` / `--mirror` for a camera mounted that way (the car's ESP32-CAM is upside down, as in the original `config.py`): turned before the guard sees it. The web can pick a slot once Codex adds it (`.collab/specs/web-camera-choice.md`). |
 | One launcher (`start-koz.command`) | Runner + web app, opens Setup. Tested on a recorded clip: typed "Yashil koptokni top" in Setup → trying → running; the Trials tab showed the chain (not found → hue 60 → 77 → left). Closing Terminal (HUP) or TERM stops both, nothing left running. |
 | Texts (`docs/TEXTS.md`) | Every Uzbek and Russian plan, refusal and stop text, made from the code and the contract (a test keeps it up to date). **Waiting for your check.** |
 | Cameras (`koz/capture.py`) | Recorded video (mock camera); live reader for the MacBook camera that drops the first second (too dark). **ESP32-CAM stream: not tried yet.** |
@@ -52,8 +52,8 @@ python3.13 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
 
 ## What's next
 
-1. You: `firmware/stop_test` on the car (its README, ~20 min); send Claude the MOVED and RESULT lines. Then upload `motor_listener` and try `agent_demo.py --motors auto ... "Qizil koptokni quv"`.
-2. You: 10 chase trials by Oct 19 (option B time box); then the classroom and privacy trials.
+1. You, Sunday: `docs/SUNDAY.md` (portfolio recordings with the original car first, stop test, motor_listener, 10 chase trials, original back). Option B time box: Oct 19.
+2. You: then the classroom and privacy trials; the video (`docs/VIDEO.md`); check the report draft (`docs/REPORT.md`).
 3. Codex: `.collab/specs/web-camera-choice.md` and `web-planner-and-live.md`.
 4. Oct 19: `docs/AWS_DAY.md` ($1 budget first). Before it: make the GitHub repo public (your decision) and Codex builds `.collab/specs/aws-review.md`.
 
