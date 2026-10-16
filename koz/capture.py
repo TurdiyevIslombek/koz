@@ -263,20 +263,51 @@ class MjpegCamera:
         self.close()
 
 
-def open_camera(source, clock=time.monotonic):
+class TurnedCamera:
+    """A camera mounted upside down, or with left and right swapped (local setup, like CAMERA_FLIP
+    and CAMERA_MIRROR in the original car's config.py). Each frame is turned before anything else
+    sees it, so the ball on the car's left is on the left of the picture (the fly brain turns the
+    right way) and faces are upright for face blur (YuNet looks for upright faces)."""
+
+    def __init__(self, camera, upside_down=False, mirror=False):
+        self._camera, self.upside_down, self.mirror = camera, upside_down, mirror
+
+    def read(self):
+        frame = self._camera.read()
+        if frame is None:
+            return None
+        image = frame.image
+        if self.upside_down:
+            image = cv2.rotate(image, cv2.ROTATE_180)
+        if self.mirror:
+            image = cv2.flip(image, 1)
+        return Frame(image, frame.t, frame.index)
+
+    def __getattr__(self, name):   # is_open, capabilities, close: the camera's own
+        return getattr(self._camera, name)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self.close()
+
+
+def open_camera(source, clock=time.monotonic, upside_down=False, mirror=False):
     """A camera from the runner's command line: "0" (this computer), "http(s)://..." (MJPEG:
-    the ESP32-CAM, a phone app) or "rtsp://..." (OpenCV reads it; video only)."""
+    the ESP32-CAM, a phone app) or "rtsp://..." (OpenCV reads it; video only). `upside_down` and
+    `mirror` say how it is mounted (TurnedCamera)."""
     text = str(source).strip()
     if text.isdigit():
-        return LiveCamera(int(text), clock=clock)
-    scheme = urllib.parse.urlsplit(text).scheme
-    if scheme in ("http", "https"):
-        return MjpegCamera(text, clock=clock)
-    if scheme == "rtsp":
+        camera = LiveCamera(int(text), clock=clock)
+    elif urllib.parse.urlsplit(text).scheme in ("http", "https"):
+        camera = MjpegCamera(text, clock=clock)
+    elif urllib.parse.urlsplit(text).scheme == "rtsp":
         camera = LiveCamera(text, clock=clock, warmup_s=0.0)
         camera.capabilities = ("rtsp",)
-        return camera
-    raise KozError("UNSUPPORTED_CAPABILITY", "camera must be a number, http(s):// or rtsp://")
+    else:
+        raise KozError("UNSUPPORTED_CAPABILITY", "camera must be a number, http(s):// or rtsp://")
+    return TurnedCamera(camera, upside_down, mirror) if upside_down or mirror else camera
 
 
 def describe(source):

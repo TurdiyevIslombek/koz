@@ -40,9 +40,13 @@ def main(argv=None):
     parser.add_argument("--i-own-this-camera", action="store_true",
                         help="confirm the camera is yours and you may film this view (rule 7)")
     parser.add_argument("--camera", default="0", help="0 = this computer's camera, or a stream URL")
+    parser.add_argument("--upside-down", action="store_true",
+                        help="the camera is mounted upside down (the car's ESP32-CAM, like CAMERA_FLIP)")
+    parser.add_argument("--mirror", action="store_true", help="the camera's picture has left and right swapped")
     parser.add_argument("--video", help="play a recorded video file instead of a camera")
     parser.add_argument("--planner", choices=CHOICES, default="auto",
-                        help="auto: Nemotron on Nebius if NEBIUS_API_KEY is in .env, else the rule planner; "
+                        help="auto: Nemotron on Nebius if NEBIUS_API_KEY is in .env, then Nova 2 Lite on Bedrock if "
+                             "AWS_BEARER_TOKEN_BEDROCK is, else the rule planner; "
                              "ollama: Gemma 4 on this Mac (14/20 on Oct 15, see docs/TRIALS.md)")
     parser.add_argument("--strict", action="store_true", help="strict mode for schools and public cameras")
     parser.add_argument("--motors", metavar="PORT", help="the car's motor_listener board on USB, or auto")
@@ -93,7 +97,7 @@ def main(argv=None):
     def open_camera():
         if args.video:
             return FileCamera(args.video, realtime=True)
-        return open_camera(args.camera)
+        return open_camera(args.camera, upside_down=args.upside_down, mirror=args.mirror)
 
     def on_plan(plan):
         chain.language = plan.language

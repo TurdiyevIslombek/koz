@@ -59,6 +59,9 @@ def main():
     parser.add_argument("--i-own-this-camera", action="store_true",
                         help="confirm the camera is yours and you may film this view (rule 7)")
     parser.add_argument("--camera", default="0", help="0 = this computer's camera, or a stream URL")
+    parser.add_argument("--upside-down", action="store_true",
+                        help="the camera is mounted upside down (the car's ESP32-CAM, like CAMERA_FLIP)")
+    parser.add_argument("--mirror", action="store_true", help="the camera's picture has left and right swapped")
     parser.add_argument("--video", help="play a recorded video file instead of a camera")
     parser.add_argument("--allowed-area", default="0,0,1,1",
                         help="left,top,right,bottom of the allowed area, 0..1 (default: whole frame)")
@@ -93,7 +96,7 @@ def main():
         if args.video:
             camera = FileCamera(args.video)
         else:
-            camera = open_camera(args.camera)
+            camera = open_camera(args.camera, upside_down=args.upside_down, mirror=args.mirror)
         runner = Runner(demo_recipe(args.job, args.hue, line, args.school), setup, camera, EventLog(keep_latest))
     except KozError as error:
         print(f"Ko'z did not start: {error.code}: {messages.get(error.code, '')}")

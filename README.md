@@ -73,12 +73,13 @@ fly's own escape turn steers it toward the ball (`koz/brains/flybrain/`).
 
 1. Measure the speed cap and the stopping distance once: `firmware/stop_test/README.md`.
 2. Upload `firmware/motor_listener` (its README). It starts disarmed and stops by itself.
-3. Run, with the board on the USB cable and the ESP32-CAM stream:
+3. Run, with the board on the USB cable and the ESP32-CAM stream (`--upside-down`: the car's camera
+   is mounted upside down, like `CAMERA_FLIP` in the original `config.py`):
    ```bash
-   .venv/bin/python scripts/agent_demo.py --i-own-this-camera --camera http://192.168.4.1:81/stream --motors auto "Qizil koptokni quv"
+   .venv/bin/python scripts/agent_demo.py --i-own-this-camera --camera http://192.168.4.1:81/stream --upside-down --motors auto "Qizil koptokni quv"
    ```
    It asks you to press Enter to arm the motors (only a person at this computer can). Or start
-   the runner with `--motors auto --camera esp32_cam=http://192.168.4.1:81/stream --window` and
+   the runner with `--motors auto --camera esp32_cam=http://192.168.4.1:81/stream --upside-down esp32_cam --window` and
    press A in its window to arm; then type the job in the web app.
 
 ## Models and credits

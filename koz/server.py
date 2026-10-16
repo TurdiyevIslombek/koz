@@ -492,6 +492,23 @@ def motor_state(link):
     return f"fault {fault}" if fault else ("armed" if link.armed else "disarmed")
 
 
+def camera_sources(entries, upside_down=(), mirror=()):
+    """--camera entries -> {slot: (source, upside down?, mirrored?)}, in the order given (the first is
+    the default). Plain 0 = mac_camera, a plain URL = esp32_cam. ValueError says what is wrong."""
+    sources = {}
+    for entry in entries or ["0"]:
+        slot, _, source = entry.partition("=") if "=" in entry.split("://")[0] else ("", "", entry)
+        slot = slot or ("mac_camera" if source.strip().isdigit() else "esp32_cam")
+        if slot not in CAMERA_SLOTS or slot in sources:
+            raise ValueError(f"camera slot must be one of {', '.join(CAMERA_SLOTS)}, each once.")
+        sources[slot] = source
+    for flag, slots in (("--upside-down", upside_down), ("--mirror", mirror)):
+        for slot in slots:
+            if slot not in sources:
+                raise ValueError(f"{flag} {slot}: no camera {slot} (cameras: {', '.join(sources)}).")
+    return {slot: (source, slot in upside_down, slot in mirror) for slot, source in sources.items()}
+
+
 def main(argv=None):
     import signal
 
@@ -505,6 +522,10 @@ def main(argv=None):
                         help="a camera the web app can pick: mac_camera=0, esp32_cam=http://192.168.4.1:81/stream, "
                              "phone_ip_camera=http://PHONE:8080/video or rtsp://...; repeat for several (the first is "
                              "the default). Plain 0 = mac_camera, a plain URL = esp32_cam. Default: mac_camera=0")
+    parser.add_argument("--upside-down", action="append", default=[], metavar="SLOT",
+                        help="that camera is mounted upside down (the car's ESP32-CAM: esp32_cam); repeatable")
+    parser.add_argument("--mirror", action="append", default=[], metavar="SLOT",
+                        help="that camera's picture has left and right swapped; repeatable")
     parser.add_argument("--report-cameras", action="store_true",
                         help="send status.cameras (contract 8.1); only once the web app accepts it")
     parser.add_argument("--video", help="play a recorded video file instead of a camera (a new start replays it)")
@@ -543,15 +564,17 @@ def main(argv=None):
         print(f"Ko'z did not start: {error.code}. Add --i-own-this-camera if this camera is yours.")
         return 1
     planner = make_planner(args.planner)
+    try:
+        sources = camera_sources(args.camera, args.upside_down, args.mirror)
+    except ValueError as error:
+        print(f"Ko'z did not start: {error}")
+        return 1
     cameras = {}
-    for entry in args.camera or ["0"]:
-        slot, _, source = entry.partition("=") if "=" in entry.split("://")[0] else ("", "", entry)
-        slot = slot or ("mac_camera" if source.strip().isdigit() else "esp32_cam")
-        if slot not in CAMERA_SLOTS or slot in cameras:
-            print(f"Ko'z did not start: camera slot must be one of {', '.join(CAMERA_SLOTS)}, each once.")
-            return 1
-        cameras[slot] = (lambda source=source: open_source(source))
-        print(f"Camera {slot}: {describe(source)}", flush=True)
+    for slot, (source, upside_down, mirror) in sources.items():
+        cameras[slot] = (lambda source=source, upside_down=upside_down, mirror=mirror:
+                         open_source(source, upside_down=upside_down, mirror=mirror))
+        turned = ", ".join(word for word, on in (("upside down", upside_down), ("mirrored", mirror)) if on)
+        print(f"Camera {slot}: {describe(source)}{f' ({turned})' if turned else ''}", flush=True)
     if args.video:
         open_camera, capabilities = (lambda: FileCamera(args.video, realtime=True)), ("recorded_fixture",)
         cameras = {}

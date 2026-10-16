@@ -134,3 +134,76 @@ def test_a_phone_camera_with_a_password_and_a_wrong_address():
         with pytest.raises(KozError):
             open_camera(bad)
     assert "secret" not in describe("rtsp://me:secret@192.168.1.5:554/live") == "rtsp://192.168.1.5:554/live"
+
+
+# --- a camera mounted upside down (the car's ESP32-CAM: CAMERA_FLIP in the original config.py) ----
+
+def test_an_upside_down_or_mirrored_camera_is_turned_before_anything_sees_it():
+    import numpy as np
+
+    from koz.capture import Frame, TurnedCamera
+
+    class Fake:
+        is_open, capabilities, closed = True, ("rtsp",), False
+
+        def __init__(self):
+            self.frames = [Frame(self.marked(), 1.5, 7), None]
+
+        @staticmethod
+        def marked():
+            image = np.zeros((4, 6, 3), np.uint8)
+            image[0, 0] = 255   # a dot at the top left
+            return image
+
+        def read(self):
+            return self.frames.pop(0)
+
+        def close(self):
+            self.closed = True
+
+    def dot(upside_down, mirror):
+        frame = TurnedCamera(Fake(), upside_down, mirror).read()
+        assert (frame.t, frame.index, frame.image.shape) == (1.5, 7, (4, 6, 3))   # time and size kept
+        ys, xs = np.nonzero(frame.image[:, :, 0])
+        return int(ys[0]), int(xs[0])
+
+    assert dot(False, False) == (0, 0)
+    assert dot(True, False) == (3, 5)    # upside down: top left -> bottom right (left and right swap too)
+    assert dot(False, True) == (0, 5)    # mirrored: left <-> right
+    assert dot(True, True) == (3, 0)
+    fake = Fake()
+    camera = TurnedCamera(fake, upside_down=True)
+    assert camera.is_open and camera.capabilities == ("rtsp",)
+    camera.read()
+    assert camera.read() is None         # a closed camera stays None
+    camera.close()
+    assert fake.closed
+
+
+def test_the_runner_turns_only_the_cameras_it_is_told_to():
+    from koz.server import camera_sources
+
+    assert camera_sources(None) == {"mac_camera": ("0", False, False)}
+    sources = camera_sources(["mac_camera=0", "esp32_cam=http://192.168.4.1:81/stream"], upside_down=["esp32_cam"])
+    assert sources == {"mac_camera": ("0", False, False),
+                       "esp32_cam": ("http://192.168.4.1:81/stream", True, False)}
+    assert camera_sources(["http://192.168.4.1:81/stream"], mirror=["esp32_cam"])["esp32_cam"][2] is True
+    for entries, flipped in ((["0"], ["esp32_cam"]), (["kitchen=0"], []), (["0", "mac_camera=1"], [])):
+        with pytest.raises(ValueError):
+            camera_sources(entries, upside_down=flipped)
+
+
+def test_open_camera_turns_an_mjpeg_stream_when_asked():
+    from koz.capture import MjpegCamera, TurnedCamera, open_camera
+
+    server = mjpeg_server()
+    url = f"http://127.0.0.1:{server.server_address[1]}/stream"
+    plain = open_camera(url)
+    turned = open_camera(url, upside_down=True)
+    try:
+        assert isinstance(plain, MjpegCamera) and isinstance(turned, TurnedCamera)
+        assert turned.read().image.shape == (120, 160, 3)
+    finally:
+        plain.close()
+        turned.close()
+        server.shutdown()
