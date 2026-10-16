@@ -1,6 +1,6 @@
 # Ko'z status
 
-Updated Oct 16, after stop logging and Islombek's sentences. 339 tests pass, 1 skipped (it needs your face clip):
+Updated Oct 16, after stop logging and Islombek's sentences. 341 tests pass, 1 skipped (it needs your face clip):
 `.venv/bin/python -m pytest -q`
 
 ## What works
@@ -50,7 +50,7 @@ python3.13 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
 1. You: try `start-koz.command` with a red ball on the camera; live test #5 with `demo-blur.command`; the privacy trials in `docs/TRIALS.md`; the face clip; check `docs/TEXTS.md`.
 2. Codex: `.collab/specs/web-planner-and-live.md` (show `status.planner`, the Setup privacy line, the colour job's Live view). Then Claude turns on `--report-planner` in `start-koz.command`.
 3. Oct 19–20 with the AWS work: the AI planner on AWS Bedrock (same fixed menu), measured on the same 20 sentences plus a fresh set.
-4. Fly-brain block (from the copied stage 2–3 code) + `firmware/motor_listener/` (car demo).
+4. Fly-brain block + `firmware/motor_listener/` (car demo): the stage 1–3 files are copied into `koz/brains/flybrain/original/` (checksummed, backup in `~/AI/competitions/_backups/`); the plan waits for Islombek's OK.
 5. Trials: car and classroom lists to write in `docs/TRIALS.md`.
 
 ## Known limits
