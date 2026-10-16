@@ -324,6 +324,26 @@ camera angle; not measured). After a stop the script restarts with the same guar
 holds the last room result for up to 3 s, so most restarts stopped again at once (fail-closed).
 The 0.40 limit is unchanged: whether to change it is Islombek's decision.
 
+## "Private rooms together" limit raised from 0.40 to 0.55 (Oct 16)
+
+Islombek's decision, after the desk stops above. The single-room rule (a private room is the top
+guess at ≥ 0.50) and the object check are unchanged. Re-measured:
+
+**71 photos** (`tests/test_scene_photos.py`): the default guard now lets **4 of 23** private
+photos through (3 at 0.40). The new one is a bathroom read as "wet_bar 0.51, bathroom 0.35,
+shower 0.06" (private rooms together 0.43), with no toilet or sink seen. Desk, kitchen, classroom
+and shop photos: none reach 0.55 (desks at most 0.41), so nothing that ran before stops now.
+Strict mode is unchanged and still stops all 23.
+
+**Islombek's desk, 5 minutes** (`scripts/guard_watch.py`, Oct 16 evening): 43 stops, all
+`PRIVATE_BEDROOM`, all in the **first 100 s**; each was the first check after a restart, so the
+job never got going. In that time private rooms together were 0.56–0.93 (dorm_room, hotel_room,
+hospital_room, bedroom), much higher than the 0.42–0.46 measured at the same desk that morning,
+and NanoDet twice saw a bed at 0.47. Then it **ran the last 191 s without a stop** (private rooms
+together 0.29 at the end). The view or light changed around 100 s; the numbers can't say what.
+So at this desk 0.55 is not enough on its own when the room looks this much like a bedroom: it
+depends on what is in view.
+
 ## Fly-brain car (demo 1) and classroom counter (demo 2)
 
 To be written.

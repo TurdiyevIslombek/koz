@@ -2,7 +2,7 @@
 privacy guard (room check + object check):
 - a bed or a toilet in view stops both modes, and no mode approves a dark frame;
 - the default guard runs at a desk without a bed and in a kitchen with a sink, and lets
-  through no more than 3 of 23 bathroom/bedroom photos (live test #3, its honest limit);
+  through no more than 4 of 23 bathroom/bedroom photos (3 at the 0.40 limit; 4 since Oct 16 at 0.55);
 - the strict guard (--strict) never approves a bathroom or a bedroom.
 
 Photos: 71 from the Places365 validation set (MIT CSAIL), listed with their SHA-256 in
@@ -118,10 +118,12 @@ def test_ordinary_places_are_still_approved_by_the_strict_guard(models):
 
 def test_default_limit_does_not_get_worse(models):
     """The honest limit of the default guard (live test #3): when no bed or toilet is visible
-    and the room check isn't confident, it runs. Measured Oct 15: 3 of 23 private photos
-    (a bathroom read as "closet 0.35", one as "bank_vault 0.69", a bedroom as "kennel/outdoor").
+    and the room check isn't confident, it runs. Measured Oct 15 (sum limit 0.40): 3 of 23 private
+    photos (a bathroom read as "closet 0.35", one as "bank_vault 0.69", a bedroom as "kennel/outdoor").
+    Oct 16, sum limit raised to 0.55 (Islombek's decision, docs/TRIALS.md): 4 of 23; the new one is a
+    bathroom read as "wet_bar 0.51, bathroom 0.35" (private rooms together 0.43).
     The strict guard (--strict) stops all 23."""
     approved = [name for group in ("bathroom", "bedroom") for name, image in photos(group)
                 if judge(models, image, False)[0].state == "approved"]
     print(f"default mode approved {len(approved)} of 23 private photos: {approved}")
-    assert len(approved) <= 3
+    assert len(approved) <= 4

@@ -109,7 +109,7 @@ OBJECT_CHECK_WINDOW = 3
 # Default mode (no --strict): the room check stops only when it is confident; the object
 # check and darkness do the rest. Measured on 71 real photos (docs/TRIALS.md, live test #3).
 DEFAULT_PRIVATE_TOP_BLOCKS = 0.50   # a private room is the top guess at least this sure
-DEFAULT_PRIVATE_SUM_BLOCKS = 0.40   # or private rooms together reach this
+DEFAULT_PRIVATE_SUM_BLOCKS = 0.55   # or private rooms together reach this (0.40 until Oct 16: stopped a desk in a bedroom at 0.42-0.46)
 
 # line_counter (proposed). A followed person's number is forgotten this long after they
 # were last seen (the contract allows at most 5 s), and a box must overlap its previous

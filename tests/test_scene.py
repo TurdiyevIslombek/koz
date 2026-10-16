@@ -77,7 +77,8 @@ def test_strict_cautious_and_removed_places(weights, expected):
     ({f"i{KITCHEN}": 0.5, "i52": 0.08, "i51": 0.04, "i182": 0.04}, PrivacyResult("approved")),
     ({"i52": 0.30}, PrivacyResult("approved")),                                         # unsure bedroom
     ({"i45": 0.6}, PrivacyResult("blocked", "PRIVATE_BATHROOM")),                       # top guess >= 0.50
-    ({f"i{KITCHEN}": 0.3, "i52": 0.2, "i51": 0.12, "i182": 0.1}, PrivacyResult("blocked", "PRIVATE_BEDROOM")),  # >= 0.40 together
+    ({f"i{KITCHEN}": 0.3, "i52": 0.3, "i51": 0.15, "i182": 0.12}, PrivacyResult("blocked", "PRIVATE_BEDROOM")),  # >= 0.55 together
+    ({f"i{KITCHEN}": 0.3, "i52": 0.2, "i51": 0.12, "i182": 0.1}, PrivacyResult("approved")),  # 0.42: Islombek's desk, runs since Oct 16
 ])
 def test_default_mode_stops_only_on_a_confident_private_room(weights, expected):
     assert decide(probs(**weights)) == expected
@@ -147,9 +148,9 @@ def test_private_total_is_what_the_default_guard_adds_up():
     from koz.scene import PlacesSceneChecker, decide
     p = np.full(365, 0.0)
     (bedroom, _), (other, _) = policy.PRIVATE_SCENES["PRIVATE_BEDROOM"][0], policy.PRIVATE_SCENES["PRIVATE_BEDROOM"][1]
-    p[bedroom], p[other] = 0.25, 0.20          # no single room is sure (< 0.50), together 0.45
+    p[bedroom], p[other] = 0.30, 0.27          # no single room is sure (< 0.50), together 0.57
     private = [i for scenes in policy.PRIVATE_SCENES.values() for i, _ in scenes]
     rest = [i for i in range(365) if i not in private]
-    p[rest] = 0.55 / len(rest)                 # everything else goes to non-private places
-    assert abs(PlacesSceneChecker.private_total(p) - 0.45) < 1e-9
-    assert decide(p).code == "PRIVATE_BEDROOM"   # the "private rooms together >= 0.40" rule
+    p[rest] = 0.43 / len(rest)                 # everything else goes to non-private places
+    assert abs(PlacesSceneChecker.private_total(p) - 0.57) < 1e-9
+    assert decide(p).code == "PRIVATE_BEDROOM"   # the "private rooms together >= 0.55" rule
