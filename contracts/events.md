@@ -19,6 +19,9 @@ Changes since then (both lanes agreed):
   `start_job.data.camera_id` (section 10), fixed slots only. Proposed by Codex and Claude
   independently. Rollout: web accepts both first; the runner sends `cameras` only after that
   (on since Oct 17).
+- Oct 17: the web's eye, a live preview for **this computer only** (section 14; Islombek's
+  decision). Not an event; never on the cloud link, never stored. Claude wrote it; Codex builds the
+  web side from `.collab/specs/web-eye-preview.md` and objects there if something can't work.
 
 `recipe.schema.json` and this file are the contract together.
 **MVP** = built by Oct 26. **stretch** = only if built; the dashboard must not
@@ -150,6 +153,9 @@ Runner events have **no field** for:
 - prompts, LLM explanations, exception text or any free text;
 - camera addresses, file names, passwords, account IDs, place names;
 - exact capture times.
+
+The one exception is the eye preview of section 14: a picture, but never an event, never on
+the cloud link or the judges' view, only between the runner and the web app on the same computer.
 
 Allowed strings: the enums in this contract; random protocol IDs (32 lowercase
 hex characters, at least 128 random bits; they name sessions, jobs, commands
@@ -710,3 +716,36 @@ and export (physical deletion can lag).
   fly-brain code. Islombek gave its location on Oct 14. Next: copy what is
   needed into `koz/brains/flybrain/` and check. (The original is never modified.)
 - **OPEN-3** — Islombek checks the Russian and Uzbek messages in section 11.
+
+## 14. The eye: a live preview for this computer only
+
+Islombek's decision (Oct 17). CLAUDE.md rule 8 already says "the preview is local and blurred";
+this section is how the web app shows it. **It is not an event** and none of sections 5–12 apply
+to it.
+
+**Where.** Only on the runner's local socket, `ws://127.0.0.1:8765/v1/preview`, opened by the
+local web app's server (not a browser: a request with an `Origin` header gets HTTP 403). The runner
+serves it only on a loopback address. With `--cloud` the runner has no local socket, so there is no
+eye. The cloud link (section 5) and the judges' view never carry it.
+
+**What the runner sends** (`koz/eye.py`):
+- **binary messages**: one JPEG each, of the newest frame the privacy guard **approved**, after the
+  allowed-area mask and **face blur**: at most **320 px** wide, at most **5 per second**, at most
+  **40 KiB** each. Only while the job is `evaluating` or `running`, and only if the frame is fresh
+  (section 3's 500 ms);
+- **text messages**: `{"v":1,"type":"preview","state":"closed","reason":R}` when it stops sending,
+  with `R` one of:
+  - `not_running`: no job, or the job stopped, was held or refused (sent at once);
+  - `checking`: before the first approval, or confirming something it saw once (no frame is sent
+    meanwhile; a routine check that approves doesn't close the eye);
+  - `not_fresh`: the newest frame is too old.
+  The web shows the reason with the job's status, privacy state and fault it already has (fixed
+  texts, section 11). The web sends nothing on this socket.
+
+**Never:** in the event log, in any database, file, log, cache, screenshot, replay fixture or trial
+summary; over the cloud link; to the judges' view; to a browser on another device. The local web app
+passes it on only to a browser on the same computer, from memory, with `Cache-Control: no-store`.
+
+**School mode:** the same rules (the runner window shows the same blurred view). The UI says the
+picture stays on this computer.
+

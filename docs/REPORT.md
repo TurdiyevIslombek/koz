@@ -52,7 +52,11 @@ See `docs/architecture.svg`. Three parts, joined by one written contract
    brain and motor safety. Frames never leave this computer.
 2. **The web app** (`web/`, Node 22, on AWS). Owner login, the setup chat, live status, the
    trial dashboard, recipe export and import. It receives only contract events: numbers, fixed
-   labels and rounded minutes. It has no field for an image.
+   labels and rounded minutes. It has no field for an image. When the web app runs on the owner's
+   own computer instead, its "eye" can also show a small live preview (contract section 14): only
+   frames the privacy guard approved, after face blur, at most 320 px and 5 per second, over that
+   computer's own socket. It is never stored, never sent over the cloud link and never shown to
+   judges; a test checks every message the cloud link sends.
 3. **The motor board** (`firmware/motor_listener/`, Arduino Uno + L298N). It accepts only
    "left speed, right speed" over USB and stops by itself.
 
@@ -106,7 +110,7 @@ the CPU of a MacBook Air, no GPU.
 | Colour finder | `cvtColor` to HSV, a hue band, `morphologyEx` (opening), `findContours`, `contourArea`, `arcLength`, `minEnclosingCircle`, `moments` | The biggest *round* patch of one colour → left / center / right / lost |
 | Person detector | the same NanoDet-Plus, "person" class only | People in the allowed area, boxes stay local |
 | Line counter | geometry on the detector's boxes (overlap tracking, which side of the line) | Entered / exited counts, no identities |
-| Local preview | `rectangle`, `putText`, `imshow` | The owner sees the blurred view; nothing is saved |
+| Local preview | `rectangle`, `putText`, `imshow`; `resize` + `imencode` (JPEG) for the web's eye on the same computer | The owner sees the blurred view; nothing is saved |
 
 Each model is pinned by SHA-256; a missing or changed file stops the job. The NanoDet decoder
 follows OpenCV Zoo's, with one change for OpenCV 5, which returns the outputs in a different order
@@ -314,7 +318,17 @@ Refused jobs never run (section 2). Trials run in Islombek's home or places he h
 film, with nobody undressed or asleep in view; the video is filmed outside the bedroom, only with
 people who agreed.
 
-## 11. Reproduce
+## 11. Future work (not built)
+
+- **QR-code membership door (no faces stored).** A gym, club or library door that opens for a
+  member who shows a QR code on their phone: OpenCV's `QRCodeDetector` reads the code, Ko'z checks it
+  against the owner's member list and drives the lock. Nobody's face is stored, matched or recognised;
+  the person presents the code on purpose. It is **not built**, and it would need a decision first:
+  reading a member's code identifies that member, which rule 4 (no identity, no badge reading) forbids
+  today, and a door lock is the kind of actuator rule 11 keeps out. Before building, it needs its own
+  rules (the code is checked and forgotten, no visit history, a manual way in for everyone).
+
+## 12. Reproduce
 
 ```bash
 python3.13 -m venv .venv
@@ -328,7 +342,7 @@ Then `start-koz.command` (runner + web app on one computer), or the commands in 
 `deploy/README.md` and `docs/AWS_DAY.md`. Every dependency is pinned (`requirements.txt`,
 `web/package-lock.json`).
 
-## 12. Credits
+## 13. Credits
 
 Fruit-fly neuron model: Shiu et al. 2024, *Nature* (code MIT, Philip Shiu and Nico Spiller).
 Wiring: FlyWire connectome v783 (Dorkenwald et al. 2024, Schlegel et al. 2024, *Nature*; data

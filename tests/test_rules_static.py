@@ -15,13 +15,15 @@ def test_error_codes_match_the_contract():
 
 
 def test_koz_cannot_save_frames_or_open_audio():
-    """Rule 8: no code in koz/ writes images or video, encodes frames, or touches audio."""
-    forbidden = ["imwrite", "VideoWriter", "imencode", "CAP_PROP_AUDIO", "pyaudio", "sounddevice",
+    """Rule 8: no code in koz/ writes images or video, or touches audio. Only koz/eye.py encodes a frame
+    (the web's eye, sent in memory over this computer's own socket: contract section 14)."""
+    forbidden = ["imwrite", "VideoWriter", "CAP_PROP_AUDIO", "pyaudio", "sounddevice",
                  "write_bytes", "write_text", "open("]
     for path in KOZ.rglob("*.py"):
         source = path.read_text(encoding="utf-8")
         for word in forbidden:
             assert word not in source, f"{word} in {path.relative_to(KOZ)}"
+        assert "imencode" not in source or path == KOZ / "eye.py", f"imencode in {path.relative_to(KOZ)}"
 
 
 def test_policy_matches_the_blocks_that_exist():

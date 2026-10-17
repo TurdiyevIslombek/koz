@@ -205,6 +205,14 @@ class Hub:
         """The current or last job's Agent (its plan and runner), or None."""
         return self._agent
 
+    def eye_frame(self):
+        """For the web's eye on this computer only (koz/eye.py): the running job's newest approved,
+        face-blurred frame as (image, seq, None), or (None, None, why not)."""
+        agent = self._agent
+        if not self.busy or agent is None or agent.stop_requested or agent.runner is None:
+            return None, None, "not_running"
+        return agent.runner.eye_frame()
+
     def arm_motors_by_hand(self):
         """A person armed the motors on this computer (A in the runner window, or Enter in its
         terminal). Contract 3: arming is local and by hand; no command from the web can do this."""
@@ -402,8 +410,10 @@ async def serve(hub, host=HOST, port=PORT, started=None):
     from websockets.asyncio.server import broadcast
     from websockets.asyncio.server import serve as ws_serve
 
+    from . import eye
     from .cloud import Outbox, heartbeat
 
+    eye.check_local(host)   # the eye preview may only ever be served on this computer
     outbox = Outbox(hub, asyncio.get_running_loop(), broadcast)
 
     def refuse_browsers(connection, request):
@@ -412,6 +422,9 @@ async def serve(hub, host=HOST, port=PORT, started=None):
         return None
 
     async def connected(connection):
+        if connection.request.path == eye.PATH:   # the web's eye: this socket only (contract section 14)
+            await eye.feed(connection, hub)
+            return
         outbox.join(connection)
         try:
             async for message in connection:

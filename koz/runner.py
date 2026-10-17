@@ -12,6 +12,7 @@ fly brain, and the dashboard (= the observation events) and motors actions. Reci
 anything else are refused in koz.recipe with UNSUPPORTED_CAPABILITY."""
 import logging
 import sys
+import threading
 import time
 
 import cv2
@@ -98,6 +99,11 @@ class Runner:
         self.stop_reason = None     # why it stopped: an error code, "stop_job", or "end of video / camera closed"
         self.coverage = "complete"  # becomes "gapped" after any stale or slow frame, and stays so
         self.preview = None         # the latest fresh, masked, blurred frame, for a local window only
+        # For the web's eye (koz/eye.py, this computer only): when that frame arrived, a counter, and
+        # why there is none. One lock for setting, dropping and reading it, so the eye never gets a
+        # frame after it was dropped (a check started, the job stopped).
+        self.preview_t, self.preview_seq, self._preview_gap = None, 0, "not_running"
+        self._preview_lock = threading.Lock()
         self.local_results = {}     # that frame's block results (e.g. where the target is); local only
         self._was_running = False
         self._last_reason_sent = None
@@ -190,7 +196,7 @@ class Runner:
         image = cv2.resize(frame.image, self.size, interpolation=cv2.INTER_AREA)
         image = cv2.bitwise_and(image, image, mask=self._mask)   # black outside the allowed area
         if self._gate.due(image):
-            self._drop_preview()   # nothing from before this check stays on screen
+            self._drop_preview("checking")   # nothing from before this check stays on screen
             self._pause_motors()   # contract 3: actions wait during a check
         privacy = self._gate.admit(image)
         if privacy.confirming:   # an object seen once: hold this frame and run no block
@@ -216,7 +222,9 @@ class Runner:
             return True
         if self._motors is not None:
             self._motors.drive(ctx.results["flybrain"].wheels)   # raises MOTOR_SAFETY_STOP on a board fault
-        self.preview, self.local_results = ctx.image, ctx.results
+        with self._preview_lock:
+            self.preview, self.local_results, self.preview_t = ctx.image, ctx.results, frame.t
+            self.preview_seq += 1
         self._observe(APPROVED, ctx.results)
         self._heartbeat()
         return True
@@ -227,7 +235,7 @@ class Runner:
         """A frame we can't trust (FRAME_STALE or OVERLOADED): outputs become unknown with
         that reason, and coverage has a gap."""
         self.coverage = "gapped"
-        self._drop_preview()
+        self._drop_preview("not_fresh")
         self._pause_motors()   # contract 3: a stale or late frame -> motors stop
         self._observe(self._privacy_state(), None, code)
         self._heartbeat()
@@ -290,8 +298,24 @@ class Runner:
         STOPS.info("Ko'z stopped (%s): %s%s%s | %s", self.state, reason, detail, seen,
                    getattr(self.guard, "line", "no privacy check line"))
 
-    def _drop_preview(self):
-        self.preview, self.local_results = None, {}
+    def _drop_preview(self, why="not_running"):
+        with self._preview_lock:
+            self.preview, self.local_results, self._preview_gap = None, {}, why
+
+    def eye_frame(self):
+        """For the web's eye (koz/eye.py, this computer only): (image, seq, None) for the newest frame
+        the guard approved, after the mask and face blur, or (None, None, why not): "not_running",
+        "checking" (checking, or confirming something seen once) or "not_fresh"."""
+        with self._preview_lock:
+            if self.state not in ("evaluating", "running"):
+                return None, None, "checking" if self.state == "checking" else "not_running"
+            if self.preview is None:
+                return None, None, self._preview_gap
+            if self._privacy_state() != APPROVED:
+                return None, None, "checking"
+            if self._clock() - self.preview_t > policy.MAX_FRAME_AGE_S:
+                return None, None, "not_fresh"
+            return self.preview, self.preview_seq, None
 
     def _privacy_state(self):
         return self._gate.last.state if self._gate.last else UNKNOWN

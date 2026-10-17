@@ -47,6 +47,7 @@ owner's computer by design (frames never leave the device), so **not pursued** (
 | `web/server/cloud.mjs`, HTTPS origin checks, `/api/health`, Linux build (`.collab/specs/aws-review.md`) | X | Oct 18 | ☐ |
 | DynamoDB storage (or NDJSON, and the report says which) and the 30-day totals | X | Oct 19 | ☐ |
 | Judges' read-only view; cloud Setup privacy line | X | Oct 19 | ☐ |
+| The web's eye from the local preview (`.collab/specs/web-eye-preview.md`; runner side done) | X | Oct 20 | ☐ |
 | Remove the 3 personal paths in `web/design/references.md` (done in the history rewrite) | C | Oct 17 | ✅ |
 | Option B time box: ≥ 7/10, else switch to option A and say so | I decides, C builds A | Oct 19 | ☐ |
 | `docs/AWS_DAY.md` steps 1–9 ($1 budget first) | I | Oct 19 | ☐ |

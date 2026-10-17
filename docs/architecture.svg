@@ -167,5 +167,5 @@
 
   <!-- Never sent -->
   <rect x="20" y="768" width="1160" height="24" rx="6" fill="#FFF1EE" stroke="#A33A2A"/>
-  <text x="600" y="785" text-anchor="middle" font-size="12" font-weight="bold" fill="#A33A2A">Never sent anywhere: frames · audio · faces · names · track numbers · text read from the camera</text>
+  <text x="600" y="785" text-anchor="middle" font-size="12" font-weight="bold" fill="#A33A2A">Never leave this computer: frames · audio · faces · names · track numbers · text read from the camera</text>
 </svg>
