@@ -1,6 +1,6 @@
 # Ko'z status
 
-Updated Oct 17, after the motor safety fixes and the repo prep. 449 tests pass, 1 skipped (it needs your face clip):
+Updated Oct 18, after the web UX pass. 458 tests pass, 1 skipped (it needs your face clip); web 68:
 `.venv/bin/python -m pytest -q`
 
 ## What works
@@ -24,7 +24,8 @@ Updated Oct 17, after the motor safety fixes and the repo prep. 449 tests pass, 
 | Fly brain (`koz/brains/flybrain/`) | Copy of the original simulation (same spikes), the driver (same wheels), and option B steering. Simulation only: reaches the ball in ~3 s from most starts. **Time box: chasing reliably (at least 7 of 10 trials) by Oct 19, else option A.** |
 | Motors (`koz/actions/motors.py`) | Serial link + mock; speed = the lower of the recipe's 0.25 and the local cap (0.15 until measured); stops on stale frames and during privacy checks; disarms at job end; armed only by a person (Enter / A key). **Codex's motor safety review (5 findings) and its re-review (3 more) fixed, tests first** (`tests/test_motor_safety.py`, `firmware/tests/test_sketch.cpp`): Stop halts at once and before it is reported; any stop, job end or USB failure locks the link until a person arms again; the sketch stops the motors within 250 ms of the last command even while the sonar pings, and reads only exact lines. Codex's confirmation of the last 3 fixes is pending (quota). |
 | Cameras | `--camera slot=source`: this Mac, the ESP32-CAM MJPEG stream, a phone (MJPEG or RTSP). `--upside-down` / `--mirror` for a camera mounted that way (the car's ESP32-CAM is upside down, as in the original `config.py`): turned before the guard sees it. The web can pick a slot once Codex adds it (`.collab/specs/web-camera-choice.md`). |
-| One launcher (`start-koz.command`) | Runner + web app, opens Setup. Tested on a recorded clip: typed "Yashil koptokni top" in Setup → trying → running; the Trials tab showed the chain (not found → hue 60 → 77 → left). Closing Terminal (HUP) or TERM stops both, nothing left running. |
+| One launcher (`start-koz.command`) | Runner + web app, opens Setup. One camera view: the eye in the browser (`KOZ_WINDOW=1` adds the runner window). Enter in its Terminal arms a car's motors (the runner now reads that Terminal). Closing Terminal (HUP) or TERM stops both. |
+| Web Live screen (UX pass, Oct 18) | Every state says why, what to do, and one obvious action in Stop's place (Try again / New job after a stop); a privacy stop names what the guard saw; plain words in Uz/Ru/En; the eye's picture fills the eye; a 3-second test bar. Screenshots of all 10 states: `web/review/states/`. |
 | Texts (`docs/TEXTS.md`) | Every Uzbek and Russian plan, refusal and stop text, made from the code and the contract (a test keeps it up to date). **Waiting for your check.** |
 | Cameras (`koz/capture.py`) | Recorded video (mock camera); live reader for the MacBook camera that drops the first second (too dark). **ESP32-CAM stream: not tried yet.** |
 | Live demo (`scripts/live_demo.py`) | Colour job or `--job counter`: blurred view, red-object ring or people boxes + line, status, scene guesses; a full-width red banner when it stops or can't start (e.g. camera not allowed). Runs headless in tests. Live test #1 on your camera found the guard bug (fixed); **re-run pending.** |

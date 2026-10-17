@@ -2,7 +2,9 @@ import { validateEvent, ContractError } from './protocol.js';
 export const DAY = 86400000;
 const sameJob=(a,b)=>a&&b&&a.session_id===b.session_id&&a.job_id===b.job_id;
 export const expiry=(event,receivedAt)=>Math.min(event.minute,Math.floor(receivedAt/60000))*60000+7*DAY;
-export function createModel(){return {events:[],seen:new Set(),highest:new Map(),status:null,statusAt:0,observation:null,fault:null,recipe:null,pending:null,trial:null};}
+// lastStop: the job's latest fault, kept after a later idle until a new job starts (UX pass, Oct 18).
+// stoppedBy: 'owner' once this page's stop_job ended the job. testing: {revision, since} of the round on test.
+export function createModel(){return {events:[],seen:new Set(),highest:new Map(),status:null,statusAt:0,observation:null,fault:null,lastStop:null,stoppedBy:null,testing:null,recipe:null,pending:null,trial:null};}
 export function invalidateLive(model){model.statusAt=0;model.observation=null;model.pending=null;}
 export function ingest(model,event,receivedAt=Date.now()) {
   validateEvent(event,receivedAt);
@@ -18,18 +20,20 @@ export function ingest(model,event,receivedAt=Date.now()) {
   if(event.type==='status'&&fresh){
     const changed=!sameJob(model.status,event);
     if(!model.statusAt||receivedAt-model.statusAt>3000)model.observation=null;
-    if(changed){model.observation=null;model.fault=null;model.recipe=null;}
+    if(changed){model.observation=null;model.fault=null;model.lastStop=null;model.stoppedBy=null;model.testing=null;model.recipe=null;}
+    if(event.data.state==='evaluating'){if(changed||model.testing?.revision!==event.revision)model.testing={revision:event.revision,since:receivedAt};}
+    else model.testing=null;
     model.status=event;model.statusAt=receivedAt;
     const matchesPending=model.pending&&(!model.pending.session_id||model.pending.session_id===event.session_id)&&(!model.pending.job_id||model.pending.job_id===event.job_id);
-    if(matchesPending&&['stop_job','finish_trial'].includes(model.pending.command)&&event.data.state==='idle')model.pending=null;
-    if(matchesPending&&model.pending?.command==='start_job'&&['running','held','refused'].includes(event.data.state))model.pending=null;
+    if(matchesPending&&['stop_job','finish_trial'].includes(model.pending.command)&&event.data.state==='idle'){if(model.pending.command==='stop_job')model.stoppedBy='owner';model.pending=null;}
+    if(matchesPending&&model.pending?.command==='start_job'&&['planning','checking','evaluating','running','held','refused'].includes(event.data.state))model.pending=null;   // the job has started (or ended)
     if(model.pending?.command==='begin_trial'&&event.trial_id===model.pending.trial_id)model.pending=null;
     model.trial=event.trial_id;
     if(['running','idle'].includes(event.data.state)&&model.fault&&event.seq>model.fault.seq)model.fault=null;
   }
   if(event.type==='observation'&&fresh&&sameJob(model.status,event)&&event.revision===model.status.revision)model.observation=event;
   if(event.type==='recipe'&&(!model.recipe||!sameJob(model.recipe,event)||event.revision>=model.recipe.revision)&&(!model.status||sameJob(model.status,event)))model.recipe=event;
-  if(event.type==='fault'&&fresh&&(!model.status||sameJob(model.status,event)))model.fault=event;
+  if(event.type==='fault'&&fresh&&(!model.status||sameJob(model.status,event))){model.fault=event;model.lastStop=event;}
   if(event.type==='command_result'&&event.data.command_id===model.pending?.command_id){
     model.pending.result=event.data.result;model.pending.code=event.data.code;
     // An acknowledgement settles delivery only. Physical/job state still comes from status.

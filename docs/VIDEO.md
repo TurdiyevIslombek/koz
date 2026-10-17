@@ -25,8 +25,8 @@ that are measured (`docs/TRIALS.md`); the car numbers are TODO until Sunday's tr
 - [ ] Latest code; `start-koz.command` (local) or the runner with `--cloud` (AWS, `docs/AWS_DAY.md`
       step 8) works; you did one full practice run.
 - [ ] A red ball, an orange-red ball (for the adjust shot), two adult volunteers.
-- [ ] Screen: `Cmd + Shift + 5` → **Record Selected Portion** around the browser and the "Ko'z runner"
-      window. Phone on a stand (or a friend) for the car and the doorway.
+- [ ] Screen: `Cmd + Shift + 5` → **Record Selected Portion** around the browser (the camera view is in
+      its eye). Phone on a stand (or a friend) for the car and the doorway.
 - [ ] Do Not Disturb on (no notifications in the recording).
 
 ## Shots
@@ -40,7 +40,7 @@ that are measured (`docs/TRIALS.md`); the car numbers are TODO until Sunday's tr
 | 5 | 1:12–1:35 | **Screen:** the orange-red ball on the kitchen table; the Trials page shows the chain: not found → `hue_center` changed → found | Type **Qizil koptokni top** ("Find the red ball") | "When a check fails, the agent reads what OpenCV measured, changes one setting and tries again, at most three times. Here it moved the colour it looks for to the ball's real colour." *(Say only what the screen shows.)* |
 | 6 | 1:35–1:58 | **Screen + laptop carried** from the kitchen to the open bathroom door: the runner window's red banner "a toilet is in view", the web shows "Bathroom view blocked." | Walk to the bathroom door with the laptop, camera facing in | "If the camera turns toward a bathroom, Ko'z stops by itself. It stops on what it sees: a toilet, a bed, a covered lens. It's an alarm, not proof: on 71 real photos the default let 4 of 23 private rooms through; strict mode, for schools, stopped all 23." |
 | 7 | 1:58–2:10 | **Screen:** Setup shows the refusal "Odamlarni tanib olish taqiqlangan." (Identifying people is not allowed); the camera never turns on | Type **Bu odam kimligini aniqla** ("Find out who this person is") | "Some jobs it refuses before the camera even opens: who someone is, hidden cameras, age or gender." |
-| 8 | 2:10–2:35 | **Screen** (laptop dashboard): Setup with the plan in Uzbek; you press **A** in the runner window. **Phone:** the car chases the ball and stops before the wall | Type **Qizil koptokni quv** ("Chase the red ball") → **Test**, then press **A** | "Same Ko'z, different blocks: the colour finder, then 2,282 neurons from the fly's real wiring diagram. Ko'z shows the fly a threat on the side away from the ball, and its escape reflex turns it toward the ball. Only a person can switch the motors on, and they stop by themselves. In ten trials it reached the ball **TODO** times." |
+| 8 | 2:10–2:35 | **Screen** (laptop dashboard): you press **Enter** in the Terminal to arm the motors, then Setup with the plan in Uzbek. **Phone:** the car chases the ball and stops before the wall | Press **Enter** in the Terminal (arms the motors), then type **Qizil koptokni quv** ("Chase the red ball") → **Test** | "Same Ko'z, different blocks: the colour finder, then 2,282 neurons from the fly's real wiring diagram. Ko'z shows the fly a threat on the side away from the ball, and its escape reflex turns it toward the ball. Only a person can switch the motors on, and they stop by themselves. In ten trials it reached the ball **TODO** times." |
 | 9 | 2:35–2:45 | **Screen:** `docs/architecture.svg`, then the AWS dashboard on your phone | — | "Frames never leave the device; the cloud gets numbers. Anyone with the same camera can import the recipe. Ko'z: tell a camera what job to do." |
 
 If shot 5 finds the ball without any adjustment, keep that take and change the line to "It found

@@ -39,5 +39,8 @@ A crossing moves one illustrative person for 900 ms in demo mode and briefly pul
 - Connection loss, or no heartbeat for 3 seconds, means Unknown with an offline reason; never stopped. Old readings are cleared and require a fresh observation after reconnect.
 - Checked steps appear only from a recipe event or a locally validated import labelled as needing device validation.
 - A synthetic demonstration is labelled on every screen. Real trials are owner-reported, not autonomous claims of success.
+- Every Live state says why and what to do, with at most two actions in Stop's place; the first is the obvious one (Stop while anything runs; Try again + New job after a stop; New job after a refusal). A privacy stop names what the guard saw (`fault.seen`) and keeps that reason after a later idle.
+- Unknown numbers are a calm muted dash plus "waiting for camera" or "not counting now", never a heavy bar.
+- The local eye's picture fills the eye shape (clipped to it) and fades in; closing removes it at once and shows the closed eye with a short reason. Testing shows a 3-second bar and its try number.
 
 Reference research: `design/references.md`. The user's selected direction overrides generic design heuristics that would remove the giant count or the eye.

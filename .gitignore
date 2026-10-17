@@ -15,3 +15,6 @@ koz/models/places365_resnet18.onnx
 # Places365 validation photos for the guard regression test (copyright: their owners)
 tests/fixtures/places365/
 tools/
+
+# Screenshots made by web/review/states/shoot.mjs (only the contact sheets are kept)
+web/review/states/shots/

@@ -79,7 +79,7 @@ const specs={
   recipe:(d,e)=>closed(d,{origin:one('planner','import','adjustment'),caused_by:nullable(v=>integer(v,1,Number.MAX_SAFE_INTEGER)),recipe:r=>{try{validateRecipe(r);return true;}catch{return false;}}})&&(d.origin==='adjustment'?d.caused_by!==null:d.caused_by===null),
   observation,decision,
   command_result:d=>closed(d,{command_id:id,result:one('accepted','rejected'),code:nullable(code)})&&(d.result==='accepted'?d.code===null:d.code!==null),
-  fault:d=>closed(d,{code,effect:one('off','held')}),trial_result:trialResult
+  fault:d=>closed(d,{code,effect:one('off','held')},{seen:one('bed','toilet','sink')}),trial_result:trialResult
 };
 export function validateEvent(e, now=Date.now()) {
   if(!closed(e,{v:one(1),type:one(...Object.keys(specs)),session_id:id,seq:v=>integer(v,1,Number.MAX_SAFE_INTEGER),job_id:nullable(id),trial_id:nullable(id),revision:nullable(v=>integer(v,1,3)),minute:v=>integer(v,0,Math.floor(now/60000)+1),data:obj})||!specs[e.type](e.data,e))fail();

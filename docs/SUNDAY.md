@@ -51,9 +51,11 @@ Start (one line):
 KOZ_RUNNER_ARGS="--camera esp32_cam=http://192.168.4.1:81/stream --upside-down esp32_cam --motors auto" ./start-koz.command
 ```
 Ball 1.5 m from the car: trials 1–4 straight ahead, 5–7 about 30° to the left, 8–10 about 30° to
-the right. For each trial: **Trials** page → start the trial → **Setup**: type
-`Qizil koptokni quv` → **Test** → press **A** in the "Ko'z runner" window → watch for up to 20 s →
-**q** → finish the trial as pass or fail.
+the right. For each trial: **Trials** page → start the trial → press **Enter** in the Terminal window
+(this arms the motors; a job won't start with them off) → **Setup**: type `Qizil koptokni quv` →
+**Test** → watch for up to 20 s → **Stop job** in the browser → finish the trial as pass or fail.
+The next trial (one job per trial): put the car back, start the next trial on the **Trials** page,
+press **Enter** again, then **Try again** on the Live page (the same job, no typing).
 
 **Pass** = it touches the ball, or stops facing it within about 20 cm, within 20 s, without hitting
 anything else. Film every trial with your phone (the video needs the best real take).
