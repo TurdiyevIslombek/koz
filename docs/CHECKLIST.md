@@ -11,7 +11,7 @@ Owners: **I** = Islombek · **C** = Claude · **X** = Codex. Status: ✅ done ·
 | # | Requirement (Devpost) | Where it is | Status |
 |---|---|---|---|
 | 1 | Technical report: problem, users, architecture, OpenCV 5, AWS deployment, evaluation, limitations, responsible use | `docs/REPORT.md` (draft; TODO numbers) | ⏳ |
-| 2 | Judge-accessible code repository or archive | GitHub `TurdiyevIslombek/koz` (to create) | ☐ |
+| 2 | Judge-accessible code repository or archive | https://github.com/TurdiyevIslombek/koz (public since Oct 17) | ✅ |
 | 3 | Pinned dependencies, clear build, deployment and test instructions | `README.md`, `requirements.txt`, `web/package-lock.json`, `deploy/` | ✅ (check from a fresh clone) |
 | 4 | Architecture diagram with the OpenCV 5 and AWS parts (and agent parts) | `docs/architecture.svg` | ✅ |
 | 5 | A working web endpoint, or an arranged live screen-share | `https://<Elastic IP>/` after Oct 19 | ☐ |
@@ -33,9 +33,9 @@ owner's computer by design (frames never leave the device), so **not pursued** (
 |---|---|---|---|
 | Fix the 5 motor-safety findings (MS-1…5), tests first | C | Oct 17 | ✅ |
 | Codex re-review: 3 more holes found, fixed with tests | C | Oct 17 | ✅ |
-| Codex confirms those 3 follow-up fixes (its quota ran out at 22:24 Oct 17) | X | Oct 18 morning | ⏳ |
+| Codex confirms those 3 follow-up fixes (`.collab/reviews/motor-safety-fc99c02.md`: no new findings) | X | Oct 17 | ✅ |
 | Decide: make the repo public, and which author email the history shows (B: noreply email, personal lines out of every commit) | I | Oct 17 | ✅ |
-| History rewritten (backup in `_backups/`), final file list shown; create the public repo and push after your yes | C | Oct 17–18 | ⏳ |
+| History rewritten (backup in `_backups/`), Codex's commits re-scanned, all tests passed, published: https://github.com/TurdiyevIslombek/koz | C | Oct 17 | ✅ |
 | `docs/SUNDAY.md` (a)–(f): portfolio recordings, stop test, motor_listener, 10 chase trials, original back | I | Oct 18 | ☐ |
 | Set `speed_cap` and `stop_cm` from the stop-test lines; write them in TRIALS.md | C | Oct 18 | ☐ |
 | Write the 10 chase trials in TRIALS.md; option B passes at **≥ 7 of 10** | C | Oct 18 | ☐ |
@@ -44,10 +44,10 @@ owner's computer by design (frames never leave the device), so **not pursued** (
 
 | Item | Owner | Date | Status |
 |---|---|---|---|
-| `web/server/cloud.mjs`, HTTPS origin checks, `/api/health`, Linux build (`.collab/specs/aws-review.md`) | X | Oct 18 | ☐ |
-| DynamoDB storage (or NDJSON, and the report says which) and the 30-day totals | X | Oct 19 | ☐ |
-| Judges' read-only view; cloud Setup privacy line | X | Oct 19 | ☐ |
-| The web's eye from the local preview (`.collab/specs/web-eye-preview.md`; runner side done) | X | Oct 20 | ☐ |
+| `web/server/cloud.mjs`, HTTPS origin checks, `/api/health`, Linux build (`.collab/specs/aws-review.md`) | X | Oct 17 | ✅ |
+| DynamoDB storage and the 30-day totals (`web/CLOUD.md`; tested with a fake DynamoDB, not yet on AWS) | X | Oct 17 | ✅ |
+| Judges' read-only view (sharing off by default); cloud Setup privacy line | X | Oct 17 | ✅ |
+| The web's eye from the local preview (`.collab/specs/web-eye-preview.md`) | X | Oct 17 | ✅ |
 | Remove the 3 personal paths in `web/design/references.md` (done in the history rewrite) | C | Oct 17 | ✅ |
 | Option B time box: ≥ 7/10, else switch to option A and say so | I decides, C builds A | Oct 19 | ☐ |
 | `docs/AWS_DAY.md` steps 1–9 ($1 budget first) | I | Oct 19 | ☐ |
