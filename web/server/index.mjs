@@ -11,6 +11,7 @@ import { createModel, ingest, liveView, summaryFor, invalidateLive } from '../sr
 import { connectRunner } from './runner-link.mjs';
 import { createFakeRunner } from './fake-runner.mjs';
 import {passwordVerifier,requestPolicy,normalizeOrigin} from './security.mjs';
+import {createEyeRelay,eyeRequestAllowed} from './eye.mjs';
 
 const id=()=>randomBytes(16).toString('hex'),hash=v=>createHash('sha256').update(v).digest('hex');
 const root=fileURLToPath(new URL('../',import.meta.url));
@@ -18,7 +19,7 @@ export async function createApplication({password='',dataDir=resolve(root,'.data
  if(publicOrigin){normalizeOrigin(publicOrigin);if(localAccess||localRunnerUrl||!password)throw Error('Cloud mode requires owner authentication and inbound runner transport');}
  const cloud=Boolean(publicOrigin);
  const realModel=createModel(),sessions=new Map(),subscribers=new Set(),attempts=new Map();
- let model=realModel,realSaved=[],fake=null,link=null,closing=false;
+ let model=realModel,realSaved=[],fake=null,link=null,eye=null,closing=false;
  let transport={mode:cloud?'cloud':localRunnerUrl?'local':'inbound',url:localRunnerUrl,state:'disconnected',source:'runner',replayOwned:false};
  let runner=null,runnerSession=null,tokenHash=null,saved=[],commandTimer=null,activeTrial=null;
  const subscriberSessions=new Map();
@@ -57,10 +58,20 @@ export async function createApplication({password='',dataDir=resolve(root,'.data
   if(event.type==='command_result'&&event.data.result==='rejected'&&model.pending?.command==='begin_trial')activeTrial=null;
   if(event.type==='status'&&model.status===event)transport={...transport,state:'connected'};
   if(event.type==='status'&&model.status===event&&selected(prior)&&!selected(event))for(const response of publicClients)writePacket(response,{reset:true});
+  syncEye();
   broadcast({event,receivedAt:at,activeTrial,transport});
  };
  const json=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
  const authenticated=req=>{const token=(req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith('koz_session='))?.slice(12);const expires=sessions.get(token);return expires&&expires>Date.now();};
+ function syncEye(){
+  if(!eye)return;
+  const view=liveView(model),status=model.status;
+  const connected=transport.state==='connected'&&transport.source==='runner'&&!view.offline;
+  const checking=status?.data.state==='checking'||status?.data.privacy==='checking';
+  eye.gate({open:connected&&!model.fault&&status?.data.camera_on&&status?.data.privacy==='approved'&&['evaluating','running'].includes(status?.data.state),
+   reason:!connected?'not_fresh':checking?'checking':'not_running',scope:status?`${status.session_id}:${status.job_id}`:null});
+ }
+ if(localAccess&&localRunnerUrl)eye=createEyeRelay({runnerUrl:localRunnerUrl,authenticated,retryMs});
  const body=async req=>{const chunks=[];let size=0;for await(const chunk of req){size+=chunk.length;if(size>32768)throw new ContractError('INVALID_COMMAND');chunks.push(chunk);}return parseStrict(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks)),32768,'INVALID_COMMAND');};
  const server=http.createServer(async(req,res)=>{
   res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');
@@ -70,11 +81,16 @@ export async function createApplication({password='',dataDir=resolve(root,'.data
   const cookie=(token,maxAge)=>`koz_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}${cloud?'; Secure':''}`;
   try{
    if(url.pathname.startsWith('/api/')){
+    if(url.pathname==='/api/eye'){
+     if(!eye)return json(res,404,{code:'INVALID_COMMAND'});
+     if(!eyeRequestAllowed(req,authenticated))return json(res,403,{code:'AUTH_REQUIRED'});
+     return json(res,426,{code:'INVALID_COMMAND'});
+    }
     if(!policy.originOK)return json(res,403,{code:'AUTH_REQUIRED'});
     if(url.pathname==='/api/health'&&req.method==='GET')return json(res,200,{service:'koz-web',...(cloud?{mode:'cloud',storage:storage?.kind||'ndjson'}:{workspace:hash(resolve(root))})});
     if(url.pathname==='/api/session'&&req.method==='GET'){
-     if(localAccess&&!verifier.configured&&!authenticated(req)){const session=randomBytes(32).toString('hex');sessions.set(session,Date.now()+8*3600000);res.setHeader('Set-Cookie',cookie(session,28800));return json(res,200,{authenticated:true,configured:false,transport});}
-     return json(res,200,{authenticated:Boolean(authenticated(req)),configured:verifier.configured,cloud,transport:authenticated(req)?transport:cloud?publicTransport():transport});
+     if(localAccess&&!verifier.configured&&!authenticated(req)){const session=randomBytes(32).toString('hex');sessions.set(session,Date.now()+8*3600000);res.setHeader('Set-Cookie',cookie(session,28800));return json(res,200,{authenticated:true,configured:false,eye:Boolean(eye),transport});}
+     return json(res,200,{authenticated:Boolean(authenticated(req)),configured:verifier.configured,cloud,eye:Boolean(eye),transport:authenticated(req)?transport:cloud?publicTransport():transport});
     }
     if(url.pathname==='/api/login'&&req.method==='POST'){
      const key=req.socket.remoteAddress,rate=attempts.get(key)||{count:0,until:Date.now()+300000};
@@ -92,7 +108,7 @@ export async function createApplication({password='',dataDir=resolve(root,'.data
      res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-store','Connection':'keep-alive','X-Accel-Buffering':'no'});res.write(': connected\n\n');publicClients.add(res);req.on('close',()=>publicClients.delete(res));return;
     }
     if(!authenticated(req))return json(res,401,{code:'AUTH_REQUIRED'});
-    if(url.pathname==='/api/logout'&&req.method==='POST'){sessions.clear();for(const client of subscribers)client.end();subscribers.clear();res.setHeader('Set-Cookie',cookie('',0));return json(res,200,{ok:true});}
+    if(url.pathname==='/api/logout'&&req.method==='POST'){sessions.clear();eye?.closeViewers();for(const client of subscribers)client.end();subscribers.clear();res.setHeader('Set-Cookie',cookie('',0));return json(res,200,{ok:true});}
     if(cloud&&url.pathname==='/api/publication'&&req.method==='POST'){
      const data=await body(req);
      if(data!==null&&(!data||Object.keys(data).sort().join(',')!=='job_id,session_id,summary_ids'||!Array.isArray(data.summary_ids)||data.summary_ids.length>100||new Set(data.summary_ids).size!==data.summary_ids.length||!data.summary_ids.every(trial=>saved.some(s=>s.trial_id===trial))||!model.events.some(r=>r.expiresAt>Date.now()&&r.event.job_id&&r.event.job_id===data.job_id&&r.event.session_id===data.session_id)))throw new ContractError('INVALID_COMMAND');
@@ -148,7 +164,7 @@ export async function createApplication({password='',dataDir=resolve(root,'.data
    const name=url.pathname==='/'?'index.html':decodeURIComponent(url.pathname).replace(/^\//,'');
    const path=resolve(root,'dist',name);if(!path.startsWith(resolve(root,'dist')+'/'))return json(res,404,{code:'INVALID_COMMAND'});
    const content=await readFile(path);const types={'.html':'text/html','.js':'text/javascript','.css':'text/css','.ttf':'font/ttf','.txt':'text/plain'};
-   res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+   res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
    res.writeHead(200,{'Content-Type':`${types[extname(path)]||'application/octet-stream'}; charset=utf-8`,'Cache-Control':'no-cache'});res.end(req.method==='HEAD'?undefined:content);
   }catch(error){json(res,error instanceof ContractError?400:500,{code:error instanceof ContractError?error.code:'INTERNAL_ERROR'});}
  });
@@ -156,7 +172,7 @@ export async function createApplication({password='',dataDir=resolve(root,'.data
   if(closing)return;
   if(storage)enqueue(()=>storage.disconnected()).catch(()=>{});
   invalidateLive(model);clearTimeout(commandTimer);
-  transport={...transport,state:'disconnected'};broadcast({transport});
+  transport={...transport,state:'disconnected'};syncEye();broadcast({transport});
  }
  function attachRunner(ws,source='runner'){
   runner?.terminate();runner=ws;runnerSession=null;
@@ -167,7 +183,7 @@ export async function createApplication({password='',dataDir=resolve(root,'.data
   }
   invalidateLive(model);
   transport={...transport,source,state:'connecting',replayOwned:Boolean(fake)};
-  broadcast({reset:true,transport});
+  syncEye();broadcast({reset:true,transport});
   ws.on('message',(data,isBinary)=>{if(runner!==ws)return;try{
    if(isBinary)throw new ContractError();const event=readEvent(new TextDecoder('utf-8',{fatal:true}).decode(data));
    if(!runnerSession){if(event.type!=='status')throw new ContractError();runnerSession=event.session_id;}
@@ -177,13 +193,17 @@ export async function createApplication({password='',dataDir=resolve(root,'.data
  }
  const wss=new WebSocketServer({noServer:true,maxPayload:32768,perMessageDeflate:false});
  server.on('upgrade',(req,socket,head)=>{
+  if(req.url?.split('?')[0]==='/api/eye'){
+   if(!eye){socket.end('HTTP/1.1 404 Not Found\r\nConnection: close\r\nCache-Control: no-store\r\n\r\n');return;}
+   eye.upgrade(req,socket,head);return;
+  }
   const supplied=req.headers.authorization?.startsWith('Bearer ')?req.headers.authorization.slice(7):'';
   if(!requestPolicy(req,publicOrigin).allowed||req.headers.origin||localRunnerUrl||req.url!=='/v1/runner'||!supplied||!tokenHash||!timingSafeEqual(Buffer.from(tokenHash,'hex'),Buffer.from(hash(supplied),'hex'))){socket.end('HTTP/1.1 401 Unauthorized\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{"code":"AUTH_REQUIRED"}');return;}
   wss.handleUpgrade(req,socket,head,ws=>attachRunner(ws));
  });
  if(localRunnerUrl)link=connectRunner({url:localRunnerUrl,onSocket:attachRunner,onWaiting:disconnected,retryMs});
  const freshness=setInterval(()=>{
-  if(transport.state==='connected'&&liveView(model).offline){if(storage)enqueue(()=>storage.disconnected()).catch(()=>{});invalidateLive(model);transport={...transport,state:'waiting'};broadcast({transport});}
+  if(transport.state==='connected'&&liveView(model).offline){if(storage)enqueue(()=>storage.disconnected()).catch(()=>{});invalidateLive(model);transport={...transport,state:'waiting'};syncEye();broadcast({transport});}
  },250);freshness.unref();
  const maintenance=setInterval(()=>{
   for(const [session,expires]of sessions)if(expires<Date.now())sessions.delete(session);
@@ -193,7 +213,7 @@ export async function createApplication({password='',dataDir=resolve(root,'.data
   for(const res of publicClients)if(!res.write(': heartbeat\n\n'))res.destroy();
   for(const res of subscribers){if(subscriberSessions.get(res)<Date.now()){res.end();subscribers.delete(res);subscriberSessions.delete(res);}else res.write(': heartbeat\n\n');}
  },30000);maintenance.unref();
- return {server,get model(){return model;},close:async()=>{closing=true;link?.close();await fake?.close();clearInterval(freshness);clearInterval(maintenance);clearTimeout(commandTimer);runner?.terminate();for(const r of [...subscribers,...publicClients])r.end();wss.close();await persistence;if(storage){await storage.disconnected().catch(storageFailed);await storage.saveMeta({tokenHash,publication,storageIncomplete,cleanShutdown:true}).catch(()=>{});storage.close?.();}await new Promise(resolve=>server.close(resolve));}};
+ return {server,get model(){return model;},close:async()=>{closing=true;eye?.close();link?.close();await fake?.close();clearInterval(freshness);clearInterval(maintenance);clearTimeout(commandTimer);runner?.terminate();for(const r of [...subscribers,...publicClients])r.end();wss.close();await persistence;if(storage){await storage.disconnected().catch(storageFailed);await storage.saveMeta({tokenHash,publication,storageIncomplete,cleanShutdown:true}).catch(()=>{});storage.close?.();}await new Promise(resolve=>server.close(resolve));}};
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
  const env=resolve(root,'.env');if(existsSync(env))process.loadEnvFile(env);

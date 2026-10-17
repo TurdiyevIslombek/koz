@@ -12,3 +12,7 @@
 .tabs a{min-width:0;overflow-wrap:anywhere;flex:1;justify-content:center}.tabs{gap:12px}.reading{flex-wrap:wrap}.live-grid>*{min-width:0}.count.long{font-size:min(6rem,calc((100vw - 60px) / var(--digits) / .65))}
 @media(max-width:759px){.screen-live .count.long{font-size:min(5.5rem,calc((100vw - 60px) / var(--digits) / .65))}}
 @media(min-width:760px){.tabs a{flex:0 1 auto}.tabs{gap:32px}}
+
+/* The picture fits wholly inside the eye. Closing removes it immediately; only the lid moves. */
+.live-eye{position:relative;aspect-ratio:1.8}.live-eye-shape{width:100%;height:100%;display:block}.eye-picture{position:absolute;left:15%;top:16%;width:70%;height:68%;object-fit:contain}.eye-lid{position:absolute;inset:0;width:100%;height:100%;fill:none;stroke:var(--muted);stroke-width:2;opacity:0;transform:scaleY(.7);transition:opacity .12s,transform .2s}.live-eye.is-closed .live-eye-shape{visibility:hidden}.live-eye.is-closed .eye-lid{opacity:1;transform:scaleY(1)}.eye-label,.eye-reason{font-size:.75rem;color:var(--muted);line-height:1.5}.eye-reason{color:var(--ink);margin-bottom:8px}.eye-label{text-align:center}.local-eye .scene-heading span{flex-shrink:0}
+@media(prefers-reduced-motion:reduce){.eye-lid{transition:none}}

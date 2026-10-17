@@ -60,7 +60,7 @@ test('close and silent heartbeat loss clear readings; reconnect never restores a
   const send = (type, data) => current.send(JSON.stringify({ ...base, trial_id:null, minute:Math.floor(Date.now()/60000), seq:++seq, type, data }));
   const status = { ...base.data, state:'running' };
   const observation = { ...sampleEvidence()[2].data, round:null, target:null, occupancy:known(7), entered:known(9), exited:known(2) };
-  wss.on('connection', socket => { current=socket; connections++;socket.on('message', data=>commands.push(JSON.parse(data)));send('status',status);if(connections===1)send('observation',observation); });
+  wss.on('connection', (socket,request) => { if(request.url==='/v1/preview'){socket.send(JSON.stringify({v:1,type:'preview',state:'closed',reason:'not_running'}));return;}current=socket; connections++;socket.on('message', data=>commands.push(JSON.parse(data)));send('status',status);if(connections===1)send('observation',observation); });
   const { app, api } = await web(`ws://127.0.0.1:${wss.address().port}`);
   try {
     await until(() => liveView(app.model).counts[0]?.value === 7);

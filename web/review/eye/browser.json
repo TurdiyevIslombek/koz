@@ -1,0 +1,15 @@
+{
+  "passed": [
+    "360px Uzbek/Russian/English and both themes",
+    "in-memory JPEG decoded inside eye without cropping",
+    "checking and one-second stale reason clear image",
+    "fixed bathroom refusal closes eye and keeps Unknown",
+    "reduced motion",
+    "preview/event disconnect recovery",
+    "same-tab local web restart",
+    "navigation releases preview"
+  ],
+  "jsErrors": [],
+  "mediaArtifactsSaved": false,
+  "hardwareUsed": false
+}

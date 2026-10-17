@@ -91,3 +91,17 @@ test('cloud startup validates configuration and removes the plaintext password e
   const env={...config(),...change};await assert.rejects(createCloudApplication(env,{storage:{close(){}}}));assert.equal(env.KOZ_OWNER_PASSWORD,undefined);
  }
 });
+test('cloud has no preview route and rejects binary/image-bearing input before SSE or storage',async()=>{
+ const f=await fixture();let ws;
+ try{
+  assert.equal((await f.request('eye',undefined,'GET',false)).status,404);
+  assert.equal((await f.request('eye')).status,404);
+  const eye=new WebSocket(f.origin.replace('http:','ws:')+'/api/eye',{headers:f.headers});eye.on('error',()=>{});
+  const code=await new Promise(resolve=>eye.on('unexpected-response',(_req,res)=>{resolve(res.statusCode);res.resume();eye.terminate();}));assert.equal(code,404);
+  for(const input of [Buffer.alloc(32,255),JSON.stringify({...sampleEvidence()[0],image:'data:image/jpeg;base64,forbidden'})]){
+   ({ws}=await f.runner());const closed=once(ws,'close');ws.send(input);await closed;
+   const snapshot=(await f.request('public/snapshot',undefined,'GET',false)).body;assert.deepEqual(snapshot.events,[]);
+   assert.doesNotMatch(JSON.stringify([...f.client.rows.values()]),/base64|data:image|"preview"/);
+  }
+ }finally{ws?.terminate();await f.app.close();}
+});

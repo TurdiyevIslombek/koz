@@ -19,7 +19,13 @@ export async function createFakeRunner({ port = 8765, timeScale = 1 } = {}) {
   const wss = new WebSocketServer({ server, maxPayload: 32768, perMessageDeflate: false });
   wss.on('headers', headers => headers.push('X-Koz-Source: replay'));
   const cleanups = new Set();
-  wss.on('connection', socket => {
+  wss.on('connection', (socket, request) => {
+    // Replay has no video. Do not start another event replay on the preview socket.
+    if (request.url === '/v1/preview') {
+      socket.send(JSON.stringify({v:1,type:'preview',state:'closed',reason:'not_running'}));
+      socket.on('error',()=>{});
+      return;
+    }
     const commandResults = new Map(), ids = new Map(), sequences = new Map(), replayTimers = new Set();
     const mappedId = id => {
       if (id === null) return null;

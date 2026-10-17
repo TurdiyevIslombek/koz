@@ -1,5 +1,10 @@
 export const languages = ['uz','ru','en'];
 const rows = {
+ eyeLive:['Jonli tasvir','Прямой вид','Live view'],
+ eyeLocal:['Yuzlar xiralashtirilgan · faqat shu kompyuterda','Лица размыты · только на этом компьютере','Faces blurred · this computer only'],
+ eyeChecking:['Koʻrinish tekshirilmoqda','Проверка вида','Checking the view'],
+ eyeLate:['Kamera tasviri kechikmoqda','Изображение с камеры запаздывает','Camera picture is late'],
+ eyeAlt:['Maxfiylik tekshiruvidan oʻtgan kamera tasviri','Изображение камеры после проверки приватности','Camera view approved by the privacy guard'],
  planner_bedrock:['Amazon Nova (Bedrock)','Amazon Nova (Bedrock)','Amazon Nova (Bedrock)'],
  bedrockPrivacy:['Matn AWS Yevropa hududlaridagi Bedrock xizmatida qayta ishlanadi. Matn saqlanmaydi.','Текст обрабатывается Bedrock в регионах AWS в ЕС. Текст не сохраняется.','Text is processed by Bedrock in AWS EU Regions. It is not stored.'],
  cloudBedrock:['Matn AWS Frankfurt orqali oʻtadi; Bedrock reja tuzuvchisi uni AWS Yevropa hududlarida qayta ishlaydi. Matn saqlanmaydi.','Текст проходит через AWS во Франкфурте; планировщик Bedrock обрабатывает его в регионах AWS в ЕС. Текст не сохраняется.','The text passes through AWS Frankfurt; with the Bedrock planner it is processed in AWS EU Regions; it is not stored.'],
