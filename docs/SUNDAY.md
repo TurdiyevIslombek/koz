@@ -66,8 +66,8 @@ anything else. Film every trial with your phone (the video needs the best real t
 - The fps number at the top of the Ko'z window, and the last 30 Terminal lines after any failed trial.
 - Keep the videos on your phone. Don't send `.env` or anything with a token.
 
-Then I write the numbers into `docs/TRIALS.md` and the report. If it doesn't chase reliably
-(your call; mine would be at least 7 of 10), we switch to option A by Oct 19, as agreed.
+Then I write the numbers into `docs/TRIALS.md` and the report. Reliable = **at least 7 of 10**
+(your decision, in `docs/TRIALS.md`); 6 or fewer, and we switch to option A by Oct 19, as agreed.
 
 ## f. Put the original car.ino back
 

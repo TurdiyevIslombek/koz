@@ -535,8 +535,8 @@ def main(argv=None):
                         help="that camera is mounted upside down (the car's ESP32-CAM: esp32_cam); repeatable")
     parser.add_argument("--mirror", action="append", default=[], metavar="SLOT",
                         help="that camera's picture has left and right swapped; repeatable")
-    parser.add_argument("--report-cameras", action="store_true",
-                        help="send status.cameras (contract 8.1); only once the web app accepts it")
+    parser.add_argument("--no-report-cameras", dest="report_cameras", action="store_false",
+                        help="don't send status.cameras (contract 8.1; the web app accepts it since Oct 17)")
     parser.add_argument("--video", help="play a recorded video file instead of a camera (a new start replays it)")
     parser.add_argument("--allowed-area", default="0,0,1,1",
                         help="left,top,right,bottom of the allowed area, 0..1 (default: whole frame)")

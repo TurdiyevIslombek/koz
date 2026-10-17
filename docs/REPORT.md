@@ -169,7 +169,7 @@ capped on the board and on the computer. Only the colour finder feeds the brain 
 | 10 chase trials on the car: reached the ball | **TODO** / 10, failures: **TODO** |
 | Time to reach the ball (median) | **TODO** |
 | Frames per second from the ESP32-CAM | **TODO** |
-| Option B (the brain chases) vs the Oct 19 time box | **TODO** (if it doesn't chase reliably by Oct 19, the brain only avoids obstacles and a simple pull steers; the report will say so) |
+| Option B (the brain chases) vs the Oct 19 time box | **TODO** (reliable = at least 7 of 10 trials; if not by Oct 19, the brain only avoids obstacles and a simple pull steers, and the report says so) |
 
 ## 7. AWS
 

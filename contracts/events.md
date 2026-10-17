@@ -17,7 +17,8 @@ Changes since then (both lanes agreed):
   accept it before a runner with a Bedrock key sends it.
 - Oct 16: choosing a camera: optional `status.cameras` (section 8.1) and optional
   `start_job.data.camera_id` (section 10), fixed slots only. Proposed by Codex and Claude
-  independently. Rollout: web accepts both first; the runner sends `cameras` only after that.
+  independently. Rollout: web accepts both first; the runner sends `cameras` only after that
+  (on since Oct 17).
 
 `recipe.schema.json` and this file are the contract together.
 **MVP** = built by Oct 26. **stretch** = only if built; the dashboard must not

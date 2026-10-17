@@ -350,6 +350,11 @@ depends on what is in view.
 the ball reliably by **Oct 19**, switch to option A (the brain avoids obstacles, a hand-written pull
 steers toward the ball) and say so in the report.
 
+**"Chases reliably" = at least 7 of the 10 chase trials pass** (Islombek, Oct 17). A pass: the car
+touches the ball, or stops facing it within about 20 cm, within 20 s, without hitting anything else
+(`docs/SUNDAY.md` step d: 4 trials with the ball straight ahead, 3 about 30° left, 3 about 30° right,
+1.5 m away). 6 of 10 or fewer by Oct 19 → option A.
+
 **Measured on the brain itself** (the original `brain_driver.py`, 2 s per input): looming on the
 left eye turns the car right (wheels 69 / -143 at 100 Hz), on the right eye left (-150 / 134);
 nothing seen drives straight (130 / 130); both eyes back it up slowly. Below about 20 Hz it doesn't
