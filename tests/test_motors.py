@@ -116,7 +116,9 @@ def test_serial_link_reads_the_board_and_sends_the_protocol():
     link.disarm()
     assert port.written == ["ARM\n", "M,40,-20\n", "STOP\n", "DISARM\n"]
     link.handle_line("S,1,RUNNING,120")
-    assert link.armed and link.distance_cm == 120 and link.fault is None
+    assert not link.armed and link.distance_cm == 120   # after DISARM only a person's ARM counts, not a report
+    link.arm_by_hand()
+    assert link.armed and link.fault is None
     link.handle_line("S,0,OBSTACLE,22")
     assert not link.armed and link.fault == "OBSTACLE"
     link.handle_line("garbage,,")
