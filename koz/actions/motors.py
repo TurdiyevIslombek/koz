@@ -108,10 +108,11 @@ class SerialMotorLink:
                 raise KozError("MOTOR_SAFETY_STOP", "the motor board can't be reached")
             self.lockout = None
 
-    def drive(self, left, right):
-        """Send wheel commands. False (nothing sent) while locked out by Stop; raises if the link is lost."""
+    def drive(self, left, right, allowed=None):
+        """Send wheel commands. False (nothing sent) while locked out by Stop, or if `allowed()` says no
+        (the job was cancelled); raises if the link is lost."""
         with self._write_lock:   # checked under the same lock as halt(): a Stop is never overtaken
-            if self.lockout == "stopped":
+            if self.lockout == "stopped" or (allowed is not None and not allowed()):
                 return False
             if self.lockout is not None or not self._write(f"M,{int(left)},{int(right)}"):
                 raise KozError("MOTOR_SAFETY_STOP", "the motor board can't be reached")
@@ -169,9 +170,9 @@ class MockMotorLink:
             self.sent.append("ARM")
             self.state, self.reason, self.lockout = 1, "WAITING", None
 
-    def drive(self, left, right):
+    def drive(self, left, right, allowed=None):
         with self._write_lock:
-            if self.lockout == "stopped":
+            if self.lockout == "stopped" or (allowed is not None and not allowed()):
                 return False
             if self.lockout is not None:
                 raise KozError("MOTOR_SAFETY_STOP")
@@ -212,11 +213,17 @@ class MockMotorLink:
 class MotorsAction:
     """Sends wheel speeds while the job may drive. status: disarmed / enabled / stop_commanded."""
 
-    def __init__(self, link, max_speed_ratio, local_cap):
+    def __init__(self, link, max_speed_ratio, local_cap, cancelled=None):
+        """`cancelled()` is True once the owner stopped this job: from then on nothing drives, even if
+        a person arms the board again for the next job (re-review of MS-1)."""
         self.link = link
         self.ratio = min(max_speed_ratio, local_cap)   # contract section 3: the lower of the two
         self.status = "enabled" if link.armed else "disarmed"
         self._ended = False
+        self._cancelled = cancelled or (lambda: False)
+
+    def _may_drive(self):
+        return not self._ended and not self._cancelled()
 
     def check(self):
         """Before the job starts and before every move: a fault or a disarmed board stops the job."""
@@ -228,11 +235,11 @@ class MotorsAction:
     def drive(self, wheels):
         """wheels: the brain's (left, right), -255..255. Sent as wheel x ratio (the board lifts and caps).
         After end() or a Stop, nothing is sent (a frame that was already being processed can't drive)."""
-        if self._ended or self.link.lockout == "stopped":
+        if not self._may_drive() or self.link.lockout == "stopped":
             return
         self.check()
         left, right = (int(round(w * self.ratio)) for w in wheels)
-        if self.link.drive(left, right):
+        if self.link.drive(left, right, allowed=self._may_drive):   # asked again under the write lock
             self.status = "enabled"
 
     def pause(self):

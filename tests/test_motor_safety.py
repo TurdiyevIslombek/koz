@@ -360,3 +360,60 @@ def test_a_job_thread_that_crashes_still_disarms():
                            "data": {"input": "prompt", "language": "en", "text": "chase the red ball"}}))
     hub._thread.join(5)
     assert link.sent[-2:] == ["STOP", "DISARM"] and not link.armed
+
+
+# --- Codex's re-review of the fixes (Oct 17): three more holes ------------------------------------------
+
+def test_stop_halts_even_if_its_acceptance_cannot_be_reported():
+    from koz.actions.motors import MockMotorLink
+
+    link, gate = MockMotorLink(armed=True, delayed_status=True), Gate()
+    hub, _, command = car_hub(link, camera_gate=gate)
+    try:
+        assert gate.entered.wait(5)
+        hub.events.listeners.append(lambda e: raising() if e["type"] == "command_result" else None)
+        with pytest.raises(RuntimeError):
+            command("stop_job", {})          # reporting "accepted" fails...
+        at_stop = len(link.sent)
+        assert link.sent[at_stop - 2:] == ["STOP", "DISARM"] and hub.agent.stop_requested   # ...it still stopped
+        gate.release.set()
+        hub._thread.join(5)
+        assert not any(line.startswith("M,") for line in link.sent[at_stop:])
+    finally:
+        gate.release.set()
+
+
+def test_arming_again_does_not_revive_a_frame_of_the_stopped_job():
+    from koz.actions.motors import MockMotorLink
+
+    link, gate = MockMotorLink(armed=True, delayed_status=True), Gate()
+    hub, _, command = car_hub(link, camera_gate=gate)
+    try:
+        assert gate.entered.wait(5)
+        command("stop_job", {})
+        at_stop = len(link.sent)
+        hub.arm_motors_by_hand()             # a person arms again for the next job...
+        gate.release.set()                   # ...while the stopped job's frame is still in progress
+        hub._thread.join(5)
+        assert not any(line.startswith("M,") for line in link.sent[at_stop:])
+    finally:
+        gate.release.set()
+
+
+def test_a_failure_after_the_tries_still_stops_the_motors():
+    from helpers import Approve, EndlessCamera, FakeFaces
+    from test_motors import CAR_SETUP, car_recipe
+
+    from koz.actions.motors import MockMotorLink
+    from koz.agent import FakePlanner
+    from koz.agent.loop import Agent
+    from koz.events import EventLog
+
+    link, clock = MockMotorLink(armed=True, delayed_status=True), FakeClock()
+    agent = Agent(FakePlanner(), CAR_SETUP, lambda: EndlessCamera(ball_in_the_middle(), clock),
+                  EventLog(failing_on("decision")), clock=clock, eval_seconds=1.0, motor_link=link,
+                  models={"scene_checker": Approve(), "face_detector": FakeFaces(), "brain_driver": StillBrain()})
+    with pytest.raises(RuntimeError):
+        agent.run_recipe(car_recipe())       # the decision can't be delivered, after the car drove
+    assert link.sent[-2:] == ["STOP", "DISARM"] and not link.armed
+    agent.runner.camera.close()

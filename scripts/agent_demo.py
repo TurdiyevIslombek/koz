@@ -92,9 +92,9 @@ def main(argv=None):
         fps = clock["frames"] / max(time.monotonic() - clock["start"], 1e-6)
         cv2.imshow(WINDOW, draw(runner, latest, messages, fps, shown["line"]))
         if quit_pressed(1):
+            agent.stop_requested = True   # first: this job's frames can't drive any more
             if link is not None:
-                link.halt()   # at once: the frame being processed can't drive after q
-            agent.stop_requested = True
+                link.halt()                  # and the motors stop and disarm at once
 
     def open_camera():
         if args.video:
@@ -153,7 +153,7 @@ def main(argv=None):
         print(f"Adjusted: {c['setting']} {c['before']} -> {c['after']} "
               f"({change['check']}: {change['before_label']} -> {change['after_label']}, {change['after_result']})")
     if link is not None:
-        link.disarm()
+        link.halt()
         link.close()
     if not args.no_window:
         cv2.destroyAllWindows()

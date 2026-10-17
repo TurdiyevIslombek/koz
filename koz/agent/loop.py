@@ -118,7 +118,16 @@ class Agent:
         return self.run_recipe(plan.recipe, origin="planner", plan=plan)
 
     def run_recipe(self, recipe, origin="import", plan=None):
-        """A recipe (from the planner or an import) -> tried, adjusted, run."""
+        """A recipe (from the planner or an import) -> tried, adjusted, run. If anything fails on the
+        way (a report, a callback), the motors stop and disarm before the error goes on (re-review of MS-2)."""
+        try:
+            return self._run_recipe(recipe, origin, plan)
+        except BaseException:
+            if self.runner is not None:
+                self.runner.end_motors()
+            raise
+
+    def _run_recipe(self, recipe, origin, plan):
         self.phase = "trying"
         if self.stop_requested:
             return self._stopped(plan)
@@ -144,7 +153,8 @@ class Agent:
         for number in range(1, policy.AGENT_MAX_ROUNDS + 1):
             try:
                 runner = Runner(checked, self.setup, camera, self.events, revision=revision,
-                                evaluation_round=number, clock=self.clock, motor_link=self.motor_link, **models)
+                                evaluation_round=number, clock=self.clock, motor_link=self.motor_link,
+                                cancelled=lambda: self.stop_requested, **models)
             except KozError as error:   # a model file missing or changed, or no motor board: nothing runs
                 camera.close()
                 return self._refuse(plan, error.code)

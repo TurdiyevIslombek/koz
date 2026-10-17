@@ -53,7 +53,7 @@ class Runner:
 
     def __init__(self, recipe, setup, camera, events, scene_checker=None, face_detector=None,
                  person_detector=None, revision=1, evaluation_round=None, clock=time.monotonic,
-                 motor_link=None, brain_driver=None):
+                 motor_link=None, brain_driver=None, cancelled=None):
         if not isinstance(recipe, CheckedRecipe):
             raise TypeError("Runner needs a CheckedRecipe from koz.recipe")
         if OPENCV_MAJOR != 5:
@@ -90,7 +90,8 @@ class Runner:
         motors = next((a for a in recipe.data["actions"] if a["type"] == "motors"), None)
         if motors is not None and motor_link is None:
             raise KozError("UNSUPPORTED_CAPABILITY", "no motor board set up on this computer")
-        self._motors = MotorsAction(motor_link, motors["max_speed_ratio"], setup.motor_cap) if motors else None
+        self._motors = (MotorsAction(motor_link, motors["max_speed_ratio"], setup.motor_cap, cancelled=cancelled)
+                        if motors else None)   # `cancelled()`: the owner stopped the job (the agent's flag)
         self._motors_checked = False
 
         self.state = None           # set to "checking" on the first step

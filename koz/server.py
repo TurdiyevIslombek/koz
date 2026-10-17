@@ -268,6 +268,7 @@ class Hub:
     def _stop_job(self, command):
         if command["job_id"] != self.events.job_id or command["trial_id"] != self.events.trial_id:
             return "INVALID_COMMAND"
+        self._cancel()   # before anything is reported: a report that fails can't keep the car going
         self._answer(command)
         self._stop()
         return None
@@ -294,6 +295,7 @@ class Hub:
             return "INVALID_COMMAND"
         if self._trial["finish"] is not None:
             return "BUSY"   # already finishing: waiting for the job to stop
+        self._cancel()
         self._answer(command)
         self._trial["finish"] = command["data"]
         self._stop()
@@ -303,15 +305,20 @@ class Hub:
         # so no event of this trial's job can arrive after the trial is closed.
         return None
 
-    def _stop(self):
-        """stop_job: at once, before any planner work. A planner answer that comes later can't
-        start the job (Agent checks stop_requested). The motors stop and disarm here, in this thread,
-        and the link refuses every wheel command until a person arms it again: a frame the job thread
-        is still reading or processing can't drive afterwards (motor safety review MS-1)."""
+    def _cancel(self):
+        """The part of a stop that must not wait for anything, and sends no event: the job is marked
+        stopped (its motors action refuses every wheel command from now on, even after the board is
+        armed again), then the motors stop and disarm here, in this thread (motor safety review MS-1)."""
         if self.busy:
+            self._agent.stop_requested = True
             if self.motor_link is not None:
                 self.motor_link.halt()
-            self._agent.stop_requested = True
+
+    def _stop(self):
+        """stop_job: at once, before any planner work. A planner answer that comes later can't
+        start the job (Agent checks stop_requested)."""
+        self._cancel()
+        if self.busy:
             if self._agent.phase in (None, "planning") or self._camera is None:
                 self.emit_status("idle")   # the planner or the camera may take seconds: say idle now
         elif self._status[0]["state"] != "idle":
