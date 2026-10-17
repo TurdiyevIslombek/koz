@@ -116,3 +116,136 @@ def test_threads_can_stop_while_another_drives():
         assert written[stop + 1] == "DISARM" and not any(w.startswith("M,") for w in written[stop:])
     finally:
         link.close()
+
+
+# --- MS-1: a frame already in progress could drive after Stop was accepted ---------------------------
+
+def test_an_ended_action_never_drives_even_before_the_board_reports_disarmed():
+    from koz.actions.motors import MockMotorLink
+
+    link = MockMotorLink(armed=True, delayed_status=True)   # DISARM sent, the board hasn't said so yet
+    action = MotorsAction(link, .25, .2)
+    action.end()
+    action.drive((100, 100))
+    assert link.sent == ["STOP", "DISARM"]
+
+
+class Gate:
+    """Holds the job thread at one point (a camera read or the brain) until the test releases it."""
+
+    def __init__(self, active=True):
+        self.active, self.entered, self.release = active, threading.Event(), threading.Event()
+
+    def wait_here(self):
+        if self.active:
+            self.active = False
+            self.entered.set()
+            assert self.release.wait(5)
+
+
+class StillBrain:
+    """A brain that always says 'forward', optionally held at its first tick."""
+
+    def __init__(self, gate=None):
+        self.gate = gate
+
+    def reset(self):
+        pass
+
+    def tick(self, *args, **kwargs):
+        if self.gate is not None:
+            self.gate.wait_here()
+        return None, (100, 100)
+
+
+def ball_in_the_middle():
+    import cv2
+    import numpy as np
+    image = np.full((240, 320, 3), 120, np.uint8)
+    cv2.circle(image, (160, 120), 22, (0, 0, 220), -1)
+    return image
+
+
+def car_hub(link, camera_gate=None, brain=None):
+    import json
+
+    from helpers import Approve, EndlessCamera, FakeFaces
+    from test_motors import CAR_SETUP, car_recipe
+
+    from koz.agent import FakePlanner
+    from koz.events import new_id
+    from koz.server import Hub
+
+    class GatedCamera(EndlessCamera):
+        def read(self):
+            if camera_gate is not None:
+                camera_gate.wait_here()
+            return super().read()
+
+    clock, delivered = FakeClock(), []
+    hub = Hub(CAR_SETUP, lambda: GatedCamera(ball_in_the_middle(), clock), FakePlanner(), motor_link=link,
+              clock=clock, wall_clock=lambda: 1000, deliver=delivered.append, eval_seconds=1.0,
+              models={"scene_checker": Approve(), "face_detector": FakeFaces(), "brain_driver": brain or StillBrain()})
+    job = new_id()
+
+    def command(name, data):
+        hub.handle(json.dumps({"v": 1, "type": "command", "command_id": new_id(), "session_id": hub.events.session_id,
+                               "job_id": job, "trial_id": None, "expires_at": 1010, "command": name, "data": data}))
+
+    command("start_job", {"input": "recipe", "recipe": car_recipe()})
+    return hub, delivered, command
+
+
+def stop_while_held(hub, link, command, gate):
+    """Press Stop while the job thread is held at the gate; return what was sent from then on."""
+    try:
+        assert gate.entered.wait(5)
+        command("stop_job", {})
+        at_stop = len(link.sent)
+        assert link.sent[at_stop - 2:at_stop] == ["STOP", "DISARM"]   # at once, not at the next frame
+        gate.release.set()
+        hub._thread.join(5)
+        assert not hub._thread.is_alive()
+        return link.sent[at_stop:]
+    finally:
+        gate.release.set()
+
+
+def wait_for_running(delivered):
+    import time
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        if any(e["type"] == "status" and e["data"]["state"] == "running" for e in list(delivered)):
+            return
+        time.sleep(0.01)
+    raise AssertionError("the job never reached running")
+
+
+def test_stop_during_a_camera_read_while_trying_never_drives_after():
+    from koz.actions.motors import MockMotorLink
+
+    link, gate = MockMotorLink(armed=True, delayed_status=True), Gate()
+    hub, _, command = car_hub(link, camera_gate=gate)
+    after = stop_while_held(hub, link, command, gate)
+    assert not any(line.startswith("M,") for line in after) and not link.armed
+
+
+def test_stop_during_processing_while_trying_never_drives_after():
+    from koz.actions.motors import MockMotorLink
+
+    link, gate = MockMotorLink(armed=True, delayed_status=True), Gate()
+    hub, _, command = car_hub(link, brain=StillBrain(gate))
+    after = stop_while_held(hub, link, command, gate)
+    assert not any(line.startswith("M,") for line in after) and not link.armed
+
+
+def test_stop_during_a_camera_read_while_running_never_drives_after():
+    from koz.actions.motors import MockMotorLink
+
+    link, gate = MockMotorLink(armed=True, delayed_status=True), Gate(active=False)
+    hub, delivered, command = car_hub(link, camera_gate=gate)
+    wait_for_running(delivered)
+    assert any(line.startswith("M,") for line in link.sent)   # it was driving
+    gate.active = True
+    after = stop_while_held(hub, link, command, gate)
+    assert not any(line.startswith("M,") for line in after) and not link.armed

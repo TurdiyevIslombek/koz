@@ -92,6 +92,8 @@ def main(argv=None):
         fps = clock["frames"] / max(time.monotonic() - clock["start"], 1e-6)
         cv2.imshow(WINDOW, draw(runner, latest, messages, fps, shown["line"]))
         if quit_pressed(1):
+            if link is not None:
+                link.halt()   # at once: the frame being processed can't drive after q
             agent.stop_requested = True
 
     def open_camera():

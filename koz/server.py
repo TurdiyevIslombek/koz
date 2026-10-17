@@ -305,8 +305,12 @@ class Hub:
 
     def _stop(self):
         """stop_job: at once, before any planner work. A planner answer that comes later can't
-        start the job (Agent checks stop_requested)."""
+        start the job (Agent checks stop_requested). The motors stop and disarm here, in this thread,
+        and the link refuses every wheel command until a person arms it again: a frame the job thread
+        is still reading or processing can't drive afterwards (motor safety review MS-1)."""
         if self.busy:
+            if self.motor_link is not None:
+                self.motor_link.halt()
             self._agent.stop_requested = True
             if self._agent.phase in (None, "planning") or self._camera is None:
                 self.emit_status("idle")   # the planner or the camera may take seconds: say idle now
