@@ -25,6 +25,10 @@ The browser uses `http://127.0.0.1:4173`. `npm run fake-runner` optionally runs 
 
 `web/.env` may set `PORT` or `KOZ_OWNER_PASSWORD`. Without a password, the loopback-only development app creates an HttpOnly, SameSite owner session automatically. Cross-origin mutations are rejected. If a password is configured, the normal sign-in remains required. This local convenience is not a public/cloud authentication configuration.
 
+## Cloud entry point
+
+`node server/cloud.mjs` implements the AWS installer interface from `.collab/specs/aws-review.md`: loopback binding behind HTTPS, Secure owner sessions, an inbound token-authenticated runner, DynamoDB retention and owner-selected public sharing. Setup accepts Bedrock and explains AWS Frankfurt transit / AWS EU processing. Camera choice remains supported. See [CLOUD.md](CLOUD.md) for environment variables, pairing, the judges view, storage keys/expiry and verification limits. No AWS account actions or deployment were performed.
+
 ## Runner connection
 
 The web server is now a WebSocket **client** of `ws://127.0.0.1:8765`; browser updates use the existing same-origin event stream. This follows the owner's explicit local-transport request, overriding the connection direction in contract section 5 for this development mode. The event and command JSON formats are unchanged, and no files in `contracts/`, `koz/` or `firmware/` were edited.
@@ -33,7 +37,7 @@ The web server is now a WebSocket **client** of `ws://127.0.0.1:8765`; browser u
 - `start_job`, `stop_job`, `begin_trial` and `finish_trial` go back on **the same WebSocket**, with web-generated IDs, the current session and a ten-second expiry. Accepted means delivery, not applied state.
 - Socket close or browser event-stream failure clears live readings immediately. Three seconds without status also clears them. Heading: **Unknown**; reason: **Offline — job state unknown**. The recipe/history can remain available, but old live numbers cannot return when the socket reconnects. A new observation is required.
 - After a web restart, the browser renews its local owner session and fetches a fresh snapshot automatically. If a password is configured, it asks you to sign in again. While reconnecting it shows Unknown and a **Reload page** fallback; Setup drafts remain in the tab.
-- Optional `status.planner` accepts `rules`, `ollama`, `nebius`, or `null`, alongside older statuses without the field. Other unknown fields and non-enum values are rejected. Missing means **not reported**, never rules. The latest report appears on Setup and Live. `--report-planner` can now be enabled in the runner.
+- Optional `status.planner` accepts `rules`, `ollama`, `nebius`, `bedrock`, or `null`, alongside older statuses without the field. Other unknown fields and non-enum values are rejected. Missing means **not reported**, never rules. The latest report appears on Setup and Live. `--report-planner` can now be enabled in the runner.
 - Optional `status.cameras` accepts unique fixed camera slots, including an empty list. Setup offers a camera choice when two or more are available and sends the selected `camera_id` with prompt and recipe starts. One slot is selected automatically; empty or legacy statuses omit it. Choices reset for a new runner session. Camera addresses stay on the runner. `--report-cameras` can now be enabled.
 - Retry is once per second. There is no command queue, replay on reconnect, automatic job start or motor re-arm.
 - The original token-authenticated inbound adapter remains available through `createApplication` for existing integration tests, but normal `npm start` uses the requested outbound local connection.
@@ -53,11 +57,11 @@ Camera address, ownership confirmation, allowed-area mask and motor re-arm belon
 
 `web/.data/` is ignored and created with owner-only permissions. Changed events persist in `events.ndjson` for up to seven days. Persistence records rounded minute times only; precise receipt times and unchanged status heartbeats remain in live memory. Expired records are filtered on reads and removed by maintenance. Saved summaries retain only the contract's allowlisted summary fields until deleted. Prompts are request-only memory; no analytics, frame uploads, media storage, or raw exception messages are used. Demo data is browser memory and disappears on exit/reload.
 
-This is a **local implementation**, not an AWS deployment. The localhost runner adapter is implemented and tested against the recorded fake server; actual camera measurements are not claimed. Cloud database TTL, 30-day daily crossing aggregates, deployment secrets, TLS, and validation with the real hardware runner remain integration/deployment work. Current per-job entered/exited counters are displayed directly; occupancy is never summed into totals. Do not describe this local JSON storage as the contract's completed cloud retention system.
+The default launcher runs **locally**. A separate cloud implementation is available; neither mode is an AWS deployment by itself. The localhost runner adapter is implemented and tested against the recorded fake server; actual camera measurements are not claimed. Cloud mode now implements DynamoDB TTL, 30-day observed-crossing records and public sharing; deployment secrets, production TLS and validation against AWS and the real hardware runner remain integration/deployment work. Current per-job entered/exited counters are displayed directly; occupancy is never summed into totals. Do not describe this local JSON storage as the contract's completed cloud retention system.
 
 ## Verification and design
 
-Latest camera pass: **36 tests passed**, build passed, and browser checks passed for fixed camera labels in three languages at 360 px, both themes, prompt/recipe starts, runner-session changes, one/empty/legacy slot lists, and fixed rejection messages. No JavaScript errors or horizontal overflow. See `review/cameras/REVIEW.md`. Earlier planner/restart and replay/launcher checks remain in `review/planner/REVIEW.md` and `review/runner/REVIEW.md`.
+Latest cloud pass: **48 tests passed**, build passed, with HTTPS owner/judges browser checks and a clean install/build/prune verification (`review/cloud/REVIEW.md`). Earlier camera checks passed, and browser checks passed for fixed camera labels in three languages at 360 px, both themes, prompt/recipe starts, runner-session changes, one/empty/legacy slot lists, and fixed rejection messages. No JavaScript errors or horizontal overflow. See `review/cameras/REVIEW.md`. Earlier planner/restart and replay/launcher checks remain in `review/planner/REVIEW.md` and `review/runner/REVIEW.md`.
 
 - Node tests cover strict JSON, schema limits, exact unknown messages, state transitions, evidence completeness, auth, token revocation, WebSocket validation, commands and summary CRUD.
 - Browser review covers three screens × two themes × three languages at 360 px, desktop, enlarged text, reduced motion, zero/unknown/offline/Stop, and the complete trial and import/export flow.
@@ -69,3 +73,5 @@ AI contribution: Codex implemented the web UI, local owner/runner adapter, contr
 AI contribution, 2026-10-16: Codex implemented the agreed planner field, conditional Setup disclosure, colour-target diagram, owner-session restart recovery, and regression checks. Changes remain in `web/`; runner and contracts were read only.
 
 AI contribution, 2026-10-16: Codex implemented camera slot validation, Setup selection and session-scoped `camera_id` commands, with protocol, integration and browser checks. Hardware sources remain untouched; separate motor-safety findings are in the explicitly requested `.collab/reviews/motor-safety.md`.
+
+AI contribution, 2026-10-17: Codex implemented `server/cloud.mjs`, DynamoDB storage, HTTPS proxy authentication, owner-scoped judges sharing, Bedrock acceptance/disclosures, and cloud regression/browser/install checks. Changes remain in `web/`; no AWS account actions or deployment.

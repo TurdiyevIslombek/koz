@@ -1,0 +1,14 @@
+{
+  "passed": [
+    "cloud Setup disclosure in Uz/Ru/En at 360px",
+    "light/dark themes",
+    "Secure owner login through HTTPS proxy",
+    "Bedrock and camera selection on the wire",
+    "unpublished default",
+    "public job selection",
+    "judge controls absent",
+    "privacy stop and disconnect clear target",
+    "same tabs recover after web restart"
+  ],
+  "jsErrors": []
+}

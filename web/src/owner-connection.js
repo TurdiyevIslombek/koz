@@ -12,10 +12,11 @@ export function createOwnerConnection({api,onSession,onSnapshot,onPacket,onDisco
   try{
    const session=await api('session');if(attempt!==generation)return;
    onSession(session);
-   if(!session.authenticated){onSignedOut();return;}
-   const snapshot=await api('snapshot');if(attempt!==generation)return;
+   if(!session.authenticated&&!session.cloud){onSignedOut();return;}
+   const readOnly=session.cloud&&!session.authenticated;
+   const snapshot=await api(readOnly?'public/snapshot':'snapshot');if(attempt!==generation)return;
    onSnapshot(snapshot);
-   stream=new EventSource('/api/events');
+   stream=new EventSource(readOnly?'/api/events/public':'/api/events');
    stream.onmessage=e=>{
     if(attempt!==generation)return;
     let packet;try{packet=JSON.parse(e.data);if(!packet||typeof packet!=='object'||Array.isArray(packet))throw Error();}catch{onInvalidPacket();return;}

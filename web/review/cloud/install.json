@@ -1,0 +1,10 @@
+{
+  "nativePlatform": "darwin",
+  "node": "v25.1.0",
+  "passed": [
+    "clean npm ci -> build -> prune --omit=dev",
+    "cloud and protocol imports after removing dev dependencies",
+    "Linux x64 optional esbuild package resolves from lockfile and contains an ELF executable"
+  ],
+  "limit": "Linux execution and an AWS deployment were not performed on this macOS host."
+}

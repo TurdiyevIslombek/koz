@@ -23,7 +23,7 @@ test('camera choice defaults to the first slot and resets on session or availabl
 });
 
 test('planner copy distinguishes local, cloud, null, missing and stale reports in all languages',()=>{
- const cases=[['rules','planner_rules','plannerLocal'],['ollama','planner_ollama','plannerLocal'],['nebius','planner_nebius','crossBorder'],[null,'plannerUnset','plannerDepends'],[undefined,'plannerNotReported','plannerDepends']];
+ const cases=[['rules','planner_rules','plannerLocal'],['ollama','planner_ollama','plannerLocal'],['nebius','planner_nebius','crossBorder'],['bedrock','planner_bedrock','bedrockPrivacy'],[null,'plannerUnset','plannerDepends'],[undefined,'plannerNotReported','plannerDepends']];
  for(const [planner,label,disclosure] of cases){
   assert.deepEqual(plannerPresentation(planner===undefined?{}:{planner}),{label,disclosure});
   for(const lang of ['uz','ru','en'])for(const key of [label,disclosure])assert.notEqual(t(lang,key),key);
@@ -52,4 +52,15 @@ test('target locations cannot survive privacy stops or a dropped connection',()=
  const held=structuredClone(status);held.seq=observation.seq+1;held.data.state='held';held.data.privacy='blocked';ingest(model,held);
  assert.equal(liveView(model).target,'unknown');
  invalidateLive(model);assert.equal(liveView(model).target,'unknown');
+});
+
+
+test('cloud Setup always discloses AWS Frankfurt and gives the planner-specific processing location',()=>{
+ for(const [planner,key]of [['bedrock','cloudBedrock'],['rules','cloudLocal'],['ollama','cloudLocal'],['nebius','cloudNebius'],[null,'cloudDepends'],[undefined,'cloudDepends']]){
+  const {disclosure}=plannerPresentation({planner},false,true);assert.equal(disclosure,key);
+  for(const language of ['uz','ru','en'])assert.notEqual(t(language,key),key);
+  assert.match(t('en',key),/AWS Frankfurt/);
+ }
+ assert.match(t('en','cloudBedrock'),/AWS EU Regions; it is not stored/);
+ assert.equal(plannerPresentation({planner:'bedrock'},true,true).disclosure,'cloudDepends');
 });

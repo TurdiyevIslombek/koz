@@ -23,7 +23,7 @@ test('camera_id is a fixed optional start_job field for prompt and recipe; unsup
 test('status accepts the optional planner enum and legacy shape, without opening the contract',()=>{
  const status=()=>sampleEvidence().find(e=>e.type==='status');
  const legacy=status();delete legacy.data.planner;assert.doesNotThrow(()=>validateEvent(legacy));assert.equal(Object.hasOwn(legacy.data,'planner'),false);
- for(const planner of ['rules','ollama','nebius',null]){const e=status();e.data.planner=planner;assert.equal(validateEvent(e).data.planner,planner);}
+ for(const planner of ['rules','ollama','nebius','bedrock',null]){const e=status();e.data.planner=planner;assert.equal(validateEvent(e).data.planner,planner);}
  for(const planner of ['unknown','Gemma','Nebius','',false,0,{},[],undefined]){const e=status();e.data.planner=planner;assert.throws(()=>validateEvent(e));}
  for(const change of [e=>e.data.model='Gemma',e=>e.data.prompt='count people',e=>delete e.data.state,e=>e.planner='rules']){const e=status();e.data.planner='rules';change(e);assert.throws(()=>validateEvent(e));}
  const e=observation();e.data.planner='rules';assert.throws(()=>validateEvent(e));

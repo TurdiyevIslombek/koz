@@ -1,10 +1,10 @@
 // A missing report is not a rules-based plan. Null also covers imports and failed planning.
-export function plannerPresentation(status,offline=false){
- if(offline)return {label:'unknown',disclosure:'plannerDepends'};
+export function plannerPresentation(status,offline=false,cloud=false){
+ if(offline)return {label:'unknown',disclosure:cloud?'cloudDepends':'plannerDepends'};
  const planner=status?.planner;
  return {
   label:planner===undefined?'plannerNotReported':planner===null?'plannerUnset':`planner_${planner}`,
-  disclosure:planner==='nebius'?'crossBorder':['rules','ollama'].includes(planner)?'plannerLocal':'plannerDepends'
+  disclosure:cloud?(planner==='bedrock'?'cloudBedrock':planner==='nebius'?'cloudNebius':['rules','ollama'].includes(planner)?'cloudLocal':'cloudDepends'):(planner==='bedrock'?'bedrockPrivacy':planner==='nebius'?'crossBorder':['rules','ollama'].includes(planner)?'plannerLocal':'plannerDepends')
  };
 }
 

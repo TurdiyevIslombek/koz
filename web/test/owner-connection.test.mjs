@@ -56,3 +56,9 @@ test('a source reset refreshes its snapshot and keeps only one stream',async()=>
   assert.deepEqual(h.calls.filter(c=>c[0]==='Snapshot').map(c=>c[1].revision),[1,2]);
  }finally{h.connection.stop();}
 });
+
+
+test('an anonymous cloud visitor uses only the public snapshot and public SSE stream',async()=>{
+ const paths=[];const h=harness(async path=>{paths.push(path);return path==='session'?{authenticated:false,cloud:true}:{};});
+ try{await h.connection.start();assert.deepEqual(paths,['session','public/snapshot']);assert.equal(h.streams[0].url,'/api/events/public');assert.equal(h.calls.some(c=>c[0]==='SignedOut'),false);}finally{h.connection.stop();}
+});

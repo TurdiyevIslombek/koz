@@ -11,6 +11,7 @@
     "fake-runner": "node server/fake-runner.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "3.1152.0",
     "ajv": "8.20.0",
     "ws": "8.22.0"
   },

@@ -1,5 +1,5 @@
 import http from 'node:http';
-import { randomBytes, createHash, scryptSync, timingSafeEqual } from 'node:crypto';
+import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
 import { readFile, writeFile, appendFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -10,33 +10,53 @@ import { createModel, ingest, liveView, summaryFor, invalidateLive } from '../sr
 
 import { connectRunner } from './runner-link.mjs';
 import { createFakeRunner } from './fake-runner.mjs';
+import {passwordVerifier,requestPolicy,normalizeOrigin} from './security.mjs';
 
 const id=()=>randomBytes(16).toString('hex'),hash=v=>createHash('sha256').update(v).digest('hex');
 const root=fileURLToPath(new URL('../',import.meta.url));
-export async function createApplication({password='',dataDir=resolve(root,'.data'),persist=true,localRunnerUrl=null,localAccess=false,retryMs=1000}={}){
+export async function createApplication({password='',dataDir=resolve(root,'.data'),persist=true,localRunnerUrl=null,localAccess=false,retryMs=1000,publicOrigin=null,storage=null}={}){
+ if(publicOrigin){normalizeOrigin(publicOrigin);if(localAccess||localRunnerUrl||!password)throw Error('Cloud mode requires owner authentication and inbound runner transport');}
+ const cloud=Boolean(publicOrigin);
  const realModel=createModel(),sessions=new Map(),subscribers=new Set(),attempts=new Map();
  let model=realModel,realSaved=[],fake=null,link=null,closing=false;
- let transport={mode:localRunnerUrl?'local':'inbound',url:localRunnerUrl,state:'disconnected',source:'runner',replayOwned:false};
+ let transport={mode:cloud?'cloud':localRunnerUrl?'local':'inbound',url:localRunnerUrl,state:'disconnected',source:'runner',replayOwned:false};
  let runner=null,runnerSession=null,tokenHash=null,saved=[],commandTimer=null,activeTrial=null;
  const subscriberSessions=new Map();
- const passwordSalt=randomBytes(16),passwordHash=password?scryptSync(password,passwordSalt,32):null;
+ const verifier=passwordVerifier(password);password=undefined;
+ let publication=null,storageIncomplete=false,historyCursor=null,summariesCursor=null;
+ const publicClients=new Set();
  const historyFile=resolve(dataDir,'events.ndjson'),metaFile=resolve(dataDir,'owner.json');
- if(persist){await mkdir(dataDir,{recursive:true,mode:0o700});try{const meta=JSON.parse(await readFile(metaFile,'utf8'));tokenHash=meta.tokenHash||null;saved=meta.saved||[];}catch{}try{for(const line of (await readFile(historyFile,'utf8')).split('\n').filter(Boolean)){const row=JSON.parse(line);if(row.expiresAt>Date.now())ingest(model,row.event,row.receivedAt);}}catch{}}
+ if(storage){const loaded=await storage.load();tokenHash=loaded.meta?.tokenHash||null;saved=loaded.meta?.saved||[];publication=loaded.meta?.publication||null;storageIncomplete=Boolean(loaded.meta?.storageIncomplete||loaded.meta?.cleanShutdown===false);historyCursor=loaded.historyCursor;summariesCursor=loaded.summariesCursor;for(const row of loaded.events||[])if(row.expiresAt>Date.now())ingest(model,row.event,row.receivedAt);await storage.disconnected();await storage.saveMeta({tokenHash,publication,storageIncomplete,cleanShutdown:false});}
+ else if(persist){await mkdir(dataDir,{recursive:true,mode:0o700});try{const meta=JSON.parse(await readFile(metaFile,'utf8'));tokenHash=meta.tokenHash||null;saved=meta.saved||[];publication=meta.publication||null;}catch{}try{for(const line of (await readFile(historyFile,'utf8')).split('\n').filter(Boolean)){const row=JSON.parse(line);if(row.expiresAt>Date.now())ingest(model,row.event,row.receivedAt);}}catch{}}
  realSaved=saved;
  // A persisted old heartbeat never reconnects a device after a web restart.
  model.statusAt=0;
- let persistence=Promise.resolve();
- const persistMeta=async()=>{if(model!==realModel)return;realSaved=saved;if(persist){const content=JSON.stringify({tokenHash,saved});persistence=persistence.catch(()=>{}).then(()=>writeFile(metaFile,content,{mode:0o600}));await persistence;}};
- const broadcast=packet=>{for(const response of subscribers)response.write(`data: ${JSON.stringify(packet)}\n\n`);};
+ let persistence=Promise.resolve(),queued=0;
+ const selected=event=>Boolean(publication&&event&&event.session_id===publication.session_id&&event.job_id===publication.job_id);
+ const publicEvent=event=>selected(event)&&event.type!=='command_result';
+ const publicTransport=()=>({...transport,state:selected(model.status)?transport.state:'disconnected'});
+ const writePacket=(response,packet)=>{if(!response.write(`data: ${JSON.stringify(packet)}\n\n`))response.destroy();};
+ const broadcast=packet=>{for(const response of subscribers)writePacket(response,packet);for(const response of publicClients){
+  if(packet.reset)writePacket(response,{reset:true});
+  else if(packet.event){if(publicEvent(packet.event))writePacket(response,selected(model.status)&&transport.state==='connected'?{event:packet.event,receivedAt:packet.receivedAt,transport:publicTransport()}:{reset:true});}
+  else if(packet.transport||packet.storageIncomplete)writePacket(response,{...(packet.storageIncomplete?{storageIncomplete:true}:{}),...(packet.transport?{transport:publicTransport()}:{})});
+ }};
+ const storageFailed=()=>{storageIncomplete=true;broadcast({storageIncomplete:true});};
+ const enqueue=operation=>{if(queued>=100){storageFailed();return Promise.reject(new ContractError('BUSY'));}queued++;const result=persistence.catch(()=>{}).then(operation);persistence=result.catch(storageFailed).finally(()=>queued--);return result;};
+ const persistMeta=async()=>{if(model!==realModel)return;realSaved=saved;const meta={tokenHash,publication,storageIncomplete,cleanShutdown:false};if(storage)await enqueue(()=>storage.saveMeta(meta));else if(persist)await enqueue(()=>writeFile(metaFile,JSON.stringify({...meta,saved}),{mode:0o600}));};
+ const compact=()=>{if(!cloud)return;const anchors=model.events.filter(r=>[model.recipe,model.fault].includes(r.event));model.events=[...new Set([...anchors,...model.events.slice(-998)])];if(model.seen.size>4000)model.seen=new Set([...model.seen].slice(-2000));if(model.highest.size>100)model.highest=new Map([...model.highest].slice(-100));};
+ compact();
  const receive=event=>{
   const at=Date.now(),prior=model.status;
   const unchanged=event.type==='status'&&prior?.session_id===event.session_id&&prior?.job_id===event.job_id&&prior?.trial_id===event.trial_id&&prior?.revision===event.revision&&JSON.stringify(prior.data)===JSON.stringify(event.data);
   if(!ingest(model,event,at))return;
   if(unchanged)model.events=model.events.filter(r=>r.event!==event);
-  if(persist&&model===realModel&&!unchanged){const row=model.events.find(r=>r.event===event);if(row)persistence=persistence.then(()=>appendFile(historyFile,JSON.stringify({...row,receivedAt:Math.floor(at/60000)*60000})+'\n',{mode:0o600})).catch(()=>broadcast({error:'INTERNAL_ERROR'}));}
+  if(model===realModel&&!unchanged){const row=model.events.find(r=>r.event===event);if(row){if(storage)enqueue(()=>storage.append({...row,incomplete:storageIncomplete})).catch(()=>{});else if(persist)enqueue(()=>appendFile(historyFile,JSON.stringify({...row,receivedAt:Math.floor(at/60000)*60000})+'\n',{mode:0o600})).catch(()=>{});}}
+  compact();
   if(event.type==='status'&&!event.trial_id&&['idle','running'].includes(event.data.state))activeTrial=null;
   if(event.type==='command_result'&&event.data.result==='rejected'&&model.pending?.command==='begin_trial')activeTrial=null;
   if(event.type==='status'&&model.status===event)transport={...transport,state:'connected'};
+  if(event.type==='status'&&model.status===event&&selected(prior)&&!selected(event))for(const response of publicClients)writePacket(response,{reset:true});
   broadcast({event,receivedAt:at,activeTrial,transport});
  };
  const json=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
@@ -45,32 +65,50 @@ export async function createApplication({password='',dataDir=resolve(root,'.data
  const server=http.createServer(async(req,res)=>{
   res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');
   const url=new URL(req.url,'http://localhost');
-  if(!['localhost','127.0.0.1','[::1]'].includes((req.headers.host||'').replace(/:\d+$/,'')))return json(res,403,{code:'AUTH_REQUIRED'});
+  const policy=requestPolicy(req,publicOrigin);
+  if(!policy.allowed)return json(res,403,{code:'AUTH_REQUIRED'});
+  const cookie=(token,maxAge)=>`koz_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}${cloud?'; Secure':''}`;
   try{
    if(url.pathname.startsWith('/api/')){
-    if(req.headers['sec-fetch-site']==='cross-site'||req.method!=='GET'&&req.headers.origin&&req.headers.origin!==`http://${req.headers.host}`)return json(res,403,{code:'AUTH_REQUIRED'});
-    if(url.pathname==='/api/health'&&req.method==='GET')return json(res,200,{service:'koz-web',workspace:hash(resolve(root))});
+    if(!policy.originOK)return json(res,403,{code:'AUTH_REQUIRED'});
+    if(url.pathname==='/api/health'&&req.method==='GET')return json(res,200,{service:'koz-web',...(cloud?{mode:'cloud',storage:storage?.kind||'ndjson'}:{workspace:hash(resolve(root))})});
     if(url.pathname==='/api/session'&&req.method==='GET'){
-     if(localAccess&&!passwordHash&&!authenticated(req)){const session=randomBytes(32).toString('hex');sessions.set(session,Date.now()+8*3600000);res.setHeader('Set-Cookie',`koz_session=${session}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800`);return json(res,200,{authenticated:true,configured:false,transport});}
-     return json(res,200,{authenticated:Boolean(authenticated(req)),configured:Boolean(passwordHash),transport});
+     if(localAccess&&!verifier.configured&&!authenticated(req)){const session=randomBytes(32).toString('hex');sessions.set(session,Date.now()+8*3600000);res.setHeader('Set-Cookie',cookie(session,28800));return json(res,200,{authenticated:true,configured:false,transport});}
+     return json(res,200,{authenticated:Boolean(authenticated(req)),configured:verifier.configured,cloud,transport:authenticated(req)?transport:cloud?publicTransport():transport});
     }
     if(url.pathname==='/api/login'&&req.method==='POST'){
      const key=req.socket.remoteAddress,rate=attempts.get(key)||{count:0,until:Date.now()+300000};
      if(rate.until<Date.now()){rate.count=0;rate.until=Date.now()+300000;}rate.count++;attempts.set(key,rate);
      const data=await body(req);
      if(!data||typeof data!=='object')return json(res,401,{code:'AUTH_REQUIRED'});
-     if(rate.count>8||!passwordHash||typeof data.password!=='string'||data.password.length>256||Object.keys(data).length!==1||!timingSafeEqual(passwordHash,scryptSync(data.password,passwordSalt,32)))return json(res,401,{code:'AUTH_REQUIRED'});
-     attempts.delete(key);const session=randomBytes(32).toString('hex');sessions.set(session,Date.now()+8*3600000);res.setHeader('Set-Cookie',`koz_session=${session}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800`);return json(res,200,{ok:true});
+     if(rate.count>8||Object.keys(data).length!==1||!verifier.verify(data.password))return json(res,401,{code:'AUTH_REQUIRED'});
+     attempts.delete(key);const session=randomBytes(32).toString('hex');sessions.set(session,Date.now()+8*3600000);res.setHeader('Set-Cookie',cookie(session,28800));return json(res,200,{ok:true});
+    }
+    if(cloud&&url.pathname==='/api/public/snapshot'&&req.method==='GET')return json(res,200,{
+     events:[...model.events.filter(r=>r.expiresAt>Date.now()&&publicEvent(r.event)&&r.event!==model.status),...(selected(model.status)&&model.statusAt>0?[{event:model.status,receivedAt:model.statusAt}]:[])],statusAt:selected(model.status)?model.statusAt:0,pending:null,activeTrial:null,
+     saved:saved.filter(s=>publication?.summary_ids.includes(s.trial_id)),transport:publicTransport(),published:Boolean(publication),storageIncomplete});
+    if(cloud&&url.pathname==='/api/events/public'&&req.method==='GET'){
+     if(publicClients.size>=40)return json(res,503,{code:'BUSY'});
+     res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-store','Connection':'keep-alive','X-Accel-Buffering':'no'});res.write(': connected\n\n');publicClients.add(res);req.on('close',()=>publicClients.delete(res));return;
     }
     if(!authenticated(req))return json(res,401,{code:'AUTH_REQUIRED'});
-    if(url.pathname==='/api/logout'&&req.method==='POST'){sessions.clear();for(const client of subscribers)client.end();subscribers.clear();res.setHeader('Set-Cookie','koz_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');return json(res,200,{ok:true});}
+    if(url.pathname==='/api/logout'&&req.method==='POST'){sessions.clear();for(const client of subscribers)client.end();subscribers.clear();res.setHeader('Set-Cookie',cookie('',0));return json(res,200,{ok:true});}
+    if(cloud&&url.pathname==='/api/publication'&&req.method==='POST'){
+     const data=await body(req);
+     if(data!==null&&(!data||Object.keys(data).sort().join(',')!=='job_id,session_id,summary_ids'||!Array.isArray(data.summary_ids)||data.summary_ids.length>100||new Set(data.summary_ids).size!==data.summary_ids.length||!data.summary_ids.every(trial=>saved.some(s=>s.trial_id===trial))||!model.events.some(r=>r.expiresAt>Date.now()&&r.event.job_id&&r.event.job_id===data.job_id&&r.event.session_id===data.session_id)))throw new ContractError('INVALID_COMMAND');
+     const previous=publication;publication=data;try{await persistMeta();}catch(error){publication=previous;throw error;}broadcast({reset:true});return json(res,200,{publication});
+    }
+    if(storage&&req.method==='GET'&&url.pathname==='/api/history')return json(res,200,await storage.history({session:url.searchParams.get('session')||undefined,cursor:url.searchParams.get('cursor'),limit:Number(url.searchParams.get('limit')||100)}));
+    if(storage&&req.method==='GET'&&url.pathname==='/api/totals')return json(res,200,await storage.totals({date:url.searchParams.get('date')||undefined,cursor:url.searchParams.get('cursor')}));
+    if(storage&&req.method==='GET'&&url.pathname==='/api/summaries')return json(res,200,await storage.summaries({cursor:url.searchParams.get('cursor')}));
     if(url.pathname==='/api/snapshot'&&req.method==='GET'){
      const rows=model.events.filter(r=>r.expiresAt>Date.now());
      const latest=model.status&&model.statusAt>0&&{event:model.status,receivedAt:model.statusAt};
-     return json(res,200,{events:latest?[...rows.filter(r=>r.event!==model.status),latest]:rows,pending:model.pending,statusAt:model.statusAt,activeTrial,saved,transport});
+     return json(res,200,{events:latest?[...rows.filter(r=>r.event!==model.status),latest]:rows,pending:model.pending,statusAt:model.statusAt,activeTrial,saved,transport,publication,storageIncomplete,historyCursor,summariesCursor});
     }
     if(url.pathname==='/api/events'&&req.method==='GET'){
-     res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-store','Connection':'keep-alive'});res.write(': connected\n\n');subscribers.add(res);subscriberSessions.set(res,sessions.get((req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith('koz_session='))?.slice(12)));req.on('close',()=>{subscribers.delete(res);subscriberSessions.delete(res);});return;
+     if(subscribers.size>=10)return json(res,503,{code:'BUSY'});
+     res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-store','Connection':'keep-alive','X-Accel-Buffering':'no'});res.write(': connected\n\n');subscribers.add(res);subscriberSessions.set(res,sessions.get((req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith('koz_session='))?.slice(12)));req.on('close',()=>{subscribers.delete(res);subscriberSessions.delete(res);});return;
     }
     if(url.pathname==='/api/replay'&&req.method==='POST'){
      if(!localRunnerUrl)throw new ContractError('INVALID_COMMAND');
@@ -81,7 +119,7 @@ export async function createApplication({password='',dataDir=resolve(root,'.data
     }
     if(url.pathname==='/api/runner-token'&&req.method==='POST'){
      if(localRunnerUrl)throw new ContractError('INVALID_COMMAND');
-     const token=randomBytes(32).toString('hex');tokenHash=hash(token);runner?.close(1008,'AUTH_REQUIRED');runner=null;runnerSession=null;await persistMeta();return json(res,200,{token});
+     const token=randomBytes(32).toString('hex');tokenHash=hash(token);runner?.close(1008,'AUTH_REQUIRED');runner=null;runnerSession=null;disconnected();await persistMeta();return json(res,200,{token});
     }
     if(url.pathname==='/api/commands'&&req.method==='POST'){
      const input=await body(req);
@@ -101,9 +139,9 @@ export async function createApplication({password='',dataDir=resolve(root,'.data
     if(url.pathname==='/api/summaries'&&req.method==='POST'){
      const data=await body(req);if(!data||Object.keys(data).join(',')!=='trial_id')throw new ContractError('INVALID_COMMAND');
      const record=model.events.find(r=>r.event.type==='trial_result'&&r.event.trial_id===data.trial_id&&r.expiresAt>Date.now());if(!record)throw new ContractError('INVALID_COMMAND');
-     const summary=summaryFor(record.event);if(!saved.some(s=>s.trial_id===summary.trial_id))saved.push(summary);await persistMeta();return json(res,200,{saved});
+     const summary=summaryFor(record.event);if(storageIncomplete)summary.evidence='incomplete';if(storage)await enqueue(()=>storage.saveSummary(summary));if(!saved.some(s=>s.trial_id===summary.trial_id))saved.push(summary);if(cloud)saved=[...new Set([...saved.filter(s=>publication?.summary_ids.includes(s.trial_id)),...saved.slice(-100)])];await persistMeta();return json(res,200,{saved});
     }
-    if(url.pathname.startsWith('/api/summaries/')&&req.method==='DELETE'){const trial=url.pathname.slice(15);if(!/^[a-f0-9]{32}$/.test(trial))throw new ContractError('INVALID_COMMAND');saved=saved.filter(s=>s.trial_id!==trial);await persistMeta();return json(res,200,{saved});}
+    if(url.pathname.startsWith('/api/summaries/')&&req.method==='DELETE'){const trial=url.pathname.slice(15);if(!/^[a-f0-9]{32}$/.test(trial))throw new ContractError('INVALID_COMMAND');if(storage)await enqueue(()=>storage.deleteSummary(trial));saved=saved.filter(s=>s.trial_id!==trial);await persistMeta();broadcast({reset:true});return json(res,200,{saved});}
     return json(res,404,{code:'INVALID_COMMAND'});
    }
    if(req.method!=='GET'&&req.method!=='HEAD')return json(res,405,{code:'INVALID_COMMAND'});
@@ -116,6 +154,7 @@ export async function createApplication({password='',dataDir=resolve(root,'.data
  });
  function disconnected(){
   if(closing)return;
+  if(storage)enqueue(()=>storage.disconnected()).catch(()=>{});
   invalidateLive(model);clearTimeout(commandTimer);
   transport={...transport,state:'disconnected'};broadcast({transport});
  }
@@ -139,20 +178,22 @@ export async function createApplication({password='',dataDir=resolve(root,'.data
  const wss=new WebSocketServer({noServer:true,maxPayload:32768,perMessageDeflate:false});
  server.on('upgrade',(req,socket,head)=>{
   const supplied=req.headers.authorization?.startsWith('Bearer ')?req.headers.authorization.slice(7):'';
-  if(localRunnerUrl||req.url!=='/v1/runner'||!supplied||!tokenHash||!timingSafeEqual(Buffer.from(tokenHash,'hex'),Buffer.from(hash(supplied),'hex'))){socket.end('HTTP/1.1 401 Unauthorized\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{"code":"AUTH_REQUIRED"}');return;}
+  if(!requestPolicy(req,publicOrigin).allowed||req.headers.origin||localRunnerUrl||req.url!=='/v1/runner'||!supplied||!tokenHash||!timingSafeEqual(Buffer.from(tokenHash,'hex'),Buffer.from(hash(supplied),'hex'))){socket.end('HTTP/1.1 401 Unauthorized\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{"code":"AUTH_REQUIRED"}');return;}
   wss.handleUpgrade(req,socket,head,ws=>attachRunner(ws));
  });
  if(localRunnerUrl)link=connectRunner({url:localRunnerUrl,onSocket:attachRunner,onWaiting:disconnected,retryMs});
  const freshness=setInterval(()=>{
-  if(transport.state==='connected'&&liveView(model).offline){invalidateLive(model);transport={...transport,state:'waiting'};broadcast({transport});}
+  if(transport.state==='connected'&&liveView(model).offline){if(storage)enqueue(()=>storage.disconnected()).catch(()=>{});invalidateLive(model);transport={...transport,state:'waiting'};broadcast({transport});}
  },250);freshness.unref();
  const maintenance=setInterval(()=>{
   for(const [session,expires]of sessions)if(expires<Date.now())sessions.delete(session);
   const before=realModel.events.length;realModel.events=realModel.events.filter(r=>r.expiresAt>Date.now());if(model!==realModel)model.events=model.events.filter(r=>r.expiresAt>Date.now());
-  if(persist&&before!==realModel.events.length)persistence=persistence.then(()=>writeFile(historyFile,realModel.events.map(r=>JSON.stringify({...r,receivedAt:Math.floor(r.receivedAt/60000)*60000})).join('\n')+'\n',{mode:0o600})).catch(()=>broadcast({error:'INTERNAL_ERROR'}));
+  if(!storage&&persist&&before!==realModel.events.length)enqueue(()=>writeFile(historyFile,realModel.events.map(r=>JSON.stringify({...r,receivedAt:Math.floor(r.receivedAt/60000)*60000})).join('\n')+'\n',{mode:0o600})).catch(()=>{});
+  for(const [key,rate]of attempts)if(rate.until<Date.now())attempts.delete(key);
+  for(const res of publicClients)if(!res.write(': heartbeat\n\n'))res.destroy();
   for(const res of subscribers){if(subscriberSessions.get(res)<Date.now()){res.end();subscribers.delete(res);subscriberSessions.delete(res);}else res.write(': heartbeat\n\n');}
  },30000);maintenance.unref();
- return {server,get model(){return model;},close:async()=>{closing=true;link?.close();await fake?.close();clearInterval(freshness);clearInterval(maintenance);clearTimeout(commandTimer);runner?.terminate();for(const r of subscribers)r.end();wss.close();await persistence;await new Promise(resolve=>server.close(resolve));}};
+ return {server,get model(){return model;},close:async()=>{closing=true;link?.close();await fake?.close();clearInterval(freshness);clearInterval(maintenance);clearTimeout(commandTimer);runner?.terminate();for(const r of [...subscribers,...publicClients])r.end();wss.close();await persistence;if(storage){await storage.disconnected().catch(storageFailed);await storage.saveMeta({tokenHash,publication,storageIncomplete,cleanShutdown:true}).catch(()=>{});storage.close?.();}await new Promise(resolve=>server.close(resolve));}};
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
  const env=resolve(root,'.env');if(existsSync(env))process.loadEnvFile(env);
