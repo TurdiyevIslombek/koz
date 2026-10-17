@@ -16,8 +16,14 @@
 //      backwards becomes a pure spin (judged on the capped values: security review, Oct 16).
 //   4. Speed cap: forward at most speed_cap, backwards at most reverse_cap (the sensor looks forward only).
 //   5. The motors don't turn below about min_pwm, so commands are lifted into min_pwm..255 (as car.ino).
+//   6. The watchdog is a lease (motor safety review MS-4, Oct 16): the motors may run only while
+//      now - last command < watchdog_ms. A command that arrives after the lease ran out trips the
+//      fault first, so it can't revive the motors.
+// Also here: the line parser (review MS-5). Only exact words and "M,<number>,<number>" are commands;
+// a line that is too long or has a strange byte is thrown away whole, up to its end.
 #pragma once
 #include <stdint.h>   // uint32_t: millis() is 32 bits on the Uno; the same on the Mac in tests
+#include <string.h>
 
 enum MotorState { DISARMED = 0, ARMED = 1 };
 enum StopReason { RUNNING = 0, NOT_ARMED = 1, WAITING = 2, WATCHDOG = 3, OBSTACLE = 4, NO_ECHO = 5 };
@@ -62,7 +68,18 @@ struct MotorLogic {
   void disarm() { state = DISARMED; have_command = false; want_left = want_right = 0; }
   void trip(StopReason why) { disarm(); fault = why; reason = why; }
 
+  // The lease ran out: armed, a command was given, and none came for watchdog_ms or more.
+  bool leaseExpired(uint32_t now_ms) const {
+    return state == ARMED && have_command && now_ms - last_command_ms >= s.watchdog_ms;
+  }
+  void expire(uint32_t now_ms) { if (leaseExpired(now_ms)) trip(WATCHDOG); }
+  // True if the loop may block for block_ms (a sonar ping) without overrunning the lease.
+  bool leaseCovers(uint32_t now_ms, uint32_t block_ms) const {
+    return state != ARMED || !have_command || now_ms - last_command_ms + block_ms < s.watchdog_ms;
+  }
+
   void command(int left, int right, uint32_t now_ms) {
+    expire(now_ms);   // a late command can't revive a lease that already ran out (review MS-4)
     want_left = clampInt(left, -255, 255);
     want_right = clampInt(right, -255, 255);
     last_command_ms = now_ms;
@@ -87,7 +104,7 @@ struct MotorLogic {
     *pwm_left = *pwm_right = 0;
     if (state != ARMED) { reason = fault != RUNNING ? fault : NOT_ARMED; return; }
     if (!have_command) { reason = WAITING; return; }
-    if (now_ms - last_command_ms > s.watchdog_ms) { trip(WATCHDOG); return; }
+    if (leaseExpired(now_ms)) { trip(WATCHDOG); return; }
     int left = clampInt(want_left, -s.reverse_cap, s.speed_cap);
     int right = clampInt(want_right, -s.reverse_cap, s.speed_cap);
     bool blind = missing_echoes >= s.missing_echoes_block || distance_cm < 0;
@@ -107,6 +124,67 @@ struct MotorLogic {
     *pwm_left = liftToPwm(left, s.min_pwm);
     *pwm_right = liftToPwm(right, s.min_pwm);
     reason = RUNNING;
+  }
+};
+
+// --- the laptop's lines (review MS-5) ----------------------------------------------------------------
+enum CommandKind { CMD_NONE, CMD_ARM, CMD_DISARM, CMD_STOP, CMD_MOVE };
+struct Command { CommandKind kind; int left, right; };
+
+// An optional '-' and 1 to 4 digits, nothing else (the logic caps the value to -255..255).
+inline bool parseNumber(const char*& p, int* out) {
+  bool negative = *p == '-';
+  if (negative) p++;
+  int digits = 0, value = 0;
+  while (*p >= '0' && *p <= '9') {
+    if (++digits > 4) return false;
+    value = value * 10 + (*p - '0');
+    p++;
+  }
+  if (digits == 0) return false;
+  *out = negative ? -value : value;
+  return true;
+}
+
+// "ARM", "DISARM", "STOP" or "M,<left>,<right>", exactly; anything else is CMD_NONE.
+inline Command parseCommand(const char* line) {
+  Command c = {CMD_NONE, 0, 0};
+  if (strcmp(line, "ARM") == 0) c.kind = CMD_ARM;
+  else if (strcmp(line, "DISARM") == 0) c.kind = CMD_DISARM;
+  else if (strcmp(line, "STOP") == 0) c.kind = CMD_STOP;
+  else if (line[0] == 'M' && line[1] == ',') {
+    const char* p = line + 2;
+    int left, right;
+    if (!parseNumber(p, &left) || *p++ != ',') return c;
+    if (!parseNumber(p, &right) || *p != 0) return c;
+    c.kind = CMD_MOVE;
+    c.left = left;
+    c.right = right;
+  }
+  return c;
+}
+
+// Collects one line at a time. A line longer than SIZE - 1, or with a byte that isn't printable ASCII
+// (a NUL, noise on the wire), is thrown away whole, up to its CR or LF: never its tail as a command.
+struct LineReader {
+  static const int SIZE = 32;
+  char buf[SIZE];
+  int len;
+  bool bad;
+  LineReader() : len(0), bad(false) { buf[0] = 0; }
+  // True when a complete, good line is in buf (until the next feed).
+  bool feed(int ch) {
+    if (ch == '\n' || ch == '\r') {
+      bool good = !bad && len > 0;
+      buf[len] = 0;
+      len = 0;
+      bad = false;
+      return good;
+    }
+    if (bad) return false;
+    if (len >= SIZE - 1 || ch < 32 || ch > 126) { bad = true; return false; }
+    buf[len++] = (char)ch;
+    return false;
   }
 };
 

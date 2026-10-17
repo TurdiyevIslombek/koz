@@ -3,6 +3,7 @@
 // Run by tests/test_firmware.py. Prints "all N checks passed" or the first failing check.
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include "../motor_listener/motor_logic.h"
 
 static int checks = 0;
@@ -33,14 +34,15 @@ int main() {
     CHECK(l == liftToPwm(100, 80) && r == liftToPwm(50, 80));
     CHECK(l == 80 + 100 * 175 / 255);
   }
-  {  // 3. watchdog: commands stop for more than 250 ms -> fault, disarmed, stays off until ARM
+  {  // 3. watchdog: no command for 250 ms -> fault, disarmed, stays off until ARM
+     //    (the lease ends AT 250 ms: motor safety review MS-4; it used to allow exactly 250)
     MotorLogic m(settings());
     m.echo(200);
     m.arm();
     m.command(100, 100, 1000);
-    out(m, 1250, l, r);
+    out(m, 1249, l, r);
     CHECK(l > 0 && r > 0);
-    out(m, 1251, l, r);
+    out(m, 1250, l, r);
     CHECK(l == 0 && r == 0 && m.reason == WATCHDOG && m.state == DISARMED && m.fault == WATCHDOG);
     m.command(100, 100, 1300);                               // a new command doesn't re-arm
     out(m, 1301, l, r);
@@ -147,6 +149,47 @@ int main() {
     m.command(100, 100, 0);
     out(m, 1, l, r);
     CHECK(l == 0 && r == 0 && m.reason == NO_ECHO);
+  }
+  {  // 11. review MS-4: a command after the lease ran out trips first; it can't revive the motors
+    MotorLogic m(settings());
+    m.echo(200);
+    m.arm();
+    m.command(100, 100, 0);
+    CHECK(m.leaseCovers(0, 26) && m.leaseCovers(223, 26) && !m.leaseCovers(224, 26));
+    m.command(100, 100, 250);                                // late: was waiting in the serial buffer
+    out(m, 250, l, r);
+    CHECK(l == 0 && m.state == DISARMED && m.fault == WATCHDOG);
+    CHECK(m.leaseCovers(5000, 26));                          // disarmed: no lease to protect
+  }
+  {  // 12. review MS-5: exact commands only
+    Command c = parseCommand("M,-60,250");
+    CHECK(c.kind == CMD_MOVE && c.left == -60 && c.right == 250);
+    CHECK(parseCommand("ARM").kind == CMD_ARM && parseCommand("DISARM").kind == CMD_DISARM);
+    CHECK(parseCommand("STOP").kind == CMD_STOP);
+    const char* bad[] = {"", "M,", "M,1", "M,1,", "M,,1", "M,1,2,3", "M,1x,2", "M,1,2x", "M,+1,2", "M,--1,2",
+                         "M,12345,1", "M, 1,2", "ARM ", "ARMED", "arm", "STOP1", "X,1,2", "M;1;2"};
+    for (const char* line : bad) CHECK(parseCommand(line).kind == CMD_NONE);
+  }
+  {  // 13. review MS-5: a line too long, or with a strange byte, is thrown away whole
+    LineReader reader;
+    int good = 0;
+    char last[32] = "";
+    auto feed = [&](const char* text, int n) {
+      for (int i = 0; i < n; i++) if (reader.feed(text[i])) { good++; strcpy(last, reader.buf); }
+    };
+    feed("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxARM\n", 36);       // 32 x + ARM: dropped, not "ARM"
+    CHECK(good == 0);
+    feed("ARM\r\n", 5);
+    CHECK(good == 1 && strcmp(last, "ARM") == 0);
+    feed("M,1,1\0X\n", 8);                                   // an embedded NUL: dropped
+    CHECK(good == 1);
+    feed("STOP\n", 5);
+    CHECK(good == 2 && strcmp(last, "STOP") == 0);
+    char longest[32];
+    memset(longest, '9', 31);
+    longest[31] = '\n';
+    feed(longest, 32);                                       // exactly 31 characters still fit
+    CHECK(good == 3 && strlen(last) == 31);
   }
   std::printf("all %d checks passed\n", checks);
   return 0;

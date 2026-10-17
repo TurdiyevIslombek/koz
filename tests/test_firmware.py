@@ -21,6 +21,19 @@ def test_motor_safety_rules_pass_on_the_mac(tmp_path):
     assert ran.returncode == 0 and "checks passed" in ran.stdout, ran.stdout
 
 
+@pytest.mark.skipif(shutil.which("clang++") is None, reason="needs clang++")
+def test_the_sketch_itself_keeps_the_watchdog_and_reads_only_exact_lines(tmp_path):
+    """The real motor_listener.ino on a fake Arduino (firmware/tests/test_sketch.cpp): motor safety
+    review MS-4 (off within 250 ms of the last command, also while the sonar blocks) and MS-5."""
+    binary = tmp_path / "test_sketch"
+    built = subprocess.run(["clang++", "-std=c++17", "-Wall", "-Wextra", "-Werror", "-I",
+                            str(FIRMWARE / "tests" / "stubs"), "-o", str(binary),
+                            str(FIRMWARE / "tests" / "test_sketch.cpp")], capture_output=True, text=True)
+    assert built.returncode == 0, built.stderr
+    ran = subprocess.run([str(binary)], capture_output=True, text=True, timeout=30)
+    assert ran.returncode == 0 and "sketch checks passed" in ran.stdout, ran.stdout
+
+
 @pytest.mark.skipif(not ARDUINO_CLI.exists(), reason="needs tools/bin/arduino-cli")
 @pytest.mark.parametrize("sketch", ["motor_listener", "stop_test"])
 def test_sketch_compiles_for_the_uno(sketch, tmp_path):

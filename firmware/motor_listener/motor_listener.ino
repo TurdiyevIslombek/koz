@@ -11,6 +11,8 @@
 //   STOP       motors off now (stays armed)
 // Faults (WATCHDOG, OBSTACLE, NO_ECHO: see motor_logic.h) disarm; only a new ARM enables the motors.
 //
+// Commands are exact lines (motor_logic.h: parseCommand); anything else is ignored.
+//
 // The numbers marked MEASURE come from firmware/stop_test (see its README). Until they are
 // measured, these defaults are deliberately slow and careful.
 #include <Servo.h>
@@ -34,10 +36,12 @@ MotorLogic logic(settings);
 Servo servo;
 
 const unsigned long PING_EVERY_MS = 50;
+const unsigned long PING_TIMEOUT_US = 25000UL;   // no echo within 25 ms (~4 m): nothing there
+const uint32_t PING_BLOCK_MS = 26;               // the longest a ping can hold up the loop
 const unsigned long REPORT_EVERY_MS = 100;
+const int SERIAL_BYTES_PER_LOOP = 64;            // a flood of bytes can't keep the loop from the watchdog
 unsigned long lastPing = 0, lastReport = 0;
-char line[32];
-byte lineLen = 0;
+LineReader reader;
 
 int readCm() {                            // 0 = no echo (nothing within ~4 m, or the sensor failed)
   digitalWrite(TRIG, LOW);
@@ -45,7 +49,7 @@ int readCm() {                            // 0 = no echo (nothing within ~4 m, o
   digitalWrite(TRIG, HIGH);
   delayMicroseconds(10);
   digitalWrite(TRIG, LOW);
-  unsigned long us = pulseIn(ECHO, HIGH, 25000UL);
+  unsigned long us = pulseIn(ECHO, HIGH, PING_TIMEOUT_US);
   if (us == 0) return 0;
   unsigned long cm = us / 58;
   return cm > 400 ? 400 : (int)cm;
@@ -64,32 +68,17 @@ void applyMotors() {
   setSide(ENB, IN3, IN4, right);
 }
 
-void handleLine() {
-  if (strcmp(line, "ARM") == 0) logic.arm();
-  else if (strcmp(line, "DISARM") == 0) logic.disarm();
-  else if (strcmp(line, "STOP") == 0) logic.command(0, 0, millis());
-  else if (line[0] == 'M' && line[1] == ',') {
-    char* comma = strchr(line + 2, ',');
-    if (!comma) return;
-    *comma = 0;
-    logic.command(atoi(line + 2), atoi(comma + 1), millis());
-  }
+void handleLine(const char* line) {     // exact commands only (motor_logic.h: parseCommand)
+  Command c = parseCommand(line);
+  if (c.kind == CMD_ARM) logic.arm();
+  else if (c.kind == CMD_DISARM) logic.disarm();
+  else if (c.kind == CMD_STOP) logic.command(0, 0, millis());
+  else if (c.kind == CMD_MOVE) logic.command(c.left, c.right, millis());
 }
 
 void readSerial() {
-  while (Serial.available()) {
-    char ch = Serial.read();
-    if (ch == '\n' || ch == '\r') {
-      if (lineLen > 0) {
-        line[lineLen] = 0;
-        handleLine();
-      }
-      lineLen = 0;
-    } else if (lineLen < sizeof(line) - 1) {
-      line[lineLen++] = ch;
-    } else {
-      lineLen = 0;                       // too long: not a command; drop it
-    }
+  for (int n = 0; n < SERIAL_BYTES_PER_LOOP && Serial.available(); n++) {
+    if (reader.feed(Serial.read())) handleLine(reader.buf);
   }
 }
 
@@ -106,13 +95,20 @@ void setup() {
   Serial.println("READY");
 }
 
+// The motor deadline is checked first, after every piece of work, and a ping (which blocks for up to
+// 26 ms) only starts if the motors' lease covers it; otherwise it waits for the next command. So the
+// motors stop at most 250 ms after the last command (review MS-4).
 void loop() {
-  readSerial();
-  if (millis() - lastPing >= PING_EVERY_MS) {
-    lastPing = millis();
-    logic.echo(readCm());
-  }
+  logic.expire(millis());
   applyMotors();
+  readSerial();
+  applyMotors();
+  uint32_t now = millis();
+  if (now - lastPing >= PING_EVERY_MS && logic.leaseCovers(now, PING_BLOCK_MS)) {
+    lastPing = now;
+    logic.echo(readCm());
+    applyMotors();                       // the new distance counts at once
+  }
   if (millis() - lastReport >= REPORT_EVERY_MS) {
     lastReport = millis();
     Serial.print("S,");
