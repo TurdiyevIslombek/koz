@@ -287,7 +287,7 @@ of real users' sentences is still needed.
 6 Uzbek Latin, 5 Uzbek Cyrillic, 5 Russian, 4 English; 5 count, 8 find a colour, 7 refuse. Scored with `scripts/score_sentences.py`. Right = the expected kind (count, the
 colour, or any refusal).
 
-**Before any fix (scored first, code as of commit a18f348): 20/20.** But 4 of the 7 refusals were
+**Before any fix (scored first, code as of commit 8e1f96f): 20/20.** But 4 of the 7 refusals were
 not caught by a refusal rule; they were refused only because no job word matched
 (UNSUPPORTED_CAPABILITY). With the rule planner that is still a refusal, but with an AI planner
 (Nebius, Bedrock) these 4 sentences would be sent to the model, which could plan a job:

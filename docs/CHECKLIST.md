@@ -25,7 +25,7 @@ assistant to write the entry is not an agentic workflow, so the report keeps the
 loop and our use of Claude and Codex clearly apart (`AI_LOG.md`).
 
 **Best Use of COOL award:** COOL must run the core vision work on AWS Graviton. Ours runs on the
-owner's computer by design (frames never leave the device), so **not pursued** (C's recommendation; I decides).
+owner's computer by design (frames never leave the device), so **not pursued** (Islombek, Oct 17).
 
 ## Now → Sunday (Oct 17–18)
 
@@ -34,8 +34,8 @@ owner's computer by design (frames never leave the device), so **not pursued** (
 | Fix the 5 motor-safety findings (MS-1…5), tests first | C | Oct 17 | ✅ |
 | Codex re-review: 3 more holes found, fixed with tests | C | Oct 17 | ✅ |
 | Codex confirms those 3 follow-up fixes (its quota ran out at 22:24 Oct 17) | X | Oct 18 morning | ⏳ |
-| Decide: make the repo public, and which author email the history shows | I | Oct 17 | ☐ |
-| Create the public repo and push (after your yes) | C | Oct 17–18 | ☐ |
+| Decide: make the repo public, and which author email the history shows (B: noreply email, personal lines out of every commit) | I | Oct 17 | ✅ |
+| History rewritten (backup in `_backups/`), final file list shown; create the public repo and push after your yes | C | Oct 17–18 | ⏳ |
 | `docs/SUNDAY.md` (a)–(f): portfolio recordings, stop test, motor_listener, 10 chase trials, original back | I | Oct 18 | ☐ |
 | Set `speed_cap` and `stop_cm` from the stop-test lines; write them in TRIALS.md | C | Oct 18 | ☐ |
 | Write the 10 chase trials in TRIALS.md; option B passes at **≥ 7 of 10** | C | Oct 18 | ☐ |
@@ -47,7 +47,7 @@ owner's computer by design (frames never leave the device), so **not pursued** (
 | `web/server/cloud.mjs`, HTTPS origin checks, `/api/health`, Linux build (`.collab/specs/aws-review.md`) | X | Oct 18 | ☐ |
 | DynamoDB storage (or NDJSON, and the report says which) and the 30-day totals | X | Oct 19 | ☐ |
 | Judges' read-only view; cloud Setup privacy line | X | Oct 19 | ☐ |
-| Remove the 3 `~/...` paths in `web/design/references.md` | X | Oct 18 | ☐ |
+| Remove the 3 personal paths in `web/design/references.md` (done in the history rewrite) | C | Oct 17 | ✅ |
 | Option B time box: ≥ 7/10, else switch to option A and say so | I decides, C builds A | Oct 19 | ☐ |
 | `docs/AWS_DAY.md` steps 1–9 ($1 budget first) | I | Oct 19 | ☐ |
 | Bedrock planner score on the 40 sentences (bar 18/20 each) into TRIALS.md | C | Oct 19 | ☐ |
@@ -82,9 +82,8 @@ owner's computer by design (frames never leave the device), so **not pursued** (
 | Keep the endpoint up and the Mac reachable for a screen-share during judging | I | Oct 27 – Nov 9 | ☐ |
 | After judging: delete the stack and the Bedrock key, check billing (`docs/AWS_DAY.md`) | I | Nov 10 | ☐ |
 
-## Questions only you can answer
+## Decisions (Oct 17)
 
-- Did we receive the $150 AWS compute grant? If so, its check-in was Oct 7–14.
-- The repo going public: the author email in all 47 commits is `111496562+TurdiyevIslombek@users.noreply.github.com` (see the
-  final reply of Oct 17 for the options).
-- COOL award: skip (recommended)?
+- Repo: public, option B (history rewritten: GitHub noreply email, personal lines removed from every commit).
+- COOL award: skipped.
+- AWS compute grant: not received, so no check-in was needed.
