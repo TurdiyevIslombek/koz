@@ -68,6 +68,7 @@ _STATUS_PLANNER = _words(*PLANNERS, nullable=True)   # optional status field (co
 # Fixed camera slots (contract 8.1 and 10, Oct 16). The runner's command line binds each to a
 # source; addresses and names never appear in events or commands.
 CAMERA_SLOTS = ("mac_camera", "esp32_cam", "phone_ip_camera")
+SEEN_OBJECTS = ("bed", "toilet", "sink")   # fault.seen: the object that made the privacy guard stop
 
 
 def _camera_slots(v):
@@ -203,6 +204,8 @@ def _consistent(event_type, data, revision):
         return (data["result"] == "accepted") == (data["code"] is None)
     if event_type == "trial_result":
         return data["result"] != "pass" or data["reason"] == "none"
+    if event_type == "fault" and "seen" in data:   # only an object stop of a bedroom or bathroom
+        return data["code"] in ("PRIVATE_BEDROOM", "PRIVATE_BATHROOM")
     return True
 
 
@@ -258,6 +261,8 @@ class EventLog:
             data, spec = {**data, "planner": self.planner}, {**spec, "planner": _STATUS_PLANNER}
         if event_type == "status" and self.cameras is not None and type(data) is dict:
             data, spec = {**data, "cameras": list(self.cameras)}, {**spec, "cameras": _camera_slots}
+        if event_type == "fault" and type(data) is dict and "seen" in data:   # optional (contract 8.6, Oct 18)
+            spec = {**spec, "seen": _words(*SEEN_OBJECTS)}
         if (spec is None or type(data) is not dict or set(data) != set(spec)
                 or not all(spec[name](data[name]) for name in spec)
                 or not _whole(1, 3, nullable=True)(revision)

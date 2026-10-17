@@ -1,8 +1,8 @@
 #!/bin/bash
 # Double-click to start Ko'z: the runner (this Mac's camera) and the web app, together.
-# The browser opens the Setup page: type the job there and watch it run. The numbers show in
-# the browser; the camera view (faces blurred) shows in the "Ko'z runner" window. q in that
-# window stops the job. Nothing is saved or sent.
+# The browser opens the Setup page: type the job there and watch it run. Everything shows in the
+# browser, including the camera view in the eye (faces blurred, this computer only). Nothing is
+# saved or sent. For the car, arming the motors stays here: press Enter in this window.
 # Close this Terminal window, or press Ctrl+C here, to stop both.
 cd "$(dirname "$0")" || exit 1
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
@@ -46,10 +46,14 @@ trap 'stop; exit 0' INT TERM HUP
 trap stop EXIT
 
 # For testing: KOZ_RUNNER_ARGS adds runner options (e.g. "--video clip.mp4" instead of the camera),
-# KOZ_NO_WINDOW=1 hides the camera window, KOZ_NO_BROWSER=1 doesn't open the browser.
-window="--window"
-[ "$KOZ_NO_WINDOW" = "1" ] && window=""
-.venv/bin/python -m koz.server --i-own-this-camera $window $KOZ_RUNNER_ARGS &
+# KOZ_WINDOW=1 also shows the runner's own camera window, KOZ_NO_BROWSER=1 doesn't open the browser.
+window=""
+[ "$KOZ_WINDOW" = "1" ] && window="--window"
+# The runner reads this Terminal (not the empty input a background job gets), so Enter here arms
+# the motors of a car job: a person, at this computer (contract section 3). The web never can.
+tty_in=/dev/null
+[ -t 0 ] && tty_in=/dev/tty
+.venv/bin/python -m koz.server --i-own-this-camera $window $KOZ_RUNNER_ARGS < "$tty_in" &
 runner_pid=$!
 (cd web && exec node server/index.mjs) &
 web_pid=$!

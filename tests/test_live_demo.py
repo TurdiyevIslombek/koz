@@ -113,3 +113,12 @@ def test_start_koz_runs_runner_and_web_together_and_stops_both():
     assert "node server/index.mjs" in text and "#setup" in text
     assert "trap 'stop; exit 0' INT TERM HUP" in text   # closing the Terminal window stops both
     assert "Do not type names" in text
+
+
+def test_start_koz_shows_one_camera_view_and_arms_only_from_its_terminal():
+    """Islombek's UX pass (Oct 18): the eye in the browser is the only camera view by default, and
+    Enter in the launcher's Terminal arms a car's motors (the runner must read that Terminal)."""
+    text = (DEMO.parent.parent / "start-koz.command").read_text()
+    assert 'window=""' in text and '[ "$KOZ_WINDOW" = "1" ] && window="--window"' in text
+    runner = next(line for line in text.splitlines() if "koz.server" in line and not line.lstrip().startswith("#"))
+    assert '< "$tty_in"' in runner and "tty_in=/dev/tty" in text

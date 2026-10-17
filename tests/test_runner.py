@@ -394,3 +394,29 @@ def test_a_failed_block_is_logged_without_its_error_text(test_video, caplog):
     r.run()
     line = [rec.getMessage() for rec in caplog.records if rec.name == "koz.stops"][-1]
     assert r.stop_reason == "BLUR_UNAVAILABLE" and "secret detail" not in line
+
+
+def test_a_privacy_stop_says_what_the_guard_saw():
+    """The web shows the same reason as the runner window (UX pass, Oct 18): an object stop sends
+    fault.seen ("a bed is in view"); a room-model stop has no seen ("this looks like a bedroom")."""
+    from helpers import FULL_FRAME, Approve, EndlessCamera, FakeClock, FakeFaces, Sequence, color_recipe
+
+    from koz.events import EventLog
+    from koz.local_setup import LocalSetup
+    from koz.privacy import PrivacyResult
+    from koz.recipe import check_recipe
+    from koz.runner import Runner
+
+    setup = LocalSetup(owner_confirmed=True, allowed_area=FULL_FRAME)
+    for stop, seen in ((PrivacyResult("blocked", "PRIVATE_BEDROOM", "bed"), "bed"),
+                       (PrivacyResult("blocked", "PRIVATE_BEDROOM"), None)):
+        clock, events = FakeClock(), []
+        runner = Runner(check_recipe(color_recipe()), setup, EndlessCamera(np.full((240, 320, 3), 120, np.uint8), clock),
+                        EventLog(events.append), scene_checker=Sequence(PrivacyResult("approved"), stop),
+                        face_detector=FakeFaces(), clock=clock)
+        assert runner.step()
+        runner._gate._checked_at -= 1
+        assert runner.step() is False and runner.state == "held"
+        fault = next(e["data"] for e in events if e["type"] == "fault")
+        assert fault == ({"code": "PRIVATE_BEDROOM", "effect": "held", "seen": seen} if seen
+                         else {"code": "PRIVATE_BEDROOM", "effect": "held"})

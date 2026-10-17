@@ -22,7 +22,7 @@ from .actions.motors import MotorsAction
 from .blocks import TASK_BLOCKS, FaceBlur, FrameContext, PersonDetector
 from .brains.flybrain.steering import FlyBrainSteering
 from .errors import KozError
-from .events import count_known, count_unknown
+from .events import SEEN_OBJECTS, count_known, count_unknown
 from .privacy import APPROVED, UNKNOWN, GuardCheck, PrivacyGate, PrivateObjects
 from .recipe import CheckedRecipe, check_recipe
 from .scene import PlacesSceneChecker
@@ -205,7 +205,7 @@ class Runner:
             self._observe(UNKNOWN, None, privacy.code)
             return True
         if privacy.state != APPROVED:
-            self._fault(privacy.code, privacy.state)
+            self._fault(privacy.code, privacy.state, seen=privacy.seen)   # seen: "a bed is in view", not just "bedroom"
             return False
         if self.state == "checking":
             self._was_running = True
@@ -271,13 +271,16 @@ class Runner:
             "motion": None, "looming": None, "alert": None, "unknown_reason": reason,
         }, revision=self.revision)
 
-    def _fault(self, code, privacy=None, detail=""):
-        """Stop the job: motors first, then outputs become unknown. "off" if it never ran, "held" if it was running."""
+    def _fault(self, code, privacy=None, detail="", seen=None):
+        """Stop the job: motors first, then outputs become unknown. "off" if it never ran, "held" if it was running.
+        `seen`: the object that made the privacy guard stop (bed, toilet, sink), sent so the web can say so."""
         self._drop_preview()
         self.end_motors()
         self._observe(privacy or self._privacy_state(), None, code)
-        self.events.emit("fault", {"code": code, "effect": "held" if self._was_running else "off"},
-                         revision=self.revision)
+        data = {"code": code, "effect": "held" if self._was_running else "off"}
+        if seen in SEEN_OBJECTS and code in ("PRIVATE_BEDROOM", "PRIVATE_BATHROOM"):
+            data["seen"] = seen
+        self.events.emit("fault", data, revision=self.revision)
         self._stop("held" if self._was_running else "refused", code, detail)
 
     def _pause_motors(self):

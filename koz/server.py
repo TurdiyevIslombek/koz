@@ -617,7 +617,8 @@ def main(argv=None):
         except (KozError, OSError) as error:
             print(f"Ko'z did not start: the motor board can't be reached ({getattr(error, 'code', type(error).__name__)}).")
             return 1
-        print("Motors: disarmed. Arm them by hand: press A in the runner window, or Enter here.", flush=True)
+        print("Motors: disarmed. Arm them by hand: press Enter here"
+              + (" (or A in the runner window)." if args.window else "."), flush=True)
     hub = Hub(setup, open_camera, planner, capabilities=capabilities, report_planner=args.report_planner,
               cameras=cameras, report_cameras=args.report_cameras,
               say=lambda text: print(text, flush=True), motor_link=link)

@@ -22,6 +22,9 @@ Changes since then (both lanes agreed):
 - Oct 17: the web's eye, a live preview for **this computer only** (section 14; Islombek's
   decision). Not an event; never on the cloud link, never stored. Claude wrote it; Codex builds the
   web side from `.collab/specs/web-eye-preview.md` and objects there if something can't work.
+- Oct 18: optional `fault.seen` (section 8.6): which object made the privacy guard stop, so the
+  web says "a bed is in view" like the runner window, not only "bedroom". Islombek's UX pass;
+  Claude owned both lanes for it.
 
 `recipe.schema.json` and this file are the contract together.
 **MVP** = built by Oct 26. **stretch** = only if built; the dashboard must not
@@ -468,6 +471,7 @@ A refusal or a runtime safety stop.
 |---|---|
 | `code` | an error code from section 11 |
 | `effect` | `off` (the job will not run) · `held` (stopped; needs a new start; motors need local re-arm) |
+| `seen` | optional: `bed` · `toilet` · `sink`, only with `PRIVATE_BEDROOM` or `PRIVATE_BATHROOM`, when that object in view (not the room check) made the guard stop |
 
 A scheduled privacy check is not a fault; a BLOCKED or UNKNOWN result is.
 
@@ -478,8 +482,9 @@ A scheduled privacy check is not a fault; a BLOCKED or UNKNOWN result is.
  "data":{"code":"PRIVATE_BATHROOM","effect":"off"}}
 ```
 
-Web: show the fixed message in the owner's language at once; mark live outputs
-unknown; record it on the trial where relevant. Never show exception text,
+Web: show the fixed message in the owner's language at once (with `seen`, name the object);
+mark live outputs unknown; record it on the trial where relevant. Keep showing the reason after a
+later `idle` status of the same job, until a new job starts. Never show exception text,
 rejected input or model output. Store 7 days.
 
 ### 8.7 trial_result
@@ -532,7 +537,8 @@ At most **3 evaluations** per job. Round 1 is the first candidate.
 
 Each round: check the whole candidate → check local setup and safety gates →
 install it → run it on live frames for at most 10 s → send observations → send
-the decision. Safety gates stay on the whole time.
+the decision. Safety gates stay on the whole time. (This runner tries each round for 3 s;
+the web may show a round as a 3-second test.)
 
 - A malformed, forbidden or unsafe proposal stops at once. It is never run
   "to see if it works".

@@ -130,7 +130,7 @@ def test_runner_holds_frames_while_confirming_then_stops(test_video):
                     TickingCamera(FileCamera(test_video, clock=clock), clock, 0.1), EventLog(sent.append),
                     scene_checker=guard, face_detector=faces, clock=clock)
     assert runner.run() == "refused"
-    assert [e["data"] for e in sent if e["type"] == "fault"] == [{"code": "PRIVATE_BEDROOM", "effect": "off"}]
+    assert [e["data"] for e in sent if e["type"] == "fault"] == [{"code": "PRIVATE_BEDROOM", "effect": "off", "seen": "bed"}]   # what it saw (Oct 18)
     assert faces.calls == 0 and guard.checks == 2   # no frame got past the guard
 
 
