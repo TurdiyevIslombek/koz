@@ -12,6 +12,8 @@ const one = (...values) => v => values.includes(v);
 const nullable = test => v => v === null || test(v);
 const id = v => typeof v === 'string' && /^[a-f0-9]{32}$/.test(v);
 const code = one(...CODES);
+export const CAMERA_SLOTS = ['mac_camera','esp32_cam','phone_ip_camera'];
+const cameraSlot = one(...CAMERA_SLOTS);
 const list = (test, min = 0, max = 10) => v => Array.isArray(v) && v.length >= min && v.length <= max && v.every(test);
 const closed = (value, spec, optional = {}) => obj(value) && Object.keys(value).every(k => Object.hasOwn(spec,k) || Object.hasOwn(optional,k)) && Object.entries(spec).every(([k,test]) => Object.hasOwn(value,k) && test(value[k])) && Object.entries(optional).every(([k,test]) => !Object.hasOwn(value,k) || test(value[k]));
 const checks = one('target_visible','target_centered','counts_available','motion_available','privacy_approved');
@@ -73,7 +75,7 @@ const agentChange = v => closed(v,{from_revision:n=>integer(n,1,2),to_revision:n
 const trialResult = d => closed(d,{demo:one('red_ball','classroom','privacy_guard'),index:v=>integer(v,1,10),result:results,basis:one('owner_report'),reason:one('none','missed_target','wrong_direction','count_mismatch','privacy_miss','safety_stop','interrupted','unknown'),expected_count:nullable(integer),observed_count:nullable(isCount),fault_code:nullable(code),evidence:one('complete','incomplete'),agent_changes:list(agentChange,0,2)}) &&
   (d.demo==='classroom'||d.expected_count===null&&d.observed_count===null) && (d.result!=='pass'||d.reason==='none'&&(d.demo==='privacy_guard'||d.observed_count?.state!=='unknown'));
 const specs={
-  status:d=>closed(d,{state:one('idle','planning','checking','evaluating','running','held','refused'),camera_on:v=>typeof v==='boolean',privacy:one('approved','blocked','unknown'),school:v=>typeof v==='boolean',motor:one('not_present','disarmed','enabled','stop_commanded'),opencv_major:one(5,null),capabilities:list(one('rtsp','recorded_fixture','looming','scene_tripwire'),0,4)},{planner:one('rules','ollama','nebius',null)}),
+  status:d=>closed(d,{state:one('idle','planning','checking','evaluating','running','held','refused'),camera_on:v=>typeof v==='boolean',privacy:one('approved','blocked','unknown'),school:v=>typeof v==='boolean',motor:one('not_present','disarmed','enabled','stop_commanded'),opencv_major:one(5,null),capabilities:list(one('rtsp','recorded_fixture','looming','scene_tripwire'),0,4)},{planner:one('rules','ollama','nebius',null),cameras:v=>list(cameraSlot,0,3)(v)&&new Set(v).size===v.length}),
   recipe:(d,e)=>closed(d,{origin:one('planner','import','adjustment'),caused_by:nullable(v=>integer(v,1,Number.MAX_SAFE_INTEGER)),recipe:r=>{try{validateRecipe(r);return true;}catch{return false;}}})&&(d.origin==='adjustment'?d.caused_by!==null:d.caused_by===null),
   observation,decision,
   command_result:d=>closed(d,{command_id:id,result:one('accepted','rejected'),code:nullable(code)})&&(d.result==='accepted'?d.code===null:d.code!==null),
@@ -87,11 +89,12 @@ export function validateEvent(e, now=Date.now()) {
 }
 export const readEvent = (text,now) => validateEvent(parseStrict(text),now);
 export const readRecipe = text => validateRecipe(parseStrict(text,16384,'INVALID_RECIPE'));
-export function validateCommandData(command,data,capabilities=[]) {
+export function validateCommandData(command,data,capabilities=[],cameras=undefined) {
   let valid=false;
   if(command==='start_job') {
-    valid=closed(data,{input:one('prompt'),language:one('uz','ru','en'),text:v=>typeof v==='string'&&Array.from(v.trim()).length>0&&Array.from(v).length<=2000});
-    if(!valid&&closed(data,{input:one('recipe'),recipe:obj})){validateRecipe(data.recipe,capabilities);valid=true;}
+    valid=closed(data,{input:one('prompt'),language:one('uz','ru','en'),text:v=>typeof v==='string'&&Array.from(v.trim()).length>0&&Array.from(v).length<=2000},{camera_id:cameraSlot});
+    if(!valid&&closed(data,{input:one('recipe'),recipe:obj},{camera_id:cameraSlot})){validateRecipe(data.recipe,capabilities);valid=true;}
+    if(valid&&Object.hasOwn(data,'camera_id')&&cameras!==undefined&&!cameras.includes(data.camera_id))fail('UNSUPPORTED_CAPABILITY');
   } else if(command==='stop_job')valid=closed(data,{});
   else if(command==='begin_trial')valid=closed(data,{demo:one('red_ball','classroom','privacy_guard'),index:v=>integer(v,1,10)});
   else if(command==='finish_trial')valid=closed(data,{result:results,reason:one('none','missed_target','wrong_direction','count_mismatch','privacy_miss','safety_stop','interrupted','unknown'),expected_count:nullable(integer)})&&(data.result!=='pass'||data.reason==='none');

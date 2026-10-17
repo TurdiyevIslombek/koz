@@ -1,5 +1,9 @@
 export const languages = ['uz','ru','en'];
 const rows = {
+ cameraChoice:['Kamerani tanlang','Выберите камеру','Choose a camera'],
+ mac_camera:['Shu kompyuter kamerasi','Камера этого компьютера','This computer’s camera'],
+ esp32_cam:['Robot kamerasi (ESP32-CAM)','Камера робота (ESP32-CAM)','Robot camera (ESP32-CAM)'],
+ phone_ip_camera:['Telefon kamerasi','Камера телефона','Phone camera'],
  plannerLabel:['Rejani tuzdi','План составил','Plan by'],
  planner_rules:['qoidalar','правила','rules'],planner_ollama:['Gemma (shu kompyuterda)','Gemma (на этом компьютере)','Gemma (on this computer)'],planner_nebius:['Nemotron (Nebius)','Nemotron (Nebius)','Nemotron (Nebius)'],
  plannerNotReported:['xabar berilmagan','не сообщено','not reported'],plannerUnset:['belgilanmagan','не определено','not determined'],

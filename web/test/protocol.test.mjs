@@ -2,6 +2,24 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import { parseStrict,readRecipe,validateEvent,validateCommandData,CODES,messages,codeMessage } from '../src/protocol.js';
 import { recipeFor,sampleEvidence,known,unknown } from '../src/demo.js';
 const observation=()=>sampleEvidence().find(e=>e.type==='observation');
+test('cameras is an optional unique slot list; addresses, duplicates and unknown fields stay rejected',()=>{
+ const status=()=>sampleEvidence()[0];
+ for(const cameras of [[],['mac_camera'],['esp32_cam','phone_ip_camera','mac_camera']]){const e=status();e.data.cameras=cameras;e.data.planner='rules';assert.doesNotThrow(()=>validateEvent(e));}
+ assert.doesNotThrow(()=>validateEvent(status()));
+ for(const cameras of [null,{},'mac_camera',[0],['http://camera/stream'],['mac_camera','mac_camera'],['other'],[undefined]]){const e=status();e.data.cameras=cameras;assert.throws(()=>validateEvent(e));}
+ const e=status();e.data.cameras=[];e.data.camera_url='http://camera';assert.throws(()=>validateEvent(e));
+});
+test('camera_id is a fixed optional start_job field for prompt and recipe; unsupported slots have a fixed rejection',()=>{
+ for(const input of [{input:'prompt',language:'uz',text:'Sana'},{input:'recipe',recipe:recipeFor()}]){
+  assert.doesNotThrow(()=>validateCommandData('start_job',input));
+  for(const camera_id of ['mac_camera','esp32_cam','phone_ip_camera'])assert.doesNotThrow(()=>validateCommandData('start_job',{...input,camera_id},[],[camera_id]));
+  for(const camera_id of ['http://camera/stream','other',null,0,{},undefined])assert.throws(()=>validateCommandData('start_job',{...input,camera_id}),{code:'INVALID_COMMAND'});
+  for(const cameras of [[],['mac_camera']])assert.throws(()=>validateCommandData('start_job',{...input,camera_id:'esp32_cam'},[],cameras),{code:'UNSUPPORTED_CAPABILITY'});
+  assert.throws(()=>validateCommandData('start_job',{...input,camera_url:'http://camera'}),{code:'INVALID_COMMAND'});
+ }
+ assert.throws(()=>validateCommandData('stop_job',{camera_id:'mac_camera'}),{code:'INVALID_COMMAND'});
+ const recipe=recipeFor();recipe.camera.camera_id='mac_camera';assert.throws(()=>readRecipe(JSON.stringify(recipe)));
+});
 test('status accepts the optional planner enum and legacy shape, without opening the contract',()=>{
  const status=()=>sampleEvidence().find(e=>e.type==='status');
  const legacy=status();delete legacy.data.planner;assert.doesNotThrow(()=>validateEvent(legacy));assert.equal(Object.hasOwn(legacy.data,'planner'),false);

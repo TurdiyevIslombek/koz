@@ -1,10 +1,26 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {plannerPresentation,liveKind} from '../src/presentation.js';
+import {plannerPresentation,liveKind,cameraChoice,withCamera} from '../src/presentation.js';
 import {targetSVG} from '../src/scene.js';
 import {t} from '../src/i18n.js';
 import {recipeFor,sampleEvidence} from '../src/demo.js';
 import {createModel,ingest,liveView,invalidateLive} from '../src/model.js';
+
+test('camera choice defaults to the first slot and resets on session or available-camera changes',()=>{
+ const status={session_id:'first',data:{cameras:['esp32_cam','mac_camera']}};
+ let choice=cameraChoice(status);assert.equal(choice.camera_id,'esp32_cam');
+ choice.camera_id='mac_camera';assert.equal(cameraChoice(status,choice).camera_id,'mac_camera');
+ assert.equal(cameraChoice({...status,session_id:'second'},choice).camera_id,'esp32_cam');
+ assert.equal(cameraChoice({...status,data:{cameras:['phone_ip_camera']}},choice).camera_id,'phone_ip_camera');
+ for(const data of [{},{cameras:[]}])assert.equal(cameraChoice({...status,data},choice).camera_id,null);
+ for(const input of [{input:'prompt',language:'uz',text:'Sana'},{input:'recipe',recipe:recipeFor()}]){
+  assert.equal(withCamera(input,status,choice).camera_id,'mac_camera');
+  assert.equal(withCamera(input,{...status,data:{cameras:['esp32_cam']}},choice).camera_id,'esp32_cam');
+  for(const data of [{},{cameras:[]}])assert.equal(Object.hasOwn(withCamera(input,{...status,data},choice),'camera_id'),false);
+  assert.equal(Object.hasOwn(input,'camera_id'),false);
+ }
+ for(const lang of ['uz','ru','en'])for(const slot of ['mac_camera','esp32_cam','phone_ip_camera'])assert.notEqual(t(lang,slot),slot);
+});
 
 test('planner copy distinguishes local, cloud, null, missing and stale reports in all languages',()=>{
  const cases=[['rules','planner_rules','plannerLocal'],['ollama','planner_ollama','plannerLocal'],['nebius','planner_nebius','crossBorder'],[null,'plannerUnset','plannerDepends'],[undefined,'plannerNotReported','plannerDepends']];

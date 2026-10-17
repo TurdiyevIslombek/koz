@@ -34,6 +34,7 @@ The web server is now a WebSocket **client** of `ws://127.0.0.1:8765`; browser u
 - Socket close or browser event-stream failure clears live readings immediately. Three seconds without status also clears them. Heading: **Unknown**; reason: **Offline — job state unknown**. The recipe/history can remain available, but old live numbers cannot return when the socket reconnects. A new observation is required.
 - After a web restart, the browser renews its local owner session and fetches a fresh snapshot automatically. If a password is configured, it asks you to sign in again. While reconnecting it shows Unknown and a **Reload page** fallback; Setup drafts remain in the tab.
 - Optional `status.planner` accepts `rules`, `ollama`, `nebius`, or `null`, alongside older statuses without the field. Other unknown fields and non-enum values are rejected. Missing means **not reported**, never rules. The latest report appears on Setup and Live. `--report-planner` can now be enabled in the runner.
+- Optional `status.cameras` accepts unique fixed camera slots, including an empty list. Setup offers a camera choice when two or more are available and sends the selected `camera_id` with prompt and recipe starts. One slot is selected automatically; empty or legacy statuses omit it. Choices reset for a new runner session. Camera addresses stay on the runner. `--report-cameras` can now be enabled.
 - Retry is once per second. There is no command queue, replay on reconnect, automatic job start or motor re-arm.
 - The original token-authenticated inbound adapter remains available through `createApplication` for existing integration tests, but normal `npm start` uses the requested outbound local connection.
 
@@ -56,7 +57,7 @@ This is a **local implementation**, not an AWS deployment. The localhost runner 
 
 ## Verification and design
 
-Latest planner/restart pass: **32 tests passed**, build passed, and real-browser checks passed for all planner values in three languages, target states in both themes at 360 px, and the same tab across a web restart. No JavaScript errors or horizontal overflow. See `review/planner/REVIEW.md`. The earlier replay/launcher accessibility checks remain in `review/runner/REVIEW.md`.
+Latest camera pass: **36 tests passed**, build passed, and browser checks passed for fixed camera labels in three languages at 360 px, both themes, prompt/recipe starts, runner-session changes, one/empty/legacy slot lists, and fixed rejection messages. No JavaScript errors or horizontal overflow. See `review/cameras/REVIEW.md`. Earlier planner/restart and replay/launcher checks remain in `review/planner/REVIEW.md` and `review/runner/REVIEW.md`.
 
 - Node tests cover strict JSON, schema limits, exact unknown messages, state transitions, evidence completeness, auth, token revocation, WebSocket validation, commands and summary CRUD.
 - Browser review covers three screens × two themes × three languages at 360 px, desktop, enlarged text, reduced motion, zero/unknown/offline/Stop, and the complete trial and import/export flow.
@@ -66,3 +67,5 @@ Latest planner/restart pass: **32 tests passed**, build passed, and real-browser
 AI contribution: Codex implemented the web UI, local owner/runner adapter, contract-derived validators/messages, demo and tests on 2026-10-15. The owner selected Nigoh and requested its silhouette, eye, direction, pulse and light-theme refinements. Root `AI_LOG.md` is outside this task's edit lane.
 
 AI contribution, 2026-10-16: Codex implemented the agreed planner field, conditional Setup disclosure, colour-target diagram, owner-session restart recovery, and regression checks. Changes remain in `web/`; runner and contracts were read only.
+
+AI contribution, 2026-10-16: Codex implemented camera slot validation, Setup selection and session-scoped `camera_id` commands, with protocol, integration and browser checks. Hardware sources remain untouched; separate motor-safety findings are in the explicitly requested `.collab/reviews/motor-safety.md`.

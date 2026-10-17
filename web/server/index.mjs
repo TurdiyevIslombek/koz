@@ -87,7 +87,7 @@ export async function createApplication({password='',dataDir=resolve(root,'.data
      const input=await body(req);
      if(!input||Object.keys(input).sort().join(',')!=='command,data')throw new ContractError('INVALID_COMMAND');
      if(!runner||runner.readyState!==WebSocket.OPEN||liveView(model).offline)throw new ContractError('AUTH_REQUIRED');
-     validateCommandData(input.command,input.data,model.status.data.capabilities);
+     validateCommandData(input.command,input.data,model.status.data.capabilities,model.status.data.cameras||[]);
      const state=model.status.data.state;
      if(input.command==='start_job'&&!['idle','held','refused'].includes(state)||input.command==='begin_trial'&&(!['idle','held','refused'].includes(state)||model.trial)||input.command==='finish_trial'&&!model.trial)throw new ContractError('BUSY');
      if(input.command==='start_job'&&model.trial&&model.events.some(r=>r.event.trial_id===model.trial&&r.event.job_id&&['recipe','observation','decision'].includes(r.event.type)))throw new ContractError('BUSY');
