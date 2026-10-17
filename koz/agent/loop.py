@@ -236,6 +236,9 @@ class Agent:
                     frames.append(runner.preview.copy())
             if self.stop_requested:
                 runner.stop()
+        except BaseException:   # a callback or anything else failed: the motors stop first (review MS-2)
+            runner.end_motors()
+            raise
         finally:
             self.events.listeners.remove(listen)
         return observations, frames, (faults[-1] if faults else None)

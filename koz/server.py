@@ -368,9 +368,14 @@ class Hub:
                 while not agent.stop_requested and runner.step():
                     pass
                 runner.stop()
-        except Exception as error:   # fail closed: close the camera, say why, hold the job
-            if self._camera is not None:
-                self._camera.close()
+        except Exception as error:   # fail closed: motors first, close the camera, say why, hold the job
+            if self.motor_link is not None:
+                self.motor_link.halt()   # never raises (review MS-2)
+            try:
+                if self._camera is not None:
+                    self._camera.close()
+            except Exception:
+                pass
             code = error.code if isinstance(error, KozError) else "INTERNAL_ERROR"
             try:
                 self.events.emit("fault", {"code": code if code in CODES else "INTERNAL_ERROR", "effect": "held"})

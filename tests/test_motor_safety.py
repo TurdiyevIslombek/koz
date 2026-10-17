@@ -249,3 +249,114 @@ def test_stop_during_a_camera_read_while_running_never_drives_after():
     gate.active = True
     after = stop_while_held(hub, link, command, gate)
     assert not any(line.startswith("M,") for line in after) and not link.armed
+
+
+# --- MS-2: a failure while reporting a stop skipped the motor cleanup ----------------------------------
+
+def failing_on(kind):
+    def deliver(event):
+        if kind == "any" or event["type"] == kind:
+            raise RuntimeError("injected event delivery failure")
+    return deliver
+
+
+def raising(*args, **kwargs):
+    raise RuntimeError("injected failure")
+
+
+def must_be_armed_again(link):
+    with pytest.raises(KozError) as error:
+        MotorsAction(link, .25, .2).check()
+    assert error.value.code == "MOTOR_NOT_ARMED"
+    link.arm_by_hand()
+    MotorsAction(link, .25, .2).check()
+
+
+@pytest.mark.parametrize("failure", ["observation delivery", "fault delivery", "a listener", "camera close"])
+@pytest.mark.parametrize("trigger", ["camera error", "privacy stop"])
+def test_the_motors_stop_and_disarm_even_if_reporting_the_stop_fails(trigger, failure):
+    from helpers import Refuse
+    from test_motors import car_runner
+
+    from koz.actions.motors import MockMotorLink
+
+    link = MockMotorLink(armed=True, delayed_status=True)
+    runner, _ = car_runner(link)
+    assert runner.step() and any(line.startswith("M,") for line in link.sent)   # driving
+    before = len(link.sent)
+    if failure == "observation delivery":
+        runner.events._sink = failing_on("observation")
+    elif failure == "fault delivery":
+        runner.events._sink = failing_on("fault")
+    elif failure == "a listener":
+        runner.events.listeners.append(failing_on("any"))
+    else:
+        runner.camera.close = raising
+    if trigger == "camera error":
+        runner.camera.read = raising
+    else:
+        runner._gate._checker = Refuse("PRIVATE_BATHROOM")
+        runner._gate._checked_at -= 1
+    assert runner.step() is False                    # it stops, and nothing escapes
+    assert runner.state == "held"
+    assert link.sent[before:][-2:] == ["STOP", "DISARM"] and not link.armed
+    must_be_armed_again(link)
+
+
+def test_hold_disarms_before_it_reports():
+    from test_motors import car_runner
+
+    from koz.actions.motors import MockMotorLink
+
+    link = MockMotorLink(armed=True, delayed_status=True)
+    runner, _ = car_runner(link)
+    assert runner.step()
+    runner.events._sink = failing_on("fault")
+    with pytest.raises(RuntimeError):
+        runner.hold("CHECK_FAILED")                  # the agent's own stop; its report fails
+    assert link.sent[-2:] == ["STOP", "DISARM"] and not link.armed
+
+
+def test_an_agent_callback_that_fails_still_stops_the_motors():
+    from helpers import Approve, EndlessCamera, FakeFaces
+    from test_motors import CAR_SETUP, car_recipe
+
+    from koz.actions.motors import MockMotorLink
+    from koz.agent import FakePlanner
+    from koz.agent.loop import Agent
+    from koz.events import EventLog
+
+    link, clock = MockMotorLink(armed=True, delayed_status=True), FakeClock()
+    agent = Agent(FakePlanner(), CAR_SETUP, lambda: EndlessCamera(ball_in_the_middle(), clock), EventLog(lambda e: None),
+                  clock=clock, eval_seconds=1.0, on_frame=raising, motor_link=link,
+                  models={"scene_checker": Approve(), "face_detector": FakeFaces(), "brain_driver": StillBrain()})
+    with pytest.raises(RuntimeError):
+        agent.run_recipe(car_recipe())
+    assert link.sent[-2:] == ["STOP", "DISARM"] and not link.armed
+    must_be_armed_again(link)
+
+
+def test_a_job_thread_that_crashes_still_disarms():
+    import json
+
+    from helpers import Approve, EndlessCamera, FakeFaces
+    from test_motors import CAR_SETUP
+
+    from koz.actions.motors import MockMotorLink
+    from koz.events import new_id
+    from koz.server import Hub
+
+    class CrashingPlanner:
+        name = "crash"
+
+        def plan(self, text):
+            raise RuntimeError("injected planner crash")
+
+    link, clock = MockMotorLink(armed=True, delayed_status=True), FakeClock()
+    hub = Hub(CAR_SETUP, lambda: EndlessCamera(ball_in_the_middle(), clock), CrashingPlanner(), motor_link=link,
+              clock=clock, wall_clock=lambda: 1000, models={"scene_checker": Approve(), "face_detector": FakeFaces()})
+    hub.handle(json.dumps({"v": 1, "type": "command", "command_id": new_id(), "session_id": hub.events.session_id,
+                           "job_id": new_id(), "trial_id": None, "expires_at": 1010, "command": "start_job",
+                           "data": {"input": "prompt", "language": "en", "text": "chase the red ball"}}))
+    hub._thread.join(5)
+    assert link.sent[-2:] == ["STOP", "DISARM"] and not link.armed

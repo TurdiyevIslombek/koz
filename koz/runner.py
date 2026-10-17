@@ -124,8 +124,15 @@ class Runner:
         stop, a fault says why, the camera closes, status held; a new start is needed."""
         if self.state in ("checking", "evaluating", "running"):
             self._drop_preview()
+            self.end_motors()   # before any report: a report that fails can't skip it (review MS-2)
             self.events.emit("fault", {"code": code, "effect": "held"}, revision=self.revision)
             self._stop("held", code)
+
+    def end_motors(self):
+        """Stop and disarm the car's motors (if any) and lock the link until a person arms it again.
+        Never raises; safe to call more than once. Every stop path calls it before reporting."""
+        if self._motors is not None:
+            self._motors.end()
 
     @property
     def models(self):
@@ -158,11 +165,16 @@ class Runner:
             detail = "" if isinstance(error, KozError) else f" ({type(error).__name__})"
             try:
                 self._fault(code, detail=detail)
-            except Exception:        # even reporting failed: still stop
+            except Exception:        # even reporting failed: still stop, motors first (review MS-2)
+                self.end_motors()
                 self._drop_preview()
-                self.camera.close()
                 self.state = "held" if self._was_running else "refused"
-                self._log_stop(code, detail + " (and the stop could not be reported)")
+                for cleanup in (self.camera.close,
+                                lambda: self._log_stop(code, detail + " (and the stop could not be reported)")):
+                    try:
+                        cleanup()
+                    except Exception:
+                        pass
             return False
 
     def _process_next_frame(self):
@@ -251,8 +263,9 @@ class Runner:
         }, revision=self.revision)
 
     def _fault(self, code, privacy=None, detail=""):
-        """Stop the job. Outputs become unknown first. "off" if it never ran, "held" if it was running."""
+        """Stop the job: motors first, then outputs become unknown. "off" if it never ran, "held" if it was running."""
         self._drop_preview()
+        self.end_motors()
         self._observe(privacy or self._privacy_state(), None, code)
         self.events.emit("fault", {"code": code, "effect": "held" if self._was_running else "off"},
                          revision=self.revision)
@@ -263,8 +276,7 @@ class Runner:
             self._motors.pause()
 
     def _stop(self, state, reason, detail=""):
-        if self._motors is not None:
-            self._motors.end()   # stop + disarm: the next job needs arming by hand
+        self.end_motors()   # stop + disarm: the next job needs arming by hand
         self.camera.close()
         self._drop_preview()
         self._set_state(state)
