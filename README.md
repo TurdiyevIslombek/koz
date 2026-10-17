@@ -4,21 +4,77 @@ Describe a camera job in plain words (Uzbek, Russian or English). Ko'z turns it 
 recipe of tested OpenCV 5 blocks, runs it on live frames, checks the results and adjusts.
 Faces are blurred, private rooms stop the camera, and frames never leave the device.
 
-Work in progress for the OpenCV AI Competition 2026.
+Built for the OpenCV AI Competition 2026 by Islombek Turdiyev (Tashkent, Uzbekistan).
+Technical report: [docs/REPORT.md](docs/REPORT.md) · architecture: [docs/architecture.svg](docs/architecture.svg) ·
+every measured result and failure: [docs/TRIALS.md](docs/TRIALS.md).
 
-## Run the tests
+## What is in this repository
+
+| Folder | What |
+|---|---|
+| `koz/` | The runner (Python, OpenCV 5): privacy guard, face blur, the blocks, recipe checks, the agent loop, the fly brain, the motors action |
+| `web/` | The web app (Node.js): setup chat, live view, trials, recipe export and import ([web/README.md](web/README.md)) |
+| `contracts/` | The runner ↔ web contract: `recipe.schema.json` and `events.md` |
+| `firmware/` | Arduino sketches: `motor_listener` (the car), `stop_test` (measures the car's speed cap and stopping distance) |
+| `deploy/` | AWS: one CloudFormation stack and its installer ([docs/AWS_DAY.md](docs/AWS_DAY.md)) |
+| `tests/` | Python tests; they also run the firmware's safety rules and the real sketch on a fake Arduino |
+| `docs/` | Report, trials, texts in three languages, video plan |
+
+## Install (exact versions)
+
+Tested on macOS 27 (MacBook Air M3, 8 GB), no GPU. Python 3.13.5; Node.js 25.1 (22 or newer works;
+the AWS server installs 22); for the car only, arduino-cli 1.5.1 with the `arduino:avr` 1.8.8 core.
 
 ```bash
 python3.13 -m venv .venv
+```
+```bash
 .venv/bin/python -m pip install -r requirements.txt
+```
+```bash
 .venv/bin/python scripts/fetch_models.py
-.venv/bin/python scripts/fetch_test_photos.py
-.venv/bin/python -m pytest -q
+```
+`requirements.txt` pins every Python package, OpenCV 5.0.0 included. `fetch_models.py` downloads the
+scene model (45 MB, below) and refuses it unless its SHA-256 matches; the two other models are in git.
+
+The web app (every package pinned by `web/package-lock.json`):
+```bash
+cd web && npm ci && node scripts/build.mjs
 ```
 
-`fetch_models.py` downloads the scene model (below) and refuses it unless its SHA-256 matches.
-`fetch_test_photos.py` downloads 71 real Places365 photos for the privacy guard's
-regression test (not in git: their copyright belongs to their owners).
+The car's firmware (only with the robot): put arduino-cli 1.5.1 in `tools/bin/`
+(https://arduino.github.io/arduino-cli), then
+```bash
+tools/bin/arduino-cli core install arduino:avr@1.8.8
+```
+```bash
+tools/bin/arduino-cli lib install Servo@1.3.0
+```
+
+## Test
+
+```bash
+.venv/bin/python scripts/fetch_test_photos.py
+```
+```bash
+.venv/bin/python -m pytest -q
+```
+```bash
+cd web && npm test
+```
+`fetch_test_photos.py` reads the official Places365 archive until it has the 71 photos the privacy
+guard's regression test uses (about 80 MB; their copyright belongs to their owners, so they are not
+in git; without them that test is skipped). The Python tests need no camera or board: hardware is mocked. The firmware tests need
+`clang++` (Xcode command line tools); the two "compiles for the Uno" tests are skipped without
+`tools/bin/arduino-cli`.
+
+## Run
+
+- **Everything on one computer:** double-click `start-koz.command` (the runner and the web app; type the
+  job in the browser). Details below.
+- **The runner alone:** `.venv/bin/python -m koz.server --i-own-this-camera --window`
+  (`--help` lists the cameras, the car, school and strict mode, and `--cloud` for AWS).
+- **On AWS:** [deploy/README.md](deploy/README.md) and the click list in [docs/AWS_DAY.md](docs/AWS_DAY.md).
 
 ## Live demo (your camera)
 
@@ -45,7 +101,8 @@ new setting → result. Requests Ko'z refuses (who is this person, a hidden came
 stop before the camera opens. `--video clip.mp4` uses a recording instead of the camera.
 
 Which planner reads the sentence: NVIDIA Nemotron on Nebius Token Factory if `NEBIUS_API_KEY=...`
-is in `.env` (only the sentence is sent; `NEBIUS_MODEL` picks the model), else the rule planner
+is in `.env` (only the sentence is sent; `NEBIUS_MODEL` picks the model), then Amazon Nova 2 Lite on
+Amazon Bedrock (EU Regions) if `AWS_BEARER_TOKEN_BEDROCK=...` is, else the rule planner
 (fixed word lists, Uzbek in both alphabets, Russian, English). `--planner ollama` tries Gemma 4 on
 this Mac through [Ollama](https://ollama.com) (`gemma4:e2b-it-qat`, 4.3 GB; nothing leaves the Mac),
 but on Oct 15 it got 14 of 20 test sentences right with the camera running, against 18 for the
@@ -123,3 +180,10 @@ Places365 validation set; their copyright belongs to their owners, so they are n
 repo (`scripts/fetch_test_photos.py` downloads them). Islombek Turdiyev signed the Places
 team's request form for the original Places365 data on Oct 14, 2026
 (http://places2.csail.mit.edu/download.html).
+
+## Licence
+
+The Ko'z code is under the MIT License ([LICENSE](LICENSE)). Some files keep their own licences
+([NOTICE](NOTICE)): the FlyWire-derived wiring of the fly brain stays under **CC BY-NC 4.0**
+(non-commercial use, with credit), the models under MIT / Apache 2.0 / CC BY, and the fonts under the
+SIL Open Font License.

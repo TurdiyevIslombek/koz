@@ -1,0 +1,93 @@
+Ko'z
+Copyright (c) 2026 Islombek Turdiyev
+
+The Ko'z code in this repository is under the MIT License (LICENSE), EXCEPT the files listed below,
+which keep their own licences. Using Ko'z means following those licences too.
+
+=====================================================================================================
+1. FlyWire connectome data: CC BY-NC 4.0 (NOT under the MIT License; non-commercial use only)
+=====================================================================================================
+
+Files:
+  koz/brains/flybrain/original/brain/locomotion/neurons.json
+  koz/brains/flybrain/original/brain/locomotion/positions.csv
+  koz/brains/flybrain/original/brain/locomotion/weights.npz
+
+These files are derived from the FlyWire connectome, materialization v783, which is published under
+the Creative Commons Attribution-NonCommercial 4.0 International licence (CC BY-NC 4.0,
+https://creativecommons.org/licenses/by-nc/4.0/). These derived files are shared under the same
+licence: you may copy and adapt them with credit, for non-commercial purposes only.
+
+Credit:
+  Dorkenwald, S. et al. "Neuronal wiring diagram of an adult brain." Nature 634, 124-138 (2024).
+  Schlegel, P. et al. "Whole-brain annotation and multi-connectome cell typing of Drosophila."
+  Nature 634, 139-152 (2024).
+  FlyWire (https://flywire.ai), Princeton University and the FlyWire Consortium.
+
+Changes made in Islombek Turdiyev's robot-car project: a 2,282-neuron circuit for locomotion and looming was selected;
+its neuron IDs, 2-D positions and cell types (neurons.json, positions.csv) and its synapse counts,
+signed by neurotransmitter (weights.npz), were saved for a real-time simulation. Nothing was trained.
+
+=====================================================================================================
+2. The fruit-fly neuron model: MIT License (Shiu et al.)
+=====================================================================================================
+
+koz/brains/flybrain/brain.py and koz/brains/flybrain/original/brain/flybrain.py are Islombek
+Turdiyev's numpy/scipy version of the leaky integrate-and-fire model and constants of:
+  Shiu, P. K. et al. "A Drosophila computational brain model reveals sensorimotor processing."
+  Nature 634, 210-219 (2024). Code: https://github.com/philshiu/Drosophila_brain_model
+
+That code's licence:
+
+  MIT License
+  Copyright (c) 2023 Philip Shiu and Nico Spiller
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+  associated documentation files (the "Software"), to deal in the Software without restriction,
+  including without limitation the rights to use, copy, modify, merge, publish, distribute,
+  sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all copies or
+  substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+  NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+  DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+  OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+The rest of koz/brains/flybrain/original/ is Islombek Turdiyev's own robot-car code (stages 1-3),
+copied unchanged (checksums in ORIGINALS.sha256) and under this repository's MIT License.
+
+=====================================================================================================
+3. Models (OpenCV Zoo and the MIT CSAIL Places team)
+=====================================================================================================
+
+koz/models/face_detection_yunet_2023mar.onnx    YuNet, MIT License, Copyright (c) 2020 Shiqi Yu
+                                                 (koz/models/YUNET_LICENSE)
+koz/models/object_detection_nanodet_2022nov.onnx NanoDet-Plus by RangiLyu, Apache License 2.0
+                                                 (koz/models/NANODET_LICENSE), unchanged
+koz/models/categories_places365.txt              MIT License, Copyright (c) 2017 Bolei Zhou and MIT
+                                                 CSAIL Computer Vision (koz/models/PLACES365_LICENSE)
+places365_resnet18.onnx (not in git; scripts/fetch_models.py downloads it) is the Places365 ResNet18
+by the MIT CSAIL Places team, CC BY, converted to ONNX with input normalisation and a softmax added
+(weights unchanged). Zhou, B. et al. "Places: A 10 million Image Database for Scene Recognition."
+IEEE TPAMI (2017).
+
+The Places365 test photos are not in this repository (their copyright belongs to their owners);
+scripts/fetch_test_photos.py downloads them from the Places team.
+
+=====================================================================================================
+4. Fonts: SIL Open Font License 1.1
+=====================================================================================================
+
+web/design/assets/onest.ttf, golos-text.ttf, ibm-plex-sans.ttf, jetbrains-mono.ttf, each with its
+licence beside it (onest-OFL.txt, golos-OFL.txt, plex-OFL.txt, jetbrains-OFL.txt).
+
+=====================================================================================================
+5. Packages installed by pip and npm
+=====================================================================================================
+
+The Python packages in requirements.txt (OpenCV, NumPy, SciPy, pyserial, websockets, pytest...) and the
+npm packages in web/package-lock.json are not part of this repository; each has its own licence.
