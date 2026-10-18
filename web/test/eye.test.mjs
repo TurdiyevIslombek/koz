@@ -9,7 +9,7 @@ import {setTimeout as delay} from 'node:timers/promises';
 import {WebSocket,WebSocketServer} from 'ws';
 import {createApplication} from '../server/index.mjs';
 import {eyeRequestAllowed} from '../server/eye.mjs';
-import {eyeClosed,readEyeClosed,validEyeJPEG,MAX_EYE_BYTES} from '../src/eye-protocol.js';
+import {eyeClosed,readEyeClosed,validEyeJPEG,MAX_EYE_BYTES,MAX_EYE_WIDTH} from '../src/eye-protocol.js';
 import {sampleEvidence} from '../src/demo.js';
 
 // Construct a JPEG header in memory for transport tests. Not a camera or recorded fixture.
@@ -44,7 +44,7 @@ async function fixture(t,{localAccess=true,persist=false}={}) {
 test('preview grammar rejects extra fields, duplicates, malformed JPEGs and oversized frames',()=>{
  for(const reason of ['checking','not_running','not_fresh'])assert.deepEqual(readEyeClosed(JSON.stringify(eyeClosed(reason))),eyeClosed(reason));
  for(const text of ['{}','{"v":1,"v":1,"type":"preview","state":"closed","reason":"checking"}',JSON.stringify({...eyeClosed('checking'),frame:'no'}),JSON.stringify(eyeClosed('other'))])assert.throws(()=>readEyeClosed(text));
- assert.equal(validEyeJPEG(jpegHeader()),true);assert.equal(validEyeJPEG(jpegHeader(321)),false);
+ assert.equal(validEyeJPEG(jpegHeader()),true);assert.equal(validEyeJPEG(jpegHeader(MAX_EYE_WIDTH)),true);assert.equal(validEyeJPEG(jpegHeader(MAX_EYE_WIDTH+1)),false);   // 640 px since Oct 18
  assert.equal(validEyeJPEG(Buffer.alloc(MAX_EYE_BYTES+1)),false);assert.equal(validEyeJPEG(Buffer.from('not a JPEG')),false);
 });
 test('eye requests require an owner, loopback address and exact same origin',()=>{

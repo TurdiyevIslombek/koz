@@ -19,8 +19,12 @@ export function createEyeRelay({runnerUrl, authenticated, retryMs=1000}) {
  let upstream, retry, expiry, closed=false, allowed=false, scope=null;
  let frame=null, at=0, reason='not_running';
  const fresh = () => frame && performance.now()-at < EYE_FRESH_MS;
+ // A viewer still receiving the last picture skips this one (the next, newer one replaces it);
+ // before Oct 18 any backlog disconnected it, so a busy browser saw the eye drop and come back a
+ // second later. Only a viewer that stops reading for good (over 1 MiB behind) is cut off.
  function send(ws, value, binary=false) {
-  if (!authenticated(viewers.get(ws)) || ws.bufferedAmount > 0) { ws.terminate(); return; }
+  if (!authenticated(viewers.get(ws)) || ws.bufferedAmount > 1048576) { ws.terminate(); return; }
+  if (binary && ws.bufferedAmount > 0) return;
   if (ws.readyState === WebSocket.OPEN) ws.send(value, {binary,compress:false});
  }
  function drop(why) {

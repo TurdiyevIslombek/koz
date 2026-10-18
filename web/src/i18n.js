@@ -158,7 +158,10 @@ const rows = {
  eyeWaiting:['Birinchi tasvir kutilmoqda','Ждём первое изображение','Waiting for the first picture'],
  eyeOffline:['Yopiq · aloqa yoʻq','Закрыто · нет связи','Closed · not connected'],
  eyePlanning:['Sinov boshlanganda ochiladi','Откроется, когда начнётся проверка','Opens when the test starts'],
- guardChecking:['tekshirilmoqda','проверяется','checking']
+ guardChecking:['tekshirilmoqda','проверяется','checking'],
+ eyeEnlarge:['Kattalashtirish uchun koʻzni bosing','Нажмите на глаз, чтобы увеличить','Tap the eye to enlarge'],
+ eyeLargeClose:['yopish: Esc yoki bosing','закрыть: Esc или нажатие','close: Esc or tap'],
+ eyeLargeLabel:['Kamera tasviri, katta','Изображение камеры, крупно','Camera view, large']
 };
 export const t=(language,key)=>rows[key]?.[languages.indexOf(language)]||rows[key]?.[0]||key;
 export const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

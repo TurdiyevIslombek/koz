@@ -347,13 +347,13 @@ depends on what is in view.
 ## Fly-brain car: how the ball reaches the brain (Oct 16)
 
 **Decision (Islombek): option B, the fly brain does the chasing.** Time box: if it doesn't chase
-the ball reliably by **Oct 19**, switch to option A (the brain avoids obstacles, a hand-written pull
+the ball reliably by **Oct 21** (moved from Oct 19 on Oct 18: the car day became Oct 20), switch to option A (the brain avoids obstacles, a hand-written pull
 steers toward the ball) and say so in the report.
 
 **"Chases reliably" = at least 7 of the 10 chase trials pass** (Islombek, Oct 17). A pass: the car
 touches the ball, or stops facing it within about 20 cm, within 20 s, without hitting anything else
-(`docs/SUNDAY.md` step d: 4 trials with the ball straight ahead, 3 about 30° left, 3 about 30° right,
-1.5 m away). 6 of 10 or fewer by Oct 19 → option A.
+(`docs/CAR_DAY.md` step d: 4 trials with the ball straight ahead, 3 about 30° left, 3 about 30° right,
+1.5 m away). 6 of 10 or fewer by Oct 21 → option A.
 
 **Measured on the brain itself** (the original `brain_driver.py`, 2 s per input): looming on the
 left eye turns the car right (wheels 69 / -143 at 100 Hz), on the right eye left (-150 / 134);
@@ -384,6 +384,36 @@ job "find the red ball", the rule planner, re-run on Oct 16:
 **One run from the Setup page** (`start-koz.command`, a recorded clip, real models, Oct 15, recorded
 in STATUS.md): typed "Yashil koptokni top" (find the green ball) → not found → `hue_center` 60 → 77 →
 found on the left. **Not yet run on a live camera.**
+
+## The eye: where the time goes on this Mac (Oct 18)
+
+Islombek: "the eye lags badly". Measured with `scripts/eye_timing.py` (MacBook Air M3, the real
+camera, real models, the counting job "count people entering", 45 s, the web app open), per frame:
+
+| Stage | mean | p95 | how often |
+|---|---|---|---|
+| Whole frame (camera to blocks) | 43.4 ms | 59.1 ms | every frame: 23 frames a second |
+| Waiting for the camera's next frame | 23.4 ms | 33.3 ms | every frame (the camera gives about 23 a second) |
+| People (NanoDet) | 12.6 ms | 16.3 ms | every frame |
+| Face blur (YuNet + pixelation) | 5.5 ms | 7.7 ms | every frame |
+| Privacy guard, objects (NanoDet: bed, toilet, sink) | 12.6 ms | 16.3 ms | every 0.5 s (1.6 ms a frame on average) |
+| Privacy guard, room (Places365) | 19.5 ms | 35.4 ms | every 3 s (second run) |
+| Eye: shrink + JPEG | 0.5 ms | 0.3 ms | per picture sent |
+
+So the guard and the detectors keep up with the camera (about 20 ms of work per 43 ms frame). The
+lag was the eye itself:
+
+| | Before | After |
+|---|---|---|
+| Eye pictures sent by the runner | 4.6 a second (gaps p50 202 ms, p95 403 ms) | 13.5 a second (gaps p50 72 ms, p95 90 ms) |
+| Eye pictures shown in the page | 4.8 a second | 13.3 a second (headless Chrome, drawn scene at 15 fps) |
+| Eye element rebuilt by the page (each rebuild replayed the fade) | 0.8 a second | 0 |
+| Picture age when sent (capture → send) | p50 39 ms | p50 40 ms |
+
+Causes and fixes: the eye polled 5 times a second (now it sends each new frame, at most 15 a second);
+the web relay disconnected a viewer that was still receiving the last picture (now it skips that
+picture); the page rebuilt the eye about once a second (now it keeps it). Limits raised for the
+large view: 640 px, 160 KiB (contract section 14). No guard or detector setting changed.
 
 ## Fly-brain car (demo 1) and classroom counter (demo 2)
 

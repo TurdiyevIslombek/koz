@@ -22,6 +22,8 @@ Changes since then (both lanes agreed):
 - Oct 17: the web's eye, a live preview for **this computer only** (section 14; Islombek's
   decision). Not an event; never on the cloud link, never stored. Claude wrote it; Codex builds the
   web side from `.collab/specs/web-eye-preview.md` and objects there if something can't work.
+- Oct 18: the eye's limits raised for a smooth eye and its large view (section 14): 640 px, 15 a
+  second, 160 KiB (were 320 px, 5, 40 KiB; measured, the 5 a second was the lag). Islombek's decision.
 - Oct 18: optional `fault.seen` (section 8.6): which object made the privacy guard stop, so the
   web says "a bed is in view" like the runner window, not only "bedroom". Islombek's UX pass;
   Claude owned both lanes for it.
@@ -736,8 +738,8 @@ eye. The cloud link (section 5) and the judges' view never carry it.
 
 **What the runner sends** (`koz/eye.py`):
 - **binary messages**: one JPEG each, of the newest frame the privacy guard **approved**, after the
-  allowed-area mask and **face blur**: at most **320 px** wide, at most **5 per second**, at most
-  **40 KiB** each. Only while the job is `evaluating` or `running`, and only if the frame is fresh
+  allowed-area mask and **face blur**: at most **640 px** wide, at most **15 per second**, at most
+  **160 KiB** each. Only while the job is `evaluating` or `running`, and only if the frame is fresh
   (section 3's 500 ms);
 - **text messages**: `{"v":1,"type":"preview","state":"closed","reason":R}` when it stops sending,
   with `R` one of:

@@ -33,4 +33,14 @@
 .dock-actions .icon{width:16px;height:16px;flex:0 0 16px}
 .dock-second{background:transparent}
 .dock-todo{font-size:.85rem;font-weight:560;line-height:1.45;padding:8px 0}
+/* The eye opens a large view (Oct 18). The picture inside the eye is a button only while open. */
+.live-eye:not(.is-closed){cursor:zoom-in}
+.live-eye:focus-visible{outline:3px solid var(--accent);outline-offset:4px;border-radius:50%}
+.eye-hint{margin-top:2px}
+dialog.eye-large{padding:0;border:0;border-radius:0;background:transparent;max-width:none;max-height:none;width:100vw;height:100dvh;overflow:hidden;cursor:zoom-out}
+dialog.eye-large[open]{display:grid;place-items:center;align-content:center;gap:12px;animation:eye-large-in .18s ease-out}
+dialog.eye-large::backdrop{background:rgb(10 12 10 / .97)}
+dialog.eye-large img{display:block;max-width:min(96vw,1100px);max-height:calc(100dvh - 90px);width:auto;height:auto;border-radius:14px;object-fit:contain}
+.eye-large-note{margin:0;padding:0 16px;color:#e8e9e1;font-size:.82rem;text-align:center}
+@keyframes eye-large-in{from{opacity:0}to{opacity:1}}
 

@@ -42,5 +42,6 @@ A crossing moves one illustrative person for 900 ms in demo mode and briefly pul
 - Every Live state says why and what to do, with at most two actions in Stop's place; the first is the obvious one (Stop while anything runs; Try again + New job after a stop; New job after a refusal). A privacy stop names what the guard saw (`fault.seen`) and keeps that reason after a later idle.
 - Unknown numbers are a calm muted dash plus "waiting for camera" or "not counting now", never a heavy bar.
 - The local eye's picture fills the eye shape (clipped to it) and fades in; closing removes it at once and shows the closed eye with a short reason. Testing shows a 3-second bar and its try number.
+- Tapping the open eye shows the same picture nearly full screen (a native modal dialog: Esc or a tap closes it); it closes at once whenever the eye closes. The eye element persists across re-renders, so it never blinks.
 
 Reference research: `design/references.md`. The user's selected direction overrides generic design heuristics that would remove the giant count or the eye.

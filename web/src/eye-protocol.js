@@ -1,6 +1,7 @@
 import {parseStrict} from './protocol.js';
 
-export const MAX_EYE_BYTES = 40 * 1024;
+export const MAX_EYE_BYTES = 160 * 1024;   // contract section 14 (raised Oct 18)
+export const MAX_EYE_WIDTH = 640;
 export const EYE_FRESH_MS = 1000;
 export const eyeClosed = reason => ({v:1,type:'preview',state:'closed',reason});
 
@@ -30,7 +31,7 @@ export function validEyeJPEG(bytes) {
   if ([192,193,194].includes(marker)) {
    const height = bytes[offset+3] * 256 + bytes[offset+4];
    const width = bytes[offset+5] * 256 + bytes[offset+6];
-   if (length < 8 || !height || !width || width > 320) return false;
+   if (length < 8 || !height || !width || width > MAX_EYE_WIDTH) return false;
    dimensions = true;
   }
   offset += length;

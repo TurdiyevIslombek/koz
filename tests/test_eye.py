@@ -158,6 +158,7 @@ def test_the_local_socket_sends_the_eye_at_most_5_times_a_second_then_closes_it(
                     frames.append(await asyncio.wait_for(ws.recv(), 2))
                 assert frames and all(isinstance(f, bytes) and f[:2] == b"\xff\xd8" for f in frames)
                 assert len(frames) <= 1.2 * eye.PREVIEW_FPS + 2 and max(map(len, frames)) <= eye.MAX_PREVIEW_BYTES
+                assert len(frames) >= 1.2 * 10   # smooth: at least 10 a second when the camera gives 30 (Oct 18)
                 await asyncio.to_thread(command, "stop_job", {})
                 message = await asyncio.wait_for(ws.recv(), 2)
                 while isinstance(message, bytes):          # at most a frame already on its way

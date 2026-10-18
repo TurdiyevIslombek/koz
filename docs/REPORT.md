@@ -54,7 +54,7 @@ See `docs/architecture.svg`. Three parts, joined by one written contract
    trial dashboard, recipe export and import. It receives only contract events: numbers, fixed
    labels and rounded minutes. It has no field for an image. When the web app runs on the owner's
    own computer instead, its "eye" can also show a small live preview (contract section 14): only
-   frames the privacy guard approved, after face blur, at most 320 px and 5 per second, over that
+   frames the privacy guard approved, after face blur, at most 640 px and 15 per second, over that
    computer's own socket. It is never stored, never sent over the cloud link and never shown to
    judges; a test checks every message the cloud link sends.
 3. **The motor board** (`firmware/motor_listener/`, Arduino Uno + L298N). It accepts only
@@ -173,7 +173,7 @@ capped on the board and on the computer. Only the colour finder feeds the brain 
 | 10 chase trials on the car: reached the ball | **TODO** / 10, failures: **TODO** |
 | Time to reach the ball (median) | **TODO** |
 | Frames per second from the ESP32-CAM | **TODO** |
-| Option B (the brain chases) vs the Oct 19 time box | **TODO** (reliable = at least 7 of 10 trials; if not by Oct 19, the brain only avoids obstacles and a simple pull steers, and the report says so) |
+| Option B (the brain chases) vs the Oct 21 time box | **TODO** (reliable = at least 7 of 10 trials; if not by Oct 21, the brain only avoids obstacles and a simple pull steers, and the report says so) |
 
 ## 7. AWS
 
