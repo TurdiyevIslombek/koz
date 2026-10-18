@@ -27,7 +27,7 @@ loop and our use of Claude and Codex clearly apart (`AI_LOG.md`).
 **Best Use of COOL award:** COOL must run the core vision work on AWS Graviton. Ours runs on the
 owner's computer by design (frames never leave the device), so **not pursued** (Islombek, Oct 17).
 
-## Now → Sunday (Oct 17–18)
+## Now → the car (Oct 17–20)
 
 | Item | Owner | Date | Status |
 |---|---|---|---|
@@ -36,11 +36,12 @@ owner's computer by design (frames never leave the device), so **not pursued** (
 | Codex confirms those 3 follow-up fixes (`.collab/reviews/motor-safety-fc99c02.md`: no new findings) | X | Oct 17 | ✅ |
 | Decide: make the repo public, and which author email the history shows (B: noreply email, personal lines out of every commit) | I | Oct 17 | ✅ |
 | History rewritten (backup in `_backups/`), Codex's commits re-scanned, all tests passed, published: https://github.com/TurdiyevIslombek/koz | C | Oct 17 | ✅ |
-| `docs/SUNDAY.md` (a)–(f): portfolio recordings, stop test, motor_listener, 10 chase trials, original back | I | Oct 18 | ☐ |
-| Set `speed_cap` and `stop_cm` from the stop-test lines; write them in TRIALS.md | C | Oct 18 | ☐ |
-| Write the 10 chase trials in TRIALS.md; option B passes at **≥ 7 of 10** | C | Oct 18 | ☐ |
+| Hardware changed on Oct 18 (9.5 V battery, soft start): decide whether `motor_listener` gets the same voltage cap and soft start | I | Oct 19 | ☐ |
+| `docs/CAR_DAY.md` (a)–(f): portfolio recordings, stop test, motor_listener, 10 chase trials, original back (moved from Oct 18) | I | **Tue Oct 20** | ☐ |
+| Set `speed_cap` and `stop_cm` from the stop-test lines; write them in TRIALS.md | C | Oct 20 | ☐ |
+| Write the 10 chase trials in TRIALS.md; option B passes at **≥ 7 of 10** | C | Oct 20 | ☐ |
 
-## AWS (Oct 18–20)
+## AWS (Mon Oct 19)
 
 | Item | Owner | Date | Status |
 |---|---|---|---|
@@ -49,22 +50,22 @@ owner's computer by design (frames never leave the device), so **not pursued** (
 | Judges' read-only view (sharing off by default); cloud Setup privacy line | X | Oct 17 | ✅ |
 | The web's eye from the local preview (`.collab/specs/web-eye-preview.md`) | X | Oct 17 | ✅ |
 | Remove the 3 personal paths in `web/design/references.md` (done in the history rewrite) | C | Oct 17 | ✅ |
-| Option B time box: ≥ 7/10, else switch to option A and say so | I decides, C builds A | Oct 19 | ☐ |
-| `docs/AWS_DAY.md` steps 1–9 ($1 budget first) | I | Oct 19 | ☐ |
+| Option B time box: ≥ 7/10, else switch to option A and say so (moved from Oct 19) | I decides, C builds A | **Wed Oct 21** | ☐ |
+| `docs/AWS_DAY.md` steps 1–9 ($1 budget first) | I | **Mon Oct 19** | ☐ |
 | Bedrock planner score on the 40 sentences (bar 18/20 each) into TRIALS.md | C | Oct 19 | ☐ |
-| Measure: event delay to a phone, "offline" time after unplugging, cost so far → report section 7 | I + C | Oct 20 | ☐ |
-| Decide: keep the stack running through judging (Oct 27 – Nov 9; about $15/month, credits) | I | Oct 20 | ☐ |
+| Measure: event delay to a phone, "offline" time after unplugging, cost so far → report section 7 | I + C | Oct 19 | ☐ |
+| Decide: keep the stack running through judging (Oct 27 – Nov 9; about $15/month, credits) | I | Oct 21 | ☐ |
 
-## Trials and evidence (Oct 20–24; not Oct 22)
+## Trials and evidence (Oct 21–24; not Oct 22)
 
 | Item | Owner | Date | Status |
 |---|---|---|---|
-| Classroom counter: 10 trials, counted by hand vs Ko'z (a classroom with permission, or the shop sentence at home) | I | Oct 20–21 | ☐ |
-| Privacy guard: trials 1–10 and S1–S2 (`TRIALS.md`), with the live stop time | I | Oct 20–21 | ☐ |
-| Face blur on real faces: your clip in `tests/fixtures/private/face.mp4` (stays on the Mac) | I | Oct 20 | ☐ |
-| A fresh set of 20 planner sentences nobody has seen, scored once, no tuning before | I writes, C scores | Oct 20 | ☐ |
-| The agent's adjust step on the live camera (an orange-red ball, "find the red ball") | I | Oct 20 | ☐ |
-| Check the Uzbek and Russian texts (`docs/TEXTS.md`) | I | Oct 21 | ☐ |
+| Classroom counter: 10 trials, counted by hand vs Ko'z (a classroom with permission, or the shop sentence at home) | I | Oct 21 | ☐ |
+| Privacy guard: trials 1–10 and S1–S2 (`TRIALS.md`), with the live stop time | I | Oct 21 | ☐ |
+| Face blur on real faces: your clip in `tests/fixtures/private/face.mp4` (stays on the Mac) | I | Oct 21 | ☐ |
+| A fresh set of 20 planner sentences nobody has seen, scored once, no tuning before | I writes, C scores | Oct 21 | ☐ |
+| The agent's adjust step on the live camera (an orange-red ball, "find the red ball") | I | Oct 21 | ☐ |
+| Check the Uzbek and Russian texts (`docs/TEXTS.md`) | I | Oct 23 | ☐ |
 | Agent workflow diagram (`docs/agent-workflow.svg`) and a trace from a live run | C | Oct 23 | ☐ |
 | Contract: which crossing direction counts as "in" (open item) | C + X | Oct 23 | ☐ |
 

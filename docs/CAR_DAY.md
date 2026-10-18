@@ -1,8 +1,13 @@
-# Sunday: the car, in this order
+# Tuesday, Oct 20: the car, in this order
 
-About 3 hours. Your physical switch within reach the whole time; nobody and no pets in front of the
+(Moved from Sunday Oct 18, which went into fixing the car's hardware.) About 3 hours. Your physical switch within reach the whole time; nobody and no pets in front of the
 car; a room that is not your bedroom. Commands run in Terminal in the Ko'z folder
 (`~/AI/competitions/opencv-flybrain`) unless they say otherwise.
+
+**Your hardware changed on Oct 18** (Claude read your car folder, read-only): a 9.5 V battery with
+the motor power scaled to at most 6 V, a soft start, and stop-before-reverse in your `car.ino`. The
+pins are the same (`QUIET_WIRING` is off). Before step c, answer Claude's question about whether
+`motor_listener` should get the same voltage cap and soft start (it is not changed yet).
 
 **Your camera is mounted upside down** (`CAMERA_FLIP = True` in your car's `config.py`). Ko'z now
 turns the picture too, with `--upside-down`. Without it, left and right would be swapped and the
@@ -69,7 +74,8 @@ anything else. Film every trial with your phone (the video needs the best real t
 - Keep the videos on your phone. Don't send `.env` or anything with a token.
 
 Then I write the numbers into `docs/TRIALS.md` and the report. Reliable = **at least 7 of 10**
-(your decision, in `docs/TRIALS.md`); 6 or fewer, and we switch to option A by Oct 19, as agreed.
+(your decision, in `docs/TRIALS.md`); 6 or fewer, and we switch to option A by Wed Oct 21 (the
+time box moved from Oct 19 with the car day).
 
 ## f. Put the original car.ino back
 
@@ -78,6 +84,7 @@ Then I write the numbers into `docs/TRIALS.md` and the report. Reliable = **at l
 3. `bash run.sh` and check stage 1 drives as before.
 4. Check nothing in your car folder changed (in Terminal):
    ```bash
-   cd ~/Downloads && shasum -a 256 -c --quiet ~/AI/competitions/_backups/flybrain_car_2026-10-16.sha256 && echo "all 187 unchanged"
+   cd ~/Downloads && shasum -a 256 -c --quiet ~/AI/competitions/_backups/flybrain_car_2026-10-18.sha256 && echo "all 202 unchanged"
    ```
-   (New run files in `runs/` are fine. A `.DS_Store` line only means Finder changed its view settings.)
+   (This list is from Oct 18, after your hardware fixes; the Oct 16 one would flag those edits. New run
+   files in `runs/` are fine. A `.DS_Store` line only means Finder changed its view settings.)

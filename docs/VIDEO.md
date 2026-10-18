@@ -2,7 +2,7 @@
 
 Target **2:45** (the competition allows 5:00; you asked for under 3). About 350 spoken words in
 English; the typing on screen is in Uzbek, with an English caption under it. Say only numbers
-that are measured (`docs/TRIALS.md`); the car numbers are TODO until Sunday's trials.
+that are measured (`docs/TRIALS.md`); the car numbers are TODO until the car trials (Tue Oct 20).
 
 ## Where: never the bedroom
 
@@ -33,7 +33,7 @@ that are measured (`docs/TRIALS.md`); the car numbers are TODO until Sunday's tr
 
 | # | Time | Camera / screen shows | You type or do | You say |
 |---|---|---|---|---|
-| 1 | 0:00–0:10 | **Phone:** the car on the floor turns toward the red ball and drives to it | Nothing (use the best take from Sunday's trials) | "This car has no program for chasing a ball. A simulated fruit-fly brain drives it, and I gave it the job in one sentence." |
+| 1 | 0:00–0:10 | **Phone:** the car on the floor turns toward the red ball and drives to it | Nothing (use the best take from the car trials) | "This car has no program for chasing a ball. A simulated fruit-fly brain drives it, and I gave it the job in one sentence." |
 | 2 | 0:10–0:28 | **You**, in the living room, ESP32-CAM in your hand | — | "Cameras cost ten dollars now. But making one do a job — count people, find something, drive a robot — still needs a programmer. And an AI that writes camera code freely can be talked into spying. Ko'z, Uzbek for 'eye', works differently." |
 | 3 | 0:28–0:50 | **Screen:** the web app's Setup page (the `https://` address visible); the plan appears in Uzbek; the recipe steps show privacy guard → face blur → person detector → line counter | Type **Do'konga kirgan odamlarni sana** (caption: "Count the people who come into my shop") → **Test** | "I describe the job in Uzbek, Russian or English. The AI can only choose from a menu of tested OpenCV 5 blocks, and the privacy guard and face blur are locked into every recipe. No sentence can remove them." |
 | 4 | 0:50–1:12 | **Phone at a doorway** (kitchen or hallway) + **screen:** the runner window with pixelated faces and the line; the Live page counting *entered 1, 2* | Two volunteers walk through, one after the other, crossing the middle of the view **from right to left** (that direction counts as entered) | "OpenCV 5 runs three neural networks on this laptop, with no GPU. Faces are pixelated before any block sees them. Only numbers go to the cloud on AWS: what Ko'z sends has no field for a picture." |

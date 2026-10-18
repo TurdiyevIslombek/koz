@@ -1,6 +1,6 @@
 # Ko'z status
 
-Updated Oct 18, after the web UX pass. 458 tests pass, 1 skipped (it needs your face clip); web 68:
+Updated Oct 18 evening, after the smooth eye and the new dates. Tests below.
 `.venv/bin/python -m pytest -q`
 
 ## What works
@@ -18,10 +18,10 @@ Updated Oct 18, after the web UX pass. 458 tests pass, 1 skipped (it needs your 
 | Agent loop (`koz/agent/`) | Words → plan → try 3 s → check the OpenCV numbers → change one setting → try again (3 tries at most) → run. Each step is an event (observation → decision → new revision → result) and one printed line. Refusals stop before the camera opens. On recorded clips: red asked, ball looks orange-red → hue 0 → 13, found; with the real models, green asked for a teal ball → hue 60 → 77, found. **Not yet tried on your camera.** |
 | Planners (`koz/agent/`) | **Default: the rule planner** (Nebius first if a key exists, then Amazon Nova 2 Lite on Bedrock if `AWS_BEARER_TOKEN_BEDROCK` is in `.env`; Bedrock tested with a fake network only, real score on Oct 19). Uzbek in both alphabets. Islombek's 20 fresh sentences: **20/20 before any fix, but 4 of 7 refusals only because nothing matched**; after new refusal rules 20/20 with all refusals by a rule (tuned on that set). The AI only picks job / colour / school / refusal; any refusal wins. Gemma 4 on this Mac: 14/20, removed (in the Trash). |
 | Runner WebSocket (`koz/server.py`) | `ws://127.0.0.1:8765` for the web app: every event as JSON, the 4 commands, trials → `trial_result` with the agent's changes. Refuses browser connections. `--window` shows each job's blurred camera view. `--cloud wss://IP/v1/runner` connects out to the web app on AWS (contract section 5: status first, offline queue, no replay); tested against the web app's token mode on this Mac. |
-| The eye (`koz/eye.py`) | A live preview for the local web app only: JPEG ≤ 320 px, ≤ 5 per second, only approved and face-blurred frames, on `ws://127.0.0.1:8765/v1/preview`; closes with a reason (not_running, checking, not_fresh). Never stored, never on the cloud link (a test checks every cloud message). Web side: Codex (`.collab/specs/web-eye-preview.md`). |
+| The eye (`koz/eye.py`) | A live preview for the local web app only: JPEG ≤ 640 px, ≤ 15 per second (13–14 measured, was 4.6), only approved and face-blurred frames; tap it for a large view, on `ws://127.0.0.1:8765/v1/preview`; closes with a reason (not_running, checking, not_fresh). Never stored, never on the cloud link (a test checks every cloud message). Web side: Codex (`.collab/specs/web-eye-preview.md`). |
 | AWS (`deploy/`) | One CloudFormation stack: t3.micro in Frankfurt, Nginx + Let's Encrypt IP certificate, DynamoDB with auto-delete, owner password generated in Secrets Manager, no SSH. Click list: `docs/AWS_DAY.md`. **Not run on AWS yet** (Oct 19); needs a public GitHub repo and Codex's `web/server/cloud.mjs`. |
 | Firmware (`firmware/`) | `motor_listener`: USB `ARM / DISARM / STOP / M,L,R`; starts disarmed; a fault (250 ms without commands, forward into an obstacle, forward while blind) disarms until armed by hand; speed caps. Safety rules tested on the Mac (31 checks); both sketches compile for the Uno. `stop_test` + README to measure the speed cap and stopping distance. **Not yet on the car.** |
-| Fly brain (`koz/brains/flybrain/`) | Copy of the original simulation (same spikes), the driver (same wheels), and option B steering. Simulation only: reaches the ball in ~3 s from most starts. **Time box: chasing reliably (at least 7 of 10 trials) by Oct 19, else option A.** |
+| Fly brain (`koz/brains/flybrain/`) | Copy of the original simulation (same spikes), the driver (same wheels), and option B steering. Simulation only: reaches the ball in ~3 s from most starts. **Time box: chasing reliably (at least 7 of 10 trials) by Oct 21, else option A.** |
 | Motors (`koz/actions/motors.py`) | Serial link + mock; speed = the lower of the recipe's 0.25 and the local cap (0.15 until measured); stops on stale frames and during privacy checks; disarms at job end; armed only by a person (Enter / A key). **Codex's motor safety review (5 findings) and its re-review (3 more) fixed, tests first** (`tests/test_motor_safety.py`, `firmware/tests/test_sketch.cpp`): Stop halts at once and before it is reported; any stop, job end or USB failure locks the link until a person arms again; the sketch stops the motors within 250 ms of the last command even while the sonar pings, and reads only exact lines. Codex's confirmation of the last 3 fixes is pending (quota). |
 | Cameras | `--camera slot=source`: this Mac, the ESP32-CAM MJPEG stream, a phone (MJPEG or RTSP). `--upside-down` / `--mirror` for a camera mounted that way (the car's ESP32-CAM is upside down, as in the original `config.py`): turned before the guard sees it. The web can pick a slot once Codex adds it (`.collab/specs/web-camera-choice.md`). |
 | One launcher (`start-koz.command`) | Runner + web app, opens Setup. One camera view: the eye in the browser (`KOZ_WINDOW=1` adds the runner window). Enter in its Terminal arms a car's motors (the runner now reads that Terminal). Closing Terminal (HUP) or TERM stops both. |
@@ -54,10 +54,10 @@ python3.13 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
 
 ## What's next
 
-1. You, Sunday: `docs/SUNDAY.md` (portfolio recordings with the original car first, stop test, motor_listener, 10 chase trials, original back). Option B time box: Oct 19.
+1. You, Tue Oct 20: `docs/CAR_DAY.md` (portfolio recordings with the original car first, stop test, motor_listener, 10 chase trials, original back). Option B time box: Wed Oct 21.
 2. You: then the classroom and privacy trials; the video (`docs/VIDEO.md`); check the report draft (`docs/REPORT.md`).
 3. Codex: `.collab/specs/web-camera-choice.md` and `web-planner-and-live.md`.
-4. Oct 19: `docs/AWS_DAY.md` ($1 budget first). Before it: make the GitHub repo public (your decision) and Codex builds `.collab/specs/aws-review.md`.
+4. Mon Oct 19: `docs/AWS_DAY.md` ($1 budget first). Before it: make the GitHub repo public (your decision) and Codex builds `.collab/specs/aws-review.md`.
 
 ## Known limits
 
