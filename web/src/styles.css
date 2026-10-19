@@ -29,6 +29,7 @@
 .motor-hint{font-size:.78rem;color:var(--warn);margin-top:6px;line-height:1.45}
 .dock-actions{display:grid;gap:10px}
 .dock-actions.two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.dock-actions.two.stacked{grid-template-columns:minmax(0,1fr)}
 .dock-actions button{width:100%;min-height:50px;padding:10px 12px}
 .dock-actions .icon{width:16px;height:16px;flex:0 0 16px}
 .dock-second{background:transparent}

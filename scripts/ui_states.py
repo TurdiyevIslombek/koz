@@ -128,6 +128,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("state", choices=STATES)
     parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--cameras", default="mac_camera", help="camera slots to offer, comma-separated (all show the drawing)")
     args = parser.parse_args()
     scene = Scene(ball=args.state == "car")
     setup = LocalSetup(owner_confirmed=True, allowed_area=(((0, 0), (1, 0), (1, 1), (0, 1)),),
@@ -137,7 +138,7 @@ def main():
               eval_seconds=3600 if args.state == "testing" else 3, report_planner=True,
               models={"scene_checker": Guard(args.state), "face_detector": Faces(scene), "person_detector": People(scene)},
               motor_link=MockMotorLink(armed=True) if args.state == "car" else None,
-              cameras={"mac_camera": camera}, report_cameras=True)
+              cameras={slot: camera for slot in args.cameras.split(",")}, report_cameras=True)
     print(f"ui_states: {args.state} on ws://127.0.0.1:{args.port}", flush=True)
     try:
         asyncio.run(serve(hub, port=args.port))

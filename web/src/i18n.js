@@ -161,7 +161,13 @@ const rows = {
  guardChecking:['tekshirilmoqda','проверяется','checking'],
  eyeEnlarge:['Kattalashtirish uchun koʻzni bosing','Нажмите на глаз, чтобы увеличить','Tap the eye to enlarge'],
  eyeLargeClose:['yopish: Esc yoki bosing','закрыть: Esc или нажатие','close: Esc or tap'],
- eyeLargeLabel:['Kamera tasviri, katta','Изображение камеры, крупно','Camera view, large']
+ eyeLargeLabel:['Kamera tasviri, katta','Изображение камеры, крупно','Camera view, large'],
+ finishRetry:['Sinovni yakunlab, qayta urinish','Завершить испытание и повторить','Finish trial and try again'],
+ trialRetryTodo:['Bu sinovning vazifasi bajarilgan. Natijani “Sinov va dalil”da yozing yoki sinovni yakunlab qayta urining: u nomaʼlum deb yoziladi.','Задание этого испытания уже выполнено. Запишите результат в «Испытаниях» или завершите испытание и повторите: оно будет записано как неизвестное.','This trial already ran its job. Record pass or fail in Trials, or finish it and try again: it is saved as unknown.'],
+ unknownTitle:['Raqamlar hozircha nomaʼlum','Числа пока неизвестны','Numbers unknown right now'],
+ waitingNumbersWhy:['Yangi oʻlchov kutilmoqda.','Ждём новое измерение.','Waiting for a fresh measurement.'],
+ overloadedTodo:['Kompyuter juda band: boshqa dasturlarni yoping. Koʻz kutishda davom etadi.','Компьютер перегружен: закройте другие программы. Koʻz продолжает ждать.','The computer is too busy: close other apps. Koʻz keeps waiting.'],
+ unknownTodo:['Koʻz tekshirishda davom etadi; raqamlar oʻzi qaytadi.','Koʻz продолжает проверку; числа вернутся сами.','Koʻz keeps checking; the numbers come back by themselves.']
 };
 export const t=(language,key)=>rows[key]?.[languages.indexOf(language)]||rows[key]?.[0]||key;
 export const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

@@ -1,9 +1,9 @@
-import { createModel, ingest, liveView, trialRows, evidenceChains, summaryFor, invalidateLive } from './model.js';
+import { createModel, ingest, liveView, trialRows, evidenceChains, summaryFor, invalidateLive, trialUsed } from './model.js';
 import { readRecipe, validateCommandData, codeMessage, CODES, newId } from './protocol.js';
 import { DemoRunner, recipeFor, sampleEvidence } from './demo.js';
 import { t, escapeHTML as esc } from './i18n.js';
 import { sceneSVG, targetSVG, icon, pulseCrossing } from './scene.js';
-import { plannerPresentation, liveKind, cameraChoice, withCamera, liveStep, eyeClosedReason, TEST_SECONDS } from './presentation.js';
+import { plannerPresentation, liveKind, cameraChoice, withCamera, liveStep, retryStart, eyeClosedReason, TEST_SECONDS } from './presentation.js';
 import { createOwnerConnection } from './owner-connection.js';
 import { createEyeConnection } from './eye-connection.js';
 
@@ -16,7 +16,7 @@ let demoMode=new URL(location.href).searchParams.get('demo')==='1';
 let transport={mode:'inbound',state:'disconnected',source:'runner',replayOwned:false};
 let model=createModel(),demo=null,authenticated=false,configured=false,saved=[],signature='',notice='',noticeError=false;
 let screen=['setup','live','trials'].includes(location.hash.slice(1))?location.hash.slice(1):'live';
-let lastStart=null; // {input, job_id}: what this page last started, so Try again runs the same job
+let lastStart=null; // {input, camera_id, job_id}: what this page last started, so Try again runs the same job on the same camera
 let prompt='',candidate=null,exampleKind='counter',trialDemo='red_ball',trialIndex=1,activeTrialDemo=null;
 let ownerState='starting',cameraSelection={},cloudMode=false,publicView=false,eyeAvailable=false,publication=null,published=false,storageIncomplete=false,historyCursor=null;
 let formResult='pass',formReason='none',formExpected='',sampleState='running';
@@ -110,21 +110,26 @@ function cameraHTML(){return cameraSelection.slots.length>=2?`<div class="camera
 function setupHTML(){return `<div class="page-heading"><h1 tabindex="-1">${tr('describe')}</h1></div><div class="setup-grid"><section><form id="prompt-form" class="prompt-form">${cameraHTML()}<label for="prompt">${tr('promptLabel')}</label><textarea id="prompt" maxlength="4000" placeholder="${tr('placeholder')}" ${candidate?'disabled':''}>${esc(prompt)}</textarea><div class="prompt-meta"><span>${tr('noNames')}</span><span id="prompt-count">${[...prompt].length} / 2000</span></div><div class="examples">${['counter','classroom','red_ball'].map(k=>button(`example:${k}`,k==='counter'?'sampleCounter':k==='classroom'?'sampleClassroom':'sampleBall')).join('')}</div><button class="primary" id="test" type="submit" ${!ready()||!jobIdle()||pending()||!candidate&&!prompt.trim()?'disabled':''}>${icon('arrow')}${tr('test')}</button>${candidate?button('clear-import','draft','link'):''}<p class="disclosure">${tr('testHint')}</p>${plannerHTML()}<p class="disclosure planner-disclosure">${tr(plannerPresentation(model.status?.data,liveView(model).offline,cloudMode&&!demoMode).disclosure)}</p></form>${!ready()?`<div class="notice" style="margin-top:22px"><p>${tr('noDevice')}</p>${button('connect','connect','link')} ${!demoMode?button('demo','tryDemo','link'):''}</div>`:!jobIdle()?`<p class="disclosure">${tr('stopFirst')}</p>`:''}<p class="setup-local">${tr('localSetup')}</p></section>${planHTML()}</div>`;}
 // The job's first recipe: Try again runs that same job (also after a page reload).
 function jobRecipe(){const job=model.status;if(!job?.job_id)return null;const first=model.events.map(r=>r.event).filter(e=>e.type==='recipe'&&e.session_id===job.session_id&&e.job_id===job.job_id).sort((a,b)=>a.revision-b.revision||a.seq-b.seq)[0];return first?.data.recipe||null;}
-function retryInput(){if(lastStart&&lastStart.job_id===model.status?.job_id)return lastStart.input;const recipe=jobRecipe();return recipe?{input:'recipe',recipe}:null;}
+function retryInput(){let stored=null;try{stored=JSON.parse(sessionStorage.getItem(LAST_CAMERA)||'null');}catch{}return retryStart({lastStart,stored,status:model.status,recipe:jobRecipe()});}
+// After start_job was sent: remember the job and its camera. This tab keeps only {session_id, job_id,
+// camera_id} (never the prompt), so Try again uses the same camera after a page reload.
+const LAST_CAMERA='koz-last-camera';
+function rememberStart(sent){const {camera_id=null,...input}=sent,job_id=model.pending?.job_id,session_id=model.pending?.session_id||model.status?.session_id;lastStart={input,camera_id,job_id};try{sessionStorage.setItem(LAST_CAMERA,JSON.stringify({session_id,job_id,camera_id}));}catch{}}
+const until=(check,ms)=>new Promise(resolve=>{const end=Date.now()+ms,tick=()=>check()?resolve(true):Date.now()>end?resolve(false):setTimeout(tick,100);tick();});
 const hasMotors=()=>Boolean(model.recipe?.data.recipe.actions.some(a=>a.type==='motors'));
-function stepFor(view){return liveStep(view,{fault:model.fault?.data||(view.status?.state==='idle'?model.lastStop?.data:null)||null,stoppedBy:model.stoppedBy,canRetry:!readOnly()&&Boolean(retryInput()),hasJob:Boolean(model.status?.job_id),testing:model.testing,kind:currentKind(),motors:hasMotors()});}
+function stepFor(view){return liveStep(view,{fault:model.fault?.data||(view.status?.state==='idle'?model.lastStop?.data:null)||null,stoppedBy:model.stoppedBy,canRetry:!readOnly()&&Boolean(retryInput()),hasJob:Boolean(model.status?.job_id),testing:model.testing,kind:currentKind(),motors:hasMotors(),trialUsed:trialUsed(model)});}
 const whyText=why=>why.key?tr(why.key):msg(why.code);
-const stepIcon=step=>({running:'check',testing:'pause',planning:'pause',confirming:'pause',cameraLost:'question',offline:'question',idle:'eye'}[step.step]||'stop');
+const stepIcon=step=>({running:'check',testing:'pause',planning:'pause',confirming:'pause',cameraLost:'question',unknownOutput:'question',offline:'question',idle:'eye'}[step.step]||'stop');
 const countText=count=>count?.state==='known'?String(count.value):'—';
 const countHTML=count=>count?.state==='known'?String(count.value):'<span class="dash" aria-label="—">—</span>';
 function statusHTML(view,step){
  const test=step.test,countdown=test&&test.left>0?`<span class="countdown">${tr('secondsLeft').replace('{n}',test.left)}</span>`:'';
  const progress=test?`<div class="test-progress" role="progressbar" aria-label="${tr('testingTitle')}" aria-valuemin="0" aria-valuemax="${TEST_SECONDS}" aria-valuenow="${Math.round(test.elapsed)}"><span style="--p:${(test.elapsed/TEST_SECONDS).toFixed(3)};animation-delay:-${test.elapsed.toFixed(2)}s"></span></div><p class="test-round">${tr('testingTry').replace('{n}',test.round)}</p>`:'';
- return `<section class="status" data-tone="${step.tone}" data-step="${step.step}"><h2>${icon(stepIcon(step))}<span>${tr(step.title)}</span>${countdown}</h2>${progress}<p id="status-reason">${esc(whyText(step.why))}</p>${step.todo&&!readOnly()?`<p class="todo">${esc(tr(step.todo))}</p>`:''}${['idle','offline','planning'].includes(step.step)?'':plannerHTML(view)}</section>`;
+ return `<section class="status" data-tone="${step.tone}" data-step="${step.step}"><h2>${icon(stepIcon(step))}<span>${tr(step.title)}</span>${countdown}</h2>${progress}<p id="status-reason">${esc(whyText(step.why))}</p>${step.todo&&!readOnly()?`<p class="todo">${esc(tr(step.todo))}</p>`:''}${step.note&&!readOnly()?`<p class="small muted">${esc(tr(step.note))}</p>`:''}${['idle','offline','planning'].includes(step.step)?'':plannerHTML(view)}</section>`;
 }
 function readoutHTML(view,step){
  const kind=currentKind(),count=view.counts[0],counting=kind==='counter',targeting=kind==='target';
- const live=['running','testing'].includes(step.step),waiting=tr(live||['cameraLost','confirming','planning'].includes(step.step)?'waitingCamera':'notCounting');
+ const live=['running','testing'].includes(step.step),waiting=tr(live||['cameraLost','unknownOutput','confirming','planning'].includes(step.step)?'waitingCamera':'notCounting');
  let main,cls,label,small;
  if(counting){const known=count?.state==='known';main=countText(count);cls=known?'count'+(main.length>2?' long':''):'count is-unknown';label=tr('now');small=count===null?tr('notConfigured'):known?tr(count.value===0?'measuredZero':'fresh'):waiting;}
  else if(targeting){const known=['left','center','right','lost'].includes(view.target);main=known?tr(view.target):'—';cls=known?'count-word':'count is-unknown';label=tr('targetWhere');small=known?tr('fresh'):waiting;}
@@ -152,8 +157,8 @@ function actionsHTML(step,stopping){
  const [first,second]=step.actions;
  if(!first)return `<p class="dock-todo">${esc(tr(step.todo||'offlineTodo'))}</p>`;
  const make=(action,main)=>action==='stop'?`<button class="stop-button" data-action="stop" ${!ready()||stopping?'disabled':''}>${icon('stop')}${tr(stopping?'stopPending':'stop')}</button>`:
-  `<button type="button" class="${main?'primary dock-main':'dock-second'}" data-action="${action==='retry'?'retry':'new-job'}" ${action==='retry'&&(!ready()||pending())?'disabled':''}>${main&&!step.actions[1]?icon(action==='retry'?'retry':'arrow'):''}${tr(action==='retry'?'retry':'newJob')}</button>`;
- return `<div class="dock-actions${second?' two':''}">${make(first,true)}${second?make(second,false):''}</div>`;
+  `<button type="button" class="${main?'primary dock-main':'dock-second'}" data-action="${action==='finishRetry'?'finish-retry':action==='retry'?'retry':'new-job'}" ${action!=='newJob'&&(!ready()||pending())?'disabled':''}>${main&&!step.actions[1]?icon(action==='newJob'?'arrow':'retry'):''}${tr(action)}</button>`;
+ return `<div class="dock-actions${second?' two':''}${step.actions.includes('finishRetry')?' stacked':''}">${make(first,true)}${second?make(second,false):''}</div>`;
 }
 function dockHTML(view){const step=stepFor(view),stopping=model.pending?.command==='stop_job'&&!model.pending.failed;return `<footer class="dock"><div class="dock-inner"><div class="privacy-strip"><span class="camera">${icon('camera')}${tr(view.offline?'cameraUnknown':view.status.camera_on?'cameraOn':'cameraOff')}</span>${!view.offline&&view.status.camera_on?`<span>${tr('guard')}: ${tr(view.status?.privacy==='approved'?'approved':view.status?.privacy==='blocked'?'guardBlocked':view.status?.state==='checking'?'guardChecking':'guardUnknown')} · ${tr('faces')}: ${tr(!view.unavailable?'blurred':'held')}</span>`:''}</div>${actionsHTML(step,stopping)}<p class="dock-note">${stopping?tr('awaitDevice'):pending()?tr(model.pending.result==='accepted'?'accepted':'sent'):demoMode||transport.source==='replay'?tr('sampleOnly'):tr(currentKind()==='counter'?'privacyPromise':'localFrames')}</p></div></footer>`;}
 function render(force=false){
@@ -188,7 +193,11 @@ async function act(action){const [name,arg]=action.split(':');
  else if(name==='example')fillExample(arg);
  else if(name==='clear-import'){candidate=null;render(true);}
  else if(name==='stop')await command('stop_job',{});
- else if(name==='retry'){const input=retryInput();if(input&&await command('start_job',withCamera(input,model.status,cameraSelection)))lastStart={input,job_id:model.pending?.job_id};}
+ else if(name==='retry'){const input=retryInput();if(input&&await command('start_job',input))rememberStart(input);}
+ else if(name==='finish-retry'){   // one job per trial: close this trial (saved as unknown, interrupted), then start the job again
+  const input=retryInput();if(!input||!await command('finish_trial',{result:'unknown',reason:'interrupted',expected_count:null}))return;
+  if(!await until(()=>!model.trial&&!pending(),6000))return setNotice(tr('pendingExpired'),true);
+  if(await command('start_job',input))rememberStart(input);}
  else if(name==='new-job'){candidate=null;if(lastStart?.input.input==='prompt')prompt=lastStart.input.text;go('setup');}
  else if(name==='cross'){const person=document.querySelector('.crossing-silhouette');if(matchMedia('(prefers-reduced-motion: reduce)').matches){demo.cross();}else if(person){const animation=person.animate([{transform:'translateX(-45px)'},{transform:'translateX(45px)'}],{duration:900,easing:'linear',fill:'forwards'});setTimeout(()=>{if(!demo)return;demo.cross();const next=document.querySelector('.crossing-silhouette');next?.animate([{transform:'translateX(0px)'},{transform:'translateX(45px)'}],{duration:450,easing:'linear'});},450);animation.onfinish=()=>animation.cancel();}}
  else if(name==='import')document.querySelector('#recipe-file').click();
@@ -207,7 +216,7 @@ async function act(action){const [name,arg]=action.split(':');
 document.addEventListener('click',event=>{const eye=event.target.closest('#live-eye');if(eye&&!eye.classList.contains('is-closed')){openLargeEye();return;}const link=event.target.closest('.tabs a');if(link){event.preventDefault();go(link.hash.slice(1));return;}const b=event.target.closest('[data-action]');if(b&&!b.disabled)act(b.dataset.action).catch(error=>{if(dialog.open)connectionHTML(msg(error.code||'INTERNAL_ERROR'));else setNotice(msg(error.code||'INTERNAL_ERROR'),true);});});
 document.addEventListener('input',event=>{const {id,value}=event.target;if(id==='prompt'){prompt=value;document.querySelector('#prompt-count').textContent=`${[...prompt].length} / 2000`;document.querySelector('#test').disabled=!ready()||!jobIdle()||pending()||!prompt.trim()||[...prompt].length>2000;}if(id==='expected-count')formExpected=value;});
 document.addEventListener('change',async event=>{const {id,value}=event.target;if(id==='camera-choice'){if(cameraSelection.slots.includes(value))cameraSelection.camera_id=value;render(true);}if(id==='language'){language=value;persist('koz-language',value);render(true);}if(id==='sample-state'){sampleState=value;demo.setState(value);render(true);}if(id==='trial-demo'){trialDemo=value;render(true);}if(id==='trial-result'){formResult=value;formReason=value==='pass'?'none':'unknown';render(true);}if(id==='trial-reason')formReason=value;if(id==='recipe-file'){const file=event.target.files[0];if(!file)return;try{if(file.size>16384)throw Error('size');candidate=readRecipe(await file.text());setNotice(tr('imported'));}catch{setNotice(msg('INVALID_RECIPE'),true);}}});
-document.addEventListener('submit',async event=>{event.preventDefault();if(event.target.id==='prompt-form'){const started=candidate?{input:'recipe',recipe:candidate}:{input:'prompt',language,text:prompt},input=withCamera(started,model.status,cameraSelection);if(await command('start_job',input)){lastStart={input:started,job_id:model.pending?.job_id};prompt='';candidate=null;go('live');}}if(event.target.id==='login-form'){try{await api('login',{password:document.querySelector('#owner-password').value});authenticated=true;dialog.close();if(!demoMode)await connectOwner();render(true);}catch(error){connectionHTML(msg(error.code||'INTERNAL_ERROR'));}}if(event.target.id==='trial-form'){await command('finish_trial',{result:formResult,reason:formResult==='pass'?'none':formReason,expected_count:(activeTrialDemo||trialDemo)==='classroom'&&formExpected!==''?Number(formExpected):null});}});
+document.addEventListener('submit',async event=>{event.preventDefault();if(event.target.id==='prompt-form'){const started=candidate?{input:'recipe',recipe:candidate}:{input:'prompt',language,text:prompt},input=withCamera(started,model.status,cameraSelection);if(await command('start_job',input)){rememberStart(input);prompt='';candidate=null;go('live');}}if(event.target.id==='login-form'){try{await api('login',{password:document.querySelector('#owner-password').value});authenticated=true;dialog.close();if(!demoMode)await connectOwner();render(true);}catch(error){connectionHTML(msg(error.code||'INTERNAL_ERROR'));}}if(event.target.id==='trial-form'){await command('finish_trial',{result:formResult,reason:formResult==='pass'?'none':formReason,expected_count:(activeTrialDemo||trialDemo)==='classroom'&&formExpected!==''?Number(formExpected):null});}});
 document.addEventListener('keydown',event=>{if((event.key==='Enter'||event.key===' ')&&event.target.id==='live-eye'&&!event.target.classList.contains('is-closed')){event.preventDefault();openLargeEye();}});
 window.addEventListener('hashchange',()=>{const page=location.hash.slice(1);if(['setup','live','trials'].includes(page)){screen=page;notice='';render(true);window.scrollTo(0,0);}});
 setInterval(()=>{if(model.pending&&Date.now()/1000>model.pending.expires_at){model.pending=null;notice=tr('pendingExpired');noticeError=true;}render();},250);

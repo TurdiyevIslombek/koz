@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolve, extname } from 'node:path';
 import { WebSocketServer, WebSocket } from 'ws';
 import { readEvent, parseStrict, validateCommandData, ContractError } from '../src/protocol.js';
-import { createModel, ingest, liveView, summaryFor, invalidateLive } from '../src/model.js';
+import { createModel, ingest, liveView, summaryFor, invalidateLive, trialUsed } from '../src/model.js';
 
 import { connectRunner } from './runner-link.mjs';
 import { createFakeRunner } from './fake-runner.mjs';
@@ -144,7 +144,7 @@ export async function createApplication({password='',dataDir=resolve(root,'.data
      validateCommandData(input.command,input.data,model.status.data.capabilities,model.status.data.cameras||[]);
      const state=model.status.data.state;
      if(input.command==='start_job'&&!['idle','held','refused'].includes(state)||input.command==='begin_trial'&&(!['idle','held','refused'].includes(state)||model.trial)||input.command==='finish_trial'&&!model.trial)throw new ContractError('BUSY');
-     if(input.command==='start_job'&&model.trial&&model.events.some(r=>r.event.trial_id===model.trial&&r.event.job_id&&['recipe','observation','decision'].includes(r.event.type)))throw new ContractError('BUSY');
+     if(input.command==='start_job'&&trialUsed(model))throw new ContractError('BUSY');
      if(model.pending&&!model.pending.failed&&input.command!=='stop_job')throw new ContractError('BUSY');
      const command={v:1,type:'command',command_id:id(),session_id:runnerSession,job_id:input.command==='start_job'?id():input.command==='begin_trial'?null:model.status.job_id,trial_id:input.command==='begin_trial'?id():model.trial,expires_at:Math.floor(Date.now()/1000)+10,command:input.command,data:input.data};
      model.pending={command_id:command.command_id,command:command.command,job_id:command.job_id,session_id:command.session_id,trial_id:command.trial_id,expires_at:command.expires_at};

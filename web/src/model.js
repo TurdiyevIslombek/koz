@@ -39,8 +39,16 @@ export function ingest(model,event,receivedAt=Date.now()) {
     // An acknowledgement settles delivery only. Physical/job state still comes from status.
     if(event.data.result==='rejected')model.pending.failed=true;
   }
+  // The trial is closed once its result arrives: when its job was already idle, no status of that job
+  // follows, so waiting for one kept finish_trial pending (and every next command BUSY) for 10 s.
+  if(event.type==='trial_result'&&fresh&&event.trial_id===model.trial){
+    if(model.pending?.command==='finish_trial'&&model.pending.trial_id===event.trial_id)model.pending=null;
+    model.trial=null;
+  }
   return true;
 }
+// One job per trial (the runner refuses a second): this trial's job has started.
+export function trialUsed(model){return Boolean(model.trial&&model.events.some(r=>r.event.trial_id===model.trial&&r.event.job_id));}
 export function liveView(model,now=Date.now()) {
   const offline=!model.status||now-model.statusAt>3000;
   const status=model.status?.data;

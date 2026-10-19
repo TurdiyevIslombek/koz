@@ -50,10 +50,21 @@ export function todoFor(code){
 // view: liveView(model). fault: the job's latest fault data ({code, effect, seen?}), kept after a
 // later idle. stoppedBy: 'owner' when this page's Stop ended the job. canRetry: the same job can be
 // started again. testing: {since, revision} of the current test round.
-export function liveStep(view,{fault=null,stoppedBy=null,canRetry=false,hasJob=false,testing=null,kind='unknown',motors=false,now=Date.now()}={}){
- const actions=list=>list.filter(a=>a!=='retry'||canRetry);
+export function liveStep(view,{fault=null,stoppedBy=null,canRetry=false,hasJob=false,testing=null,kind='unknown',motors=false,trialUsed=false,now=Date.now()}={}){
+ // In a trial whose one job already ran, "Try again" would be refused (one job per trial): the same
+ // button finishes the trial first (recorded as unknown, interrupted), then starts the job again.
+ const retry=trialUsed?'finishRetry':'retry';
+ const actions=list=>list.map(a=>a==='retry'?retry:a).filter(a=>a===retry?canRetry:true);
+ const withNote=step=>trialUsed&&step.actions.includes('finishRetry')?{...step,note:'trialRetryTodo'}:step;
  if(view.offline)return {step:'offline',tone:'unknown',title:'offlineTitle',why:{key:'offlineReason'},todo:'offlineTodo',actions:[]};
  const state=view.status.state;
+ // A fault wins at once, whatever the status still says (a privacy stop shows before "held" arrives).
+ if(fault&&state!=='planning'){
+  const code=fault.code;
+  if(PRIVACY_STOPS.has(code))return withNote({step:'privacyStop',tone:'bad',title:'privacyStopTitle',why:stopWhy(code,fault.seen),todo:todoFor(code),actions:actions(['retry','newJob'])});
+  if(REFUSALS.has(code))return {step:'refused',tone:'bad',title:'refusedTitle',why:{code},todo:'refusedTodo',actions:['newJob']};
+  return withNote({step:'problem',tone:'bad',title:'stopped',why:{code},todo:todoFor(code),actions:actions(['retry','newJob'])});
+ }
  if(state==='planning')return {step:'planning',tone:'warn',title:'planningTitle',why:{key:'planningWhy'},actions:['stop']};
  if(state==='checking')return {step:'confirming',tone:'warn',title:'confirmingTitle',why:{key:'confirmingWhy'},actions:['stop']};
  if(state==='evaluating'){
@@ -62,22 +73,33 @@ export function liveStep(view,{fault=null,stoppedBy=null,canRetry=false,hasJob=f
    actions:['stop'],test:{elapsed:Math.min(elapsed,TEST_SECONDS),left:Math.max(left,0),round:testing?.revision||1}};
  }
  if(state==='running'){
-  if(['FRAME_STALE','OVERLOADED'].includes(view.reason))return {step:'cameraLost',tone:'warn',title:'cameraLostTitle',why:{key:'cameraLostWhy'},todo:'cameraLostTodo',actions:['stop']};
+  // Any unknown output: amber, in the contract's own words (section 11), never green "Running".
+  if(view.reason==='FRAME_STALE')return {step:'cameraLost',tone:'warn',title:'cameraLostTitle',why:{code:'FRAME_STALE'},todo:'cameraLostTodo',actions:['stop']};
+  if(view.reason||view.state==='unknown')return {step:'unknownOutput',tone:'warn',title:'unknownTitle',why:view.reason?{code:view.reason}:{key:'waitingNumbersWhy'},
+   todo:view.reason==='OVERLOADED'?'overloadedTodo':'unknownTodo',actions:['stop']};
   return {step:'running',tone:'good',title:'running',why:{key:motors?'runningCar':kind==='counter'?'runningReason':kind==='target'?'runningTarget':'runningGuard'},actions:['stop']};
  }
- if(fault){
-  const code=fault.code,stop=fault;
-  if(PRIVACY_STOPS.has(code))return {step:'privacyStop',tone:'bad',title:'privacyStopTitle',why:stopWhy(code,stop.seen),todo:todoFor(code),actions:actions(['retry','newJob'])};
-  if(REFUSALS.has(code))return {step:'refused',tone:'bad',title:'refusedTitle',why:{code},todo:'refusedTodo',actions:['newJob']};
-  return {step:'problem',tone:'bad',title:'stopped',why:{code},todo:todoFor(code),actions:actions(['retry','newJob'])};
- }
- if(state==='idle'&&stoppedBy==='owner')return {step:'stoppedByYou',tone:'neutral',title:'stopped',why:{key:'youStopped'},todo:'stoppedTodo',actions:actions(['retry','newJob'])};
- if(hasJob||state!=='idle')return {step:'stopped',tone:'neutral',title:'stopped',why:{key:'jobEnded'},todo:canRetry?'stoppedTodo':'idleTodo',actions:actions(['retry','newJob'])};
+ if(state==='idle'&&stoppedBy==='owner')return withNote({step:'stoppedByYou',tone:'neutral',title:'stopped',why:{key:'youStopped'},todo:'stoppedTodo',actions:actions(['retry','newJob'])});
+ if(hasJob||state!=='idle')return withNote({step:'stopped',tone:'neutral',title:'stopped',why:{key:'jobEnded'},todo:canRetry?'stoppedTodo':'idleTodo',actions:actions(['retry','newJob'])});
  return {step:'idle',tone:'neutral',title:'idleTitle',why:{key:'idleWhy'},todo:'idleTodo',actions:['newJob']};
+}
+
+// What "Try again" starts: the same job, on the SAME camera it ran on. lastStart is what this page
+// started ({input, camera_id, job_id}); stored is {session_id, job_id, camera_id} kept by this tab
+// (no prompt text) so the camera survives a page reload; recipe is the job's first checked recipe.
+// Never the camera picked now: if the job's camera is unknown, the runner's default is used.
+export function retryStart({lastStart=null,stored=null,status=null,recipe=null}={}){
+ const job=status?.job_id;
+ if(!job)return null;
+ const same=lastStart?.job_id===job?lastStart:null;
+ const input=same?.input||(recipe?{input:'recipe',recipe}:null);
+ if(!input)return null;
+ const camera=same?same.camera_id:(stored?.job_id===job&&stored?.session_id===status.session_id?stored.camera_id:undefined);
+ return camera?{...input,camera_id:camera}:{...input};
 }
 
 // The short words under a closed eye.
 export function eyeClosedReason(step){
  return {privacyStop:'eyeClosedPrivacy',confirming:'eyeChecking',cameraLost:'eyeLate',offline:'eyeOffline',
-  testing:'eyeWaiting',running:'eyeWaiting',planning:'eyePlanning'}[step.step]||'eyeClosedStopped';
+  testing:'eyeWaiting',running:'eyeWaiting',unknownOutput:'eyeWaiting',planning:'eyePlanning'}[step.step]||'eyeClosedStopped';
 }

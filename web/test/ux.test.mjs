@@ -120,3 +120,53 @@ test('every text the Live states use exists in Uzbek, Russian and English', () =
   for (const jargon of ['Evaluation measurement', 'Request accepted', 'Since job start · crossings', 'In the area now', 'Fresh data'])
     assert.ok(!english.includes(jargon), jargon);
 });
+
+// --- Codex's findings on the UX pass (Oct 19) ----------------------------------------------------------
+import { retryStart } from '../src/presentation.js';
+
+test('a fault wins at once, even before the status says held: never green Running', () => {
+  const step = liveStep({ offline: false, reason: 'PRIVATE_BEDROOM', state: 'blocked', status: { state: 'running' } },
+    { fault: { code: 'PRIVATE_BEDROOM', seen: 'bed' }, canRetry: true });
+  assert.equal(step.step, 'privacyStop');
+  assert.equal(step.why.key, 'seen_bed');
+  const other = liveStep({ offline: false, reason: 'BLUR_UNAVAILABLE', state: 'stopped', status: { state: 'running' } },
+    { fault: { code: 'BLUR_UNAVAILABLE' }, canRetry: true });
+  assert.equal(other.tone, 'bad');
+});
+
+test('an unknown output while running is amber with the fixed contract message, never green', () => {
+  for (const reason of ['OVERLOADED', 'PRIVACY_UNCERTAIN', 'FRAME_STALE']) {
+    const step = liveStep({ offline: false, reason, state: 'unknown', status: { state: 'running' } }, {});
+    assert.notEqual(step.tone, 'good', reason);
+    assert.deepEqual(step.why, { code: reason }, reason);   // the contract's own words (section 11)
+    assert.deepEqual(step.actions, ['stop']);
+  }
+  const noNumbersYet = liveStep({ offline: false, reason: null, state: 'unknown', status: { state: 'running' } }, {});
+  assert.equal(noNumbersYet.tone, 'warn');
+  const fine = liveStep({ offline: false, reason: null, state: 'running', status: { state: 'running' } }, {});
+  assert.equal(fine.tone, 'good');
+});
+
+test('Try again keeps the camera the job ran on, also after a page reload', () => {
+  const status = { session_id: 's'.repeat(32), job_id: 'j'.repeat(32) };
+  const recipe = { version: 1 };
+  const fromPage = retryStart({ lastStart: { job_id: status.job_id, input: { input: 'prompt', language: 'uz', text: 'x' }, camera_id: 'esp32_cam' }, status, recipe });
+  assert.deepEqual(fromPage, { input: 'prompt', language: 'uz', text: 'x', camera_id: 'esp32_cam' });
+  const afterReload = retryStart({ lastStart: null, stored: { session_id: status.session_id, job_id: status.job_id, camera_id: 'esp32_cam' }, status, recipe });
+  assert.deepEqual(afterReload, { input: 'recipe', recipe, camera_id: 'esp32_cam' });
+  const otherJob = retryStart({ lastStart: null, stored: { session_id: status.session_id, job_id: 'k'.repeat(32), camera_id: 'esp32_cam' }, status, recipe });
+  assert.deepEqual(otherJob, { input: 'recipe', recipe });           // no camera known: the runner's default
+  assert.equal(retryStart({ lastStart: null, status: { job_id: null }, recipe }), null);
+});
+
+test('inside a trial whose job already ran, the one button is "Finish trial and try again"', () => {
+  const held = { offline: false, reason: null, state: 'stopped', status: { state: 'held' } };
+  const step = liveStep(held, { fault: { code: 'PRIVATE_BEDROOM' }, canRetry: true, trialUsed: true });
+  assert.deepEqual(step.actions, ['finishRetry', 'newJob']);
+  assert.equal(step.todo, 'privacyTodo');             // what to do about the stop stays
+  assert.equal(step.note, 'trialRetryTodo');         // plus what the button does to the trial
+  const idle = liveStep({ offline: false, reason: null, state: 'stopped', status: { state: 'idle' } }, { stoppedBy: 'owner', canRetry: true, hasJob: true, trialUsed: true });
+  assert.deepEqual(idle.actions, ['finishRetry', 'newJob']);
+  for (const key of ['finishRetry', 'trialRetryTodo', 'unknownTitle'])
+    assert.ok(languages.every(language => t(language, key) !== key), key);
+});
