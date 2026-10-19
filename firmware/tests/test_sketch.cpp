@@ -12,6 +12,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <utility>
+#include <vector>
 
 using byte = unsigned char;
 constexpr int A0 = 14, A1 = 15, HIGH = 1, LOW = 0, OUTPUT = 1, INPUT = 0;
@@ -21,6 +23,7 @@ static unsigned long echo_us = 11600;   // what the sonar hears (11600 us = 2 m)
 static int pings = 0;
 static int pwm[20];
 static uint32_t ena_off_at = UINT32_MAX;  // when the left motor's PWM last went from on to off
+static std::vector<std::pair<uint32_t, int>> writes;   // (time, PWM) of every write to ENA
 
 unsigned long millis() { return now_ms; }
 void digitalWrite(int, int) {}
@@ -28,6 +31,7 @@ void pinMode(int, int) {}
 void delayMicroseconds(unsigned long) {}
 void analogWrite(int pin, int value) {
   if (pin == 5 && pwm[5] > 0 && value == 0) ena_off_at = now_ms;
+  if (pin == 5) writes.push_back({now_ms, value});
   pwm[pin] = value;
 }
 unsigned long pulseIn(int, int, unsigned long timeout) {   // blocks while it listens
@@ -56,6 +60,8 @@ static int checks = 0;
 static void send(const std::string& text) {   // the laptop writes; the loop reads it (64 bytes or more per call)
   Serial.feed(text);
   for (int i = 0; i < 100 && Serial.available(); i++) { loop(); now_ms++; }
+  loop();                            // and keeps running a millisecond more (the soft start's first step)
+  now_ms++;
 }
 
 static void reset(uint32_t start_ms = 0) {
@@ -66,6 +72,8 @@ static void reset(uint32_t start_ms = 0) {
   std::memset(pwm, 0, sizeof pwm);
   ena_off_at = UINT32_MAX;
   logic = MotorLogic(settings);
+  soft = SoftStart(RAMP_PER_MS, REVERSE_PAUSE_MS);
+  writes.clear();
   send("\n");                        // ends any half line left by the previous scenario
   logic.echo(200);
 }
@@ -81,6 +89,8 @@ static uint32_t armAndMove() {      // returns when the move command was handled
   uint32_t at = now_ms;
   loop();
   now_ms++;
+  loop();                            // the soft start (Oct 18) ramps from the next millisecond
+  now_ms++;
   CHECK(logic.state == ARMED && pwm[ENA] > 0);
   return at;
 }
@@ -92,6 +102,8 @@ static void watchdogChecks() {
     send("ARM\n");
     now_ms = 1;
     Serial.feed("M,60,60\n");
+    loop();
+    now_ms = 2;                      // the soft start (Oct 18) ramps from the next millisecond
     loop();
     CHECK(pwm[ENA] > 0);
     echo_us = 24000;                 // a far wall: a valid echo that takes 24 ms
@@ -221,10 +233,47 @@ static void parserChecks() {
   }
 }
 
+static void softStartChecks() {
+  // --- Oct 18: a 9.5 V pack. At most 6 V on the motors; soft start; stop before reversing --------------
+  {  // full command: never above the 6 V PWM, and it ramps up instead of jumping
+    reset();
+    send("ARM\n");
+    for (int i = 0; i < 40; i++) { Serial.feed("M,255,255\n"); loop(); now_ms += 5; }
+    int highest = 0;
+    for (auto& w : writes) highest = w.second > highest ? w.second : highest;
+    CHECK(highest <= MAX_PWM && MAX_PWM <= 204);
+    CHECK(writes.front().second < 30);                       // the first step is small
+  }
+  {  // a reversal goes to 0 at once, stays 0 for the pause, then ramps the other way
+    reset();
+    send("ARM\n");
+    for (int i = 0; i < 40; i++) { Serial.feed("M,100,100\n"); loop(); now_ms += 5; }
+    CHECK(pwm[ENA] > 0 && logic.want_left == 100);
+    size_t mark = writes.size();
+    uint32_t at = now_ms;
+    for (int i = 0; i < 40; i++) { Serial.feed("M,-100,-100\n"); loop(); now_ms += 5; }
+    size_t stop = mark;                                      // the loop that reads the command stops at once
+    while (stop < writes.size() && writes[stop].second != 0) stop++;
+    CHECK(stop < writes.size() && writes[stop].first == at);
+    uint32_t moved = UINT32_MAX;
+    for (size_t i = stop; i < writes.size(); i++) if (writes[i].second > 0) { moved = writes[i].first; break; }
+    CHECK(moved != UINT32_MAX && moved - at >= REVERSE_PAUSE_MS);   // then waits before going backwards
+  }
+  {  // stopping is never delayed by the soft start: STOP and a fault cut the motors at once
+    reset();
+    send("ARM\n");
+    for (int i = 0; i < 40; i++) { Serial.feed("M,100,100\n"); loop(); now_ms += 5; }
+    Serial.feed("STOP\n");
+    loop();
+    CHECK(pwm[ENA] == 0);
+  }
+}
+
 int main(int argc, char** argv) {   // no argument: everything; "ms4" or "ms5": that part only
   bool all = argc < 2;
   if (all || std::strcmp(argv[1], "ms4") == 0) watchdogChecks();
   if (all || std::strcmp(argv[1], "ms5") == 0) parserChecks();
+  if (all || std::strcmp(argv[1], "soft") == 0) softStartChecks();
   std::printf("all %d sketch checks passed\n", checks);
   return 0;
 }

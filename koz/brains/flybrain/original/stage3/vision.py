@@ -33,7 +33,10 @@ def looming_from_frames(prev_gray, gray, dt=0.05):
     (left eye Hz, right eye Hz, {"exp_L", "exp_R": expansion per second, "motion": image motion in px/s})."""
     dt = min(max(dt, 0.02), 0.3)
     f = flow(prev_gray, gray)
-    motion = float(np.median(np.hypot(f[..., 0], f[..., 1]))) / dt      # whole picture: is the car moving?
+    # is the car moving? the floor in the bottom part of the picture slides by whenever it drives
+    # (90th percentile: most of a blank wall gives no flow at all, so the median was always ~0)
+    floor = f[int(f.shape[0] * 0.6):]
+    motion = float(np.percentile(np.hypot(floor[..., 0], floor[..., 1]), 90)) / dt
     top = f[: int(f.shape[0] * (1 - IGNORE_BOTTOM))]                     # the floor right in front expands
     half = top.shape[1] // 2                                             # whenever the car drives: skip it
     exp_L, exp_R = expansion(top[:, :half]) / dt, expansion(top[:, half:]) / dt

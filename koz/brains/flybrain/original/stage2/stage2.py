@@ -20,7 +20,12 @@ class SonarEyes:
 
     def no_movement(self):
         """True if, during the last STUCK_S seconds, every direction stayed within MOVED_CM.
+        Also True if EVERY ping said "nothing" (400): in a 2 m arena that never happens while driving
+        freely - it means the sensor is pressed against something and hears no echo.
         False if something changed, or if we can't tell (too few echoes)."""
+        allv = [cm for d in "LCR" for cm in self.recent.values(d, STUCK_S)]
+        if len(allv) >= 6 and min(allv) >= 400:
+            return True
         seen = 0
         for d in "LCR":
             v = [cm for cm in self.recent.values(d, STUCK_S) if cm < 400]

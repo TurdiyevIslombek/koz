@@ -1,4 +1,5 @@
-"""koz/brains/flybrain/original/ is an unchanged copy of Islombek's fly-brain car files (Oct 16).
+"""koz/brains/flybrain/original/ is an unchanged copy of Islombek's fly-brain car files (Oct 16; refreshed
+Oct 19 to his Oct 18 hardware fixes, at his request).
 Work happens next to it, never in it: this fails if any copied file changes."""
 import hashlib
 from pathlib import Path

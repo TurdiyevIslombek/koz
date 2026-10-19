@@ -7,6 +7,13 @@ sonar can't see) disarms it until the next arm by hand; speed capped. Turning on
 next to an obstacle are allowed. Your
 physical switch is the last layer. Protocol: top of `motor_listener.ino`.
 
+Since Oct 19, as in Islombek's own `car.ino` after his Oct 18 hardware fixes: for a **9.5 V pack**
+the motors get at most **6 V** (commands lift into PWM 61..204; set `BATTERY_V` to what the
+multimeter reads), and a **soft start**: a side speeds up at most 2 PWM per millisecond, and a change
+of direction stops first and waits 40 ms, so four motors never reverse at once and brown out the
+Arduino and the camera. Slowing and stopping stay immediate (the 250 ms watchdog, obstacle stops,
+faults and STOP never wait). Tested on the Mac: `firmware/tests/` (logic and the real sketch).
+
 Before the first drive, measure `speed_cap` and `stop_cm` with `firmware/stop_test` (its README).
 
 Upload (Arduino on USB; the ESP32-CAM link on D0/D1 disconnected):

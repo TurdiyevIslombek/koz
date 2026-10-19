@@ -9,7 +9,7 @@
 static int checks = 0;
 #define CHECK(cond) do { checks++; if (!(cond)) { std::printf("FAILED line %d: %s\n", __LINE__, #cond); std::exit(1); } } while (0)
 
-static MotorSettings settings() { return MotorSettings{120, 90, 80, 35, 250, 3}; }
+static MotorSettings settings() { return MotorSettings{120, 90, 80, 35, 250, 3, 255}; }
 
 static void out(MotorLogic& m, uint32_t t, int& l, int& r) { m.output(t, &l, &r); }
 
@@ -31,7 +31,7 @@ int main() {
     m.command(100, 50, 6000);
     out(m, 6010, l, r);
     CHECK(m.reason == RUNNING);
-    CHECK(l == liftToPwm(100, 80) && r == liftToPwm(50, 80));
+    CHECK(l == liftToPwm(100, 80, 255) && r == liftToPwm(50, 80, 255));
     CHECK(l == 80 + 100 * 175 / 255);
   }
   {  // 3. watchdog: no command for 250 ms -> fault, disarmed, stays off until ARM
@@ -59,7 +59,7 @@ int main() {
     m.arm();
     m.command(255, -255, 0);
     out(m, 1, l, r);
-    CHECK(l == liftToPwm(120, 80) && r == liftToPwm(-90, 80));
+    CHECK(l == liftToPwm(120, 80, 255) && r == liftToPwm(-90, 80, 255));
   }
   {  // 5. obstacle closer than stop_cm: reversing and spinning are fine; forward is a fault
     MotorLogic m(settings());
@@ -130,7 +130,7 @@ int main() {
     m.command(200, -250, 0);                                 // caps: (120, -90): would drift forward
     out(m, 1, l, r);
     CHECK(l == -r && l > 0 && m.reason == RUNNING);
-    CHECK(l == liftToPwm(90, 80));
+    CHECK(l == liftToPwm(90, 80, 255));
     m.command(255, 0, 2);                                    // a forward pivot: fault
     out(m, 3, l, r);
     CHECK(l == 0 && r == 0 && m.reason == OBSTACLE);
@@ -138,7 +138,7 @@ int main() {
     m.echo(200);                                             // clear: the command as capped
     m.command(200, -250, 4);
     out(m, 5, l, r);
-    CHECK(l == liftToPwm(120, 80) && r == liftToPwm(-90, 80));
+    CHECK(l == liftToPwm(120, 80, 255) && r == liftToPwm(-90, 80, 255));
   }
   {  // 10. security review: tens of thousands of missing echoes never let forward through again
     MotorLogic m(settings());
@@ -190,6 +190,51 @@ int main() {
     longest[31] = '\n';
     feed(longest, 32);                                       // exactly 31 characters still fit
     CHECK(good == 3 && strlen(last) == 31);
+  }
+  {  // 14. Oct 18, a 9.5 V pack: commands lift into min_pwm..max_pwm, so the motors get at most 6 V
+    CHECK(liftToPwm(255, 61, 204) == 204 && liftToPwm(-255, 61, 204) == -204);
+    CHECK(liftToPwm(12, 61, 204) == 61 + 12 * 143 / 255 && liftToPwm(11, 61, 204) == 0);
+  }
+  {  // 15. soft start (Islombek's car.ino, Oct 18): speeding up at most 2 PWM a ms; slowing, stopping at once
+    SoftStart soft(2, 40);
+    int l = 0, r = 0;
+    soft.apply(0, &l, &r);
+    l = r = 150; soft.apply(10, &l, &r);
+    CHECK(l == 20 && r == 20);                               // 10 ms x 2
+    l = r = 150; soft.apply(30, &l, &r);
+    l = r = 150; soft.apply(50, &l, &r);
+    CHECK(l == 100);                                         // 20 + 2 x 40
+    l = r = 150; soft.apply(100, &l, &r);
+    CHECK(l == 150);                                         // reaches the target, never more
+    l = r = 60; soft.apply(101, &l, &r);
+    CHECK(l == 60);                                          // slowing down: at once
+    l = r = 0; soft.apply(102, &l, &r);
+    CHECK(l == 0 && r == 0);                                 // a stop never waits
+  }
+  {  // 16. a change of direction stops first, waits 40 ms, then ramps the other way
+    SoftStart soft(2, 40);
+    int l = 0, r = 0;
+    soft.apply(0, &l, &r);
+    for (uint32_t t = 1; t <= 100; t++) { l = r = 150; soft.apply(t, &l, &r); }
+    CHECK(l == 150);
+    l = r = -150; soft.apply(101, &l, &r);
+    CHECK(l == 0 && r == 0);                                 // at once to stop
+    l = r = -150; soft.apply(120, &l, &r);
+    CHECK(l == 0);                                           // still waiting (19 ms after the stop)
+    l = r = -150; soft.apply(141, &l, &r);
+    CHECK(l < 0 && l >= -2 * 30);                            // 40 ms later: ramping backwards
+    for (uint32_t t = 142; t <= 260; t++) { l = r = -150; soft.apply(t, &l, &r); }
+    CHECK(l == -150);
+  }
+  {  // 17. each side on its own (a spin: one forward, one back), and a long idle gap can't jump to full
+    SoftStart soft(2, 40);
+    int l = 0, r = 0;
+    soft.apply(0, &l, &r);
+    l = 100; r = -100; soft.apply(10, &l, &r);
+    CHECK(l == 20 && r == -20);
+    l = r = 0; soft.apply(11, &l, &r);
+    l = r = 200; soft.apply(5000, &l, &r);                   // seconds at a stop, then full speed
+    CHECK(l > 0 && l <= 2 * 30);                             // at most 30 ms of ramp at once
   }
   std::printf("all %d checks passed\n", checks);
   return 0;

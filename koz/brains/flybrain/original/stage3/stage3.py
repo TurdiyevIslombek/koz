@@ -4,7 +4,8 @@ from common.camera import Camera
 from common.reflex import StuckReflex, Window, STUCK_S
 from stage3.vision import looming_from_frames
 
-MOVING_PX_S = getattr(config, "CAM_MOVING_PX_S", 8.0)   # image motion above this = the car is moving
+MOVING_PX_S = getattr(config, "CAM_MOVING_PX_S", 3.0)   # image motion above this = the car is moving
+MOVED_CM = 10          # sonar straight ahead changed more than this = the car moved
 
 
 class Stage3:
@@ -15,7 +16,7 @@ class Stage3:
         self.robot, self.driver, self.source = robot, driver, camera_source
         self.camera = None
         self.reflex = StuckReflex()
-        self.recent = Window(STUCK_S)                     # image motion, for the stuck reflex
+        self.recent = Window(STUCK_S)                     # image motion + sonar, for the stuck reflex
         self._clear()
 
     def _clear(self):
@@ -27,6 +28,7 @@ class Stage3:
         if self.camera is None:
             self.camera = Camera(self.source, config.CAMERA_FLIP, config.CAMERA_MIRROR)
         self._clear()
+        self.recent.clear()
         self.reflex.reset()
         self.driver.reset()
         self.robot.mode(3)
@@ -42,7 +44,21 @@ class Stage3:
             self.camera = None
 
     def on_message(self, msg):
-        pass
+        # The Arduino pings straight ahead in stage 3 too. The BRAIN never gets it (its only eye is
+        # the camera); it is used only by the stuck reflex, like a touch sensor: "am I moving at all?"
+        # (Camera motion alone was not reliable: blank white boards give the camera nothing to track.)
+        if msg[0] == "P" and msg[1] == "C":
+            self.recent.add("sonar", msg[2])
+
+    def _stuck_now(self):
+        sonar = self.recent.values("sonar", STUCK_S)
+        if len(sonar) >= 6:
+            near = [cm for cm in sonar if cm < 400]
+            if not near:
+                return True                               # no echo at all while driving: pressed on something
+            return len(near) >= 4 and max(near) - min(near) <= MOVED_CM
+        motion = self.recent.values("motion", STUCK_S)    # no sonar (old Arduino code): use the camera
+        return len(motion) >= 5 and max(motion) < MOVING_PX_S
 
     def tick(self, swap):
         got = self.camera.latest()
@@ -74,9 +90,7 @@ class Stage3:
             eye_L, eye_R = eye_R, eye_L
         spikes, hz, brain_wheels = self.driver.tick(eye_L, eye_R)
         # escape toward the side that looms less (the more open side)
-        motion = self.recent.values("motion", STUCK_S)     # picture still for STUCK_S seconds = not moving
-        stuck_now = len(motion) >= 5 and max(motion) < MOVING_PX_S
-        wheels, reflex = self.reflex.wheels(brain_wheels, self.eyes[1] <= self.eyes[0], stuck_now)
+        wheels, reflex = self.reflex.wheels(brain_wheels, self.eyes[1] <= self.eyes[0], self._stuck_now())
         self.robot.wheels(*wheels)
         return {"wheels": wheels, "eyes": self.driver.eyes_in, "hz": hz, "spikes": spikes, "frame": rgb,
                 "reflex": reflex, "raw": self.raw}

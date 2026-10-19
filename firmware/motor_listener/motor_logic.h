@@ -15,7 +15,8 @@
 //      Next to an obstacle, turning on the spot and reversing are not faults: one side forward and one
 //      backwards becomes a pure spin (judged on the capped values: security review, Oct 16).
 //   4. Speed cap: forward at most speed_cap, backwards at most reverse_cap (the sensor looks forward only).
-//   5. The motors don't turn below about min_pwm, so commands are lifted into min_pwm..255 (as car.ino).
+//   5. The motors don't turn below about min_pwm, so commands are lifted into min_pwm..max_pwm (as car.ino);
+//      max_pwm keeps the motors at their highest safe voltage (6 V on Islombek's 9.5 V pack, Oct 18).
 //   6. The watchdog is a lease (motor safety review MS-4, Oct 16): the motors may run only while
 //      now - last command < watchdog_ms. A command that arrives after the lease ran out trips the
 //      fault first, so it can't revive the motors.
@@ -36,18 +37,68 @@ struct MotorSettings {
   int stop_cm;                    // forward into something closer than this = fault (measure it)
   uint32_t watchdog_ms;           // no fresh command for this long -> fault
   int missing_echoes_block;       // this many pings in a row without an echo -> forward is a fault
+  int max_pwm;                    // PWM that gives the motors their highest safe voltage (204: 6 V of 7.5 V)
 };
 
 inline int clampInt(int v, int lo, int hi) { return v < lo ? lo : (v > hi ? hi : v); }
 inline int absInt(int v) { return v < 0 ? -v : v; }
 
-// car.ino's lift(): tiny commands are a stop; others keep their order inside min_pwm..255.
-inline int liftToPwm(int command, int min_pwm) {
+// car.ino's lift(): tiny commands are a stop; others keep their order inside min_pwm..max_pwm.
+inline int liftToPwm(int command, int min_pwm, int max_pwm) {
   int a = absInt(command);
   if (a < 12) return 0;
-  int out = min_pwm + (int)((long)a * (255 - min_pwm) / 255);
+  int out = min_pwm + (int)((long)a * (max_pwm - min_pwm) / 255);
   return command > 0 ? out : -out;
 }
+
+// Soft start, from Islombek's car.ino (Oct 18): four motors jumping to full power, or from forward to
+// reverse, pull a current spike that dips the battery and restarts the Arduino and the camera. So a
+// side speeds up at most ramp_per_ms PWM per millisecond, and a change of direction stops first and
+// waits reverse_pause_ms. Slowing down and stopping are never delayed (a stop must not wait: the
+// 250 ms watchdog, obstacles, faults and STOP still cut the power at once). Applied after MotorLogic.
+struct SoftStart {
+  int ramp_per_ms;
+  uint32_t reverse_pause_ms;
+  int out[2];            // what each side gets now
+  int last_dir[2];       // the direction it last moved: 1, -1 (0 = never)
+  uint32_t stopped_ms[2];
+  uint32_t last_ms;
+  bool started;
+
+  SoftStart(int ramp, uint32_t pause)
+      : ramp_per_ms(ramp), reverse_pause_ms(pause), out{0, 0}, last_dir{0, 0}, stopped_ms{0, 0}, last_ms(0), started(false) {}
+
+  // *left, *right: MotorLogic's PWM for now; changed to what the motors may get now.
+  void apply(uint32_t now_ms, int* left, int* right) {
+    uint32_t dt = started ? now_ms - last_ms : 0;
+    if (dt > 30) dt = 30;                       // after a long gap, no jump to full speed
+    started = true;
+    last_ms = now_ms;
+    *left = side(0, *left, now_ms, dt);
+    *right = side(1, *right, now_ms, dt);
+  }
+
+  int side(int i, int target, uint32_t now_ms, uint32_t dt) {
+    int dir = target > 0 ? 1 : (target < 0 ? -1 : 0);
+    int moving = out[i] > 0 ? 1 : (out[i] < 0 ? -1 : 0);
+    if (dir == 0 || (moving != 0 && moving != dir)) {          // stop, or a reversal: stop first, at once
+      if (moving != 0) stopped_ms[i] = now_ms;
+      out[i] = 0;
+      return 0;
+    }
+    if (moving == 0 && last_dir[i] != 0 && last_dir[i] != dir && now_ms - stopped_ms[i] < reverse_pause_ms)
+      return 0;                                                 // reversing: wait for the pause
+    last_dir[i] = dir;
+    int want = absInt(target), have = absInt(out[i]);
+    if (want <= have) have = want;                              // slowing down: at once
+    else {
+      long grow = (long)ramp_per_ms * (long)dt;
+      have = want - have <= grow ? want : have + (int)grow;
+    }
+    out[i] = dir * have;
+    return out[i];
+  }
+};
 
 struct MotorLogic {
   MotorSettings s;
@@ -121,8 +172,8 @@ struct MotorLogic {
         return;
       }
     }
-    *pwm_left = liftToPwm(left, s.min_pwm);
-    *pwm_right = liftToPwm(right, s.min_pwm);
+    *pwm_left = liftToPwm(left, s.min_pwm, s.max_pwm);
+    *pwm_right = liftToPwm(right, s.min_pwm, s.max_pwm);
     reason = RUNNING;
   }
 };

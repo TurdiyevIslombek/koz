@@ -12,7 +12,7 @@ CAMERA_FLIP = True       # True if the camera is mounted upside down
 CAMERA_MIRROR = False    # True if left and right are swapped in the picture
 
 # Servo directions, degrees from straight ahead (+ = left). Must match LEFT_DEG / RIGHT_DEG in arduino/car/car.ino
-SCAN_ANGLES = {"L": 60, "C": 0, "R": -60}
+SCAN_ANGLES = {"L": 45, "C": 0, "R": -45}
 
 # Fly brain
 TICK_MS = 50             # brain time per tick

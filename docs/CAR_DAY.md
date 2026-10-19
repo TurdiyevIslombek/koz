@@ -6,8 +6,10 @@ car; a room that is not your bedroom. Commands run in Terminal in the Ko'z folde
 
 **Your hardware changed on Oct 18** (Claude read your car folder, read-only): a 9.5 V battery with
 the motor power scaled to at most 6 V, a soft start, and stop-before-reverse in your `car.ino`. The
-pins are the same (`QUIET_WIRING` is off). Before step c, answer Claude's question about whether
-`motor_listener` should get the same voltage cap and soft start (it is not changed yet).
+pins are the same (`QUIET_WIRING` is off; you confirmed no wires moved). Done on Oct 19, as you asked:
+`motor_listener` and `stop_test` now cap the motors at 6 V for the 9.5 V pack, `motor_listener` has
+your soft start and stop-before-reverse, and the Ko'z copy of your car code is today's version. If the
+multimeter shows another voltage, change `BATTERY_V` at the top of both sketches before uploading.
 
 **Your camera is mounted upside down** (`CAMERA_FLIP = True` in your car's `config.py`). Ko'z now
 turns the picture too, with `--upside-down`. Without it, left and right would be swapped and the

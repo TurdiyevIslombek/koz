@@ -15,7 +15,11 @@ const int TRIG = A0, ECHO = A1;
 const int SERVO_PIN = 3, CENTER_DEG = 90;
 const int ENA = 5, IN1 = 7, IN2 = 8;     // left motors
 const int ENB = 6, IN3 = 9, IN4 = 10;    // right motors
-const int MIN_PWM = 80;                  // as car.ino: commands are lifted into MIN_PWM..255
+// As Islombek's car.ino (Oct 18, a 9.5 V pack): commands are lifted into MIN_PWM..MAX_PWM, so the
+// motors get at most 6 V (the L298N loses about 2 V of the 9.5). Measure the pack and write it here.
+const float BATTERY_V = 9.5;
+const int MAX_PWM = (int)(255.0 * 6.0 / (BATTERY_V - 2.0)) > 255 ? 255 : (int)(255.0 * 6.0 / (BATTERY_V - 2.0));   // 204
+const int MIN_PWM = (int)(255.0 * 1.8 / (BATTERY_V - 2.0));                                                         // 61
 const unsigned long PING_EVERY_MS = 50;  // the same ping rhythm as motor_listener, so the
                                          // measured slide includes the same reaction delay
 const unsigned long MAX_RUN_MS = 5000;   // a run never lasts longer than this
@@ -49,7 +53,7 @@ int medianCm() {                          // 5 pings, the middle one (one bad ec
 int lift(int speed) {
   int a = abs(speed);
   if (a < 12) return 0;
-  int out = MIN_PWM + (long)a * (255 - MIN_PWM) / 255;
+  int out = MIN_PWM + (long)a * (MAX_PWM - MIN_PWM) / 255;
   return speed > 0 ? out : -out;
 }
 
