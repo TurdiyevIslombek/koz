@@ -78,7 +78,7 @@ void applyMotors() {
   int left, right;
   uint32_t now = millis();
   logic.output(now, &left, &right);    // the safety rules decide what may run
-  soft.apply(now, &left, &right);      // then speeding up is gentle; stopping stays immediate
+  soft.apply(now, &left, &right, !logic.forwardBlocked());   // then gentle speed-ups; stops stay immediate
   setSide(ENA, IN1, IN2, left);
   setSide(ENB, IN3, IN4, right);
 }

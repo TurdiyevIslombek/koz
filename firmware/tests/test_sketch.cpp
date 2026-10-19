@@ -267,6 +267,21 @@ static void softStartChecks() {
     loop();
     CHECK(pwm[ENA] == 0);
   }
+  {  // security review (Oct 19): the real sketch, a wall appears while driving: no forward motion after
+    reset();
+    send("ARM\n");
+    for (int i = 0; i < 40; i++) { Serial.feed("M,100,100\n"); loop(); now_ms += 5; }
+    echo_us = 20 * 58;               // 20 cm: closer than stop_cm
+    bool forward = false, seen = false;
+    for (int i = 0; i < 60; i++) {
+      Serial.feed("M,100,-100\n");   // the brain asks to spin away
+      loop();
+      if (logic.forwardBlocked()) seen = true;   // from the next ping on, the sketch knows the wall
+      if (seen && soft.out[0] + soft.out[1] > 0) forward = true;
+      now_ms += 5;
+    }
+    CHECK(seen && !forward && soft.out[0] > 0 && soft.out[0] == -soft.out[1]);
+  }
 }
 
 int main(int argc, char** argv) {   // no argument: everything; "ms4" or "ms5": that part only

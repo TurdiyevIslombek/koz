@@ -198,43 +198,79 @@ int main() {
   {  // 15. soft start (Islombek's car.ino, Oct 18): speeding up at most 2 PWM a ms; slowing, stopping at once
     SoftStart soft(2, 40);
     int l = 0, r = 0;
-    soft.apply(0, &l, &r);
-    l = r = 150; soft.apply(10, &l, &r);
+    soft.apply(0, &l, &r, true);
+    l = r = 150; soft.apply(10, &l, &r, true);
     CHECK(l == 20 && r == 20);                               // 10 ms x 2
-    l = r = 150; soft.apply(30, &l, &r);
-    l = r = 150; soft.apply(50, &l, &r);
+    l = r = 150; soft.apply(30, &l, &r, true);
+    l = r = 150; soft.apply(50, &l, &r, true);
     CHECK(l == 100);                                         // 20 + 2 x 40
-    l = r = 150; soft.apply(100, &l, &r);
+    l = r = 150; soft.apply(100, &l, &r, true);
     CHECK(l == 150);                                         // reaches the target, never more
-    l = r = 60; soft.apply(101, &l, &r);
+    l = r = 60; soft.apply(101, &l, &r, true);
     CHECK(l == 60);                                          // slowing down: at once
-    l = r = 0; soft.apply(102, &l, &r);
+    l = r = 0; soft.apply(102, &l, &r, true);
     CHECK(l == 0 && r == 0);                                 // a stop never waits
   }
   {  // 16. a change of direction stops first, waits 40 ms, then ramps the other way
     SoftStart soft(2, 40);
     int l = 0, r = 0;
-    soft.apply(0, &l, &r);
-    for (uint32_t t = 1; t <= 100; t++) { l = r = 150; soft.apply(t, &l, &r); }
+    soft.apply(0, &l, &r, true);
+    for (uint32_t t = 1; t <= 100; t++) { l = r = 150; soft.apply(t, &l, &r, true); }
     CHECK(l == 150);
-    l = r = -150; soft.apply(101, &l, &r);
+    l = r = -150; soft.apply(101, &l, &r, true);
     CHECK(l == 0 && r == 0);                                 // at once to stop
-    l = r = -150; soft.apply(120, &l, &r);
+    l = r = -150; soft.apply(120, &l, &r, true);
     CHECK(l == 0);                                           // still waiting (19 ms after the stop)
-    l = r = -150; soft.apply(141, &l, &r);
+    l = r = -150; soft.apply(141, &l, &r, true);
     CHECK(l < 0 && l >= -2 * 30);                            // 40 ms later: ramping backwards
-    for (uint32_t t = 142; t <= 260; t++) { l = r = -150; soft.apply(t, &l, &r); }
+    for (uint32_t t = 142; t <= 260; t++) { l = r = -150; soft.apply(t, &l, &r, true); }
     CHECK(l == -150);
   }
   {  // 17. each side on its own (a spin: one forward, one back), and a long idle gap can't jump to full
     SoftStart soft(2, 40);
     int l = 0, r = 0;
-    soft.apply(0, &l, &r);
-    l = 100; r = -100; soft.apply(10, &l, &r);
+    soft.apply(0, &l, &r, true);
+    l = 100; r = -100; soft.apply(10, &l, &r, true);
     CHECK(l == 20 && r == -20);
-    l = r = 0; soft.apply(11, &l, &r);
-    l = r = 200; soft.apply(5000, &l, &r);                   // seconds at a stop, then full speed
+    l = r = 0; soft.apply(11, &l, &r, true);
+    l = r = 200; soft.apply(5000, &l, &r, true);                   // seconds at a stop, then full speed
     CHECK(l > 0 && l <= 2 * 30);                             // at most 30 ms of ramp at once
+  }
+  {  // 18. security review (Oct 19): near an obstacle the soft start must never make forward motion.
+     //     Driving forward, then an obstacle turns the command into a spin (+, -): the reversing side
+     //     waits 40 ms; the other side must not keep pushing forward alone meanwhile.
+    SoftStart soft(2, 40);
+    int l = 0, r = 0;
+    soft.apply(0, &l, &r, true);
+    for (uint32_t t = 1; t <= 80; t++) { l = r = 128; soft.apply(t, &l, &r, true); }
+    CHECK(l == 128 && r == 128);
+    for (uint32_t t = 81; t <= 300; t++) {
+      l = 128; r = -128;                                     // MotorLogic's pure spin near the wall
+      soft.apply(t, &l, &r, false);                          // forward is blocked
+      CHECK(l + r <= 0);                                     // never forward
+      CHECK(l == -r);                                        // and a spin stays a pure spin
+    }
+    CHECK(l > 0 && r < 0);                                   // it does spin away in the end
+  }
+  {  // 19. the same for a backing-off turn (left back more than right forward) after driving forward
+    SoftStart soft(2, 40);
+    int l = 0, r = 0;
+    soft.apply(0, &l, &r, true);
+    for (uint32_t t = 1; t <= 80; t++) { l = r = 100; soft.apply(t, &l, &r, true); }
+    for (uint32_t t = 81; t <= 300; t++) {
+      l = -90; r = 60;
+      soft.apply(t, &l, &r, false);
+      CHECK(l + r <= 0);
+    }
+  }
+  {  // 20. MotorLogic says when forward is blocked, by the same rule it uses itself
+    MotorLogic m(settings());
+    m.echo(200);
+    CHECK(!m.forwardBlocked());
+    m.echo(20);
+    CHECK(m.forwardBlocked());
+    m.echo(0); m.echo(0); m.echo(0);
+    CHECK(m.forwardBlocked());                               // blind
   }
   std::printf("all %d checks passed\n", checks);
   return 0;

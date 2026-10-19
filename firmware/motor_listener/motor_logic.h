@@ -56,6 +56,10 @@ inline int liftToPwm(int command, int min_pwm, int max_pwm) {
 // side speeds up at most ramp_per_ms PWM per millisecond, and a change of direction stops first and
 // waits reverse_pause_ms. Slowing down and stopping are never delayed (a stop must not wait: the
 // 250 ms watchdog, obstacles, faults and STOP still cut the power at once). Applied after MotorLogic.
+// Near an obstacle (forward blocked) the ramp must not undo MotorLogic's rule (security review,
+// Oct 19): one side waiting to reverse while the other still pushes forward would pivot the car
+// forward into the wall. So there, opposite sides move at the same (smaller) speed, a pure spin,
+// and anything that would add up to forward motion is held at a stop.
 struct SoftStart {
   int ramp_per_ms;
   uint32_t reverse_pause_ms;
@@ -69,13 +73,33 @@ struct SoftStart {
       : ramp_per_ms(ramp), reverse_pause_ms(pause), out{0, 0}, last_dir{0, 0}, stopped_ms{0, 0}, last_ms(0), started(false) {}
 
   // *left, *right: MotorLogic's PWM for now; changed to what the motors may get now.
-  void apply(uint32_t now_ms, int* left, int* right) {
+  // forward_ok: MotorLogic allows forward motion now (MotorLogic::forwardBlocked() is false).
+  void apply(uint32_t now_ms, int* left, int* right, bool forward_ok) {
     uint32_t dt = started ? now_ms - last_ms : 0;
     if (dt > 30) dt = 30;                       // after a long gap, no jump to full speed
     started = true;
     last_ms = now_ms;
-    *left = side(0, *left, now_ms, dt);
-    *right = side(1, *right, now_ms, dt);
+    bool opposite = *left != 0 && *right != 0 && (*left > 0) != (*right > 0);
+    int l = side(0, *left, now_ms, dt), r = side(1, *right, now_ms, dt);
+    if (!forward_ok) {
+      if (opposite) {                           // a pure spin: both sides at the smaller speed
+        int m = absInt(l) < absInt(r) ? absInt(l) : absInt(r);
+        l = l > 0 ? m : (l < 0 ? -m : 0);
+        r = r > 0 ? m : (r < 0 ? -m : 0);
+        if (l == 0 || r == 0) l = r = 0;        // one side still waiting: both wait
+      }
+      if (l + r > 0) l = r = 0;                 // never forward next to an obstacle
+    }
+    settle(0, l, now_ms);
+    settle(1, r, now_ms);
+    *left = l;
+    *right = r;
+  }
+
+  // What a side really got this time (after the obstacle rule): the ramp goes on from there.
+  void settle(int i, int value, uint32_t now_ms) {
+    if (out[i] != 0 && value == 0) stopped_ms[i] = now_ms;
+    out[i] = value;
   }
 
   int side(int i, int target, uint32_t now_ms, uint32_t dt) {
@@ -150,6 +174,12 @@ struct MotorLogic {
     }
   }
 
+  // Forward motion is not allowed now: too close to something, or the sensor can't see.
+  bool forwardBlocked() const {
+    bool blind = missing_echoes >= s.missing_echoes_block || distance_cm < 0;
+    return blind || distance_cm < s.stop_cm;
+  }
+
   // The PWM each side gets now (+ = forward); `reason` says why it is off, or RUNNING.
   void output(uint32_t now_ms, int* pwm_left, int* pwm_right) {
     *pwm_left = *pwm_right = 0;
@@ -159,7 +189,7 @@ struct MotorLogic {
     int left = clampInt(want_left, -s.reverse_cap, s.speed_cap);
     int right = clampInt(want_right, -s.reverse_cap, s.speed_cap);
     bool blind = missing_echoes >= s.missing_echoes_block || distance_cm < 0;
-    if ((blind || distance_cm < s.stop_cm) && left + right > 0) {
+    if (forwardBlocked() && left + right > 0) {
       // Forward is not allowed here, judged on what the motors would really get (after the caps).
       // One side forward and one backwards becomes a pure spin on the spot (the smaller of the two),
       // so the car can still turn away; anything else that would move it forward is a fault.

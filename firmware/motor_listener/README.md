@@ -12,7 +12,10 @@ the motors get at most **6 V** (commands lift into PWM 61..204; set `BATTERY_V` 
 multimeter reads), and a **soft start**: a side speeds up at most 2 PWM per millisecond, and a change
 of direction stops first and waits 40 ms, so four motors never reverse at once and brown out the
 Arduino and the camera. Slowing and stopping stay immediate (the 250 ms watchdog, obstacle stops,
-faults and STOP never wait). Tested on the Mac: `firmware/tests/` (logic and the real sketch).
+faults and STOP never wait). Near an obstacle (or with the sensor blind) the soft start never adds up
+to forward motion: one side waiting to reverse while the other still pushes forward would pivot the
+car into the wall, so there both sides wait, and a spin away stays a pure spin (Oct 19 security
+review). Tested on the Mac: `firmware/tests/` (logic and the real sketch).
 
 Before the first drive, measure `speed_cap` and `stop_cm` with `firmware/stop_test` (its README).
 
