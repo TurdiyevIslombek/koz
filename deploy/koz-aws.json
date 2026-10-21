@@ -36,6 +36,7 @@
     "OwnerPassword": {
       "Type": "AWS::SecretsManager::Secret",
       "Properties": {
+        "Name": "koz-owner-password",
         "Description": "The Ko'z web app owner password (made by AWS, never typed or shown in user data). Read it in Secrets Manager: Retrieve secret value.",
         "GenerateSecretString": {
           "PasswordLength": 24,
@@ -215,7 +216,7 @@
       "Value": {
         "Ref": "OwnerPassword"
       },
-      "Description": "Secrets Manager -> the secret named OwnerPassword-... -> Retrieve secret value"
+      "Description": "Secrets Manager -> the secret named koz-owner-password -> Retrieve secret value"
     },
     "InstallLog": {
       "Value": "/var/log/koz-install.log",

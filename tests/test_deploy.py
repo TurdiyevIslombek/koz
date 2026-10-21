@@ -41,8 +41,9 @@ def test_the_server_role_can_touch_only_its_table_and_its_password():
     statements = json.loads((DEPLOY / "iam-server-role-policy.json").read_text())["Statement"]
     actions = [a for s in statements for a in s["Action"]]
     assert all("*" not in a for a in actions)
-    assert [r for s in statements for r in s["Resource"]] == [
-        "arn:aws:dynamodb:eu-central-1:*:table/koz-web", "arn:aws:secretsmanager:eu-central-1:*:secret:*OwnerPassword*"]
+    assert [r for s in statements for r in s["Resource"]] == [   # exactly that secret (+ AWS's 6 random characters)
+        "arn:aws:dynamodb:eu-central-1:*:table/koz-web", "arn:aws:secretsmanager:eu-central-1:*:secret:koz-owner-password-??????"]
+    assert RES["OwnerPassword"]["Properties"]["Name"] == "koz-owner-password"
 
 
 def test_the_password_is_made_by_aws_and_never_in_user_data():
@@ -100,15 +101,22 @@ def test_the_deployer_policy_is_frankfurt_only_and_cannot_read_the_password():
     assert region["Condition"] == {"StringNotEquals": {"aws:RequestedRegion": "eu-central-1"}}
     assert set(region["NotAction"]) == {"iam:*", "sts:*", "signin:*", "freetier:*", "budgets:*"}   # global services only
     run = [s for s in allows if s["Action"] == "ec2:RunInstances" and s["Resource"] == "arn:aws:ec2:eu-central-1:*:instance/*"]
-    assert run[0]["Condition"] == {"StringEquals": {"ec2:InstanceType": "t3.micro"}}
+    assert run[0]["Condition"]["StringEquals"] == {"ec2:InstanceType": "t3.micro"}
     # IAM: pass the one server role to EC2 and read it; nothing that makes or changes IAM (review, Oct 20)
     iam = [a for s in allows for a in ([s["Action"]] if isinstance(s["Action"], str) else s["Action"]) if a.startswith("iam:")]
     assert all(a == "iam:PassRole" or a.startswith(("iam:Get", "iam:List")) for a in iam)
     assert {"iam:Create*", "iam:Put*", "iam:Attach*", "iam:Update*"} <= set(deny["NoIamChanges"]["Action"])
     passing = next(s for s in allows if s["Action"] == "iam:PassRole")
     assert passing["Resource"].endswith("role/koz-web-ec2") and passing["Condition"]["StringEquals"]["iam:PassedToService"] == "ec2.amazonaws.com"
-    # stopping a server or running a command on it: only the stack's own, by CloudFormation's aws: tag,
-    # which nobody can set by hand (a Name tag could be put on any server)
-    tagged = [s for s in allows if s["Sid"] in ("StopOnlyThatServer", "ReadTheInstallLogOnThatServer")]
-    assert [list(s["Condition"]["StringEquals"]) for s in tagged] == [
-        ["aws:ResourceTag/aws:cloudformation:stack-name"], ["ssm:resourceTag/aws:cloudformation:stack-name"]]
+    # stopping a server: only the stack's own, by CloudFormation's aws: tag, which nobody can set by hand
+    stop = next(s for s in allows if s["Sid"] == "StopOnlyThatServer")
+    assert list(stop["Condition"]["StringEquals"]) == ["aws:ResourceTag/aws:cloudformation:stack-name"]
+    # no shell on the server (root there can read the password file), no console output (review, Oct 21)
+    every = [a for s in allows for a in ([s["Action"]] if isinstance(s["Action"], str) else s["Action"])]
+    assert not any(a.startswith(("ssm:SendCommand", "ssm:StartSession", "ec2:GetConsoleOutput", "ec2-instance-connect:")) for a in every)
+    # a server, and the server role, only through CloudFormation: no hand-made server with the role
+    via = {"ForAnyValue:StringEquals": {"aws:CalledVia": ["cloudformation.amazonaws.com"]}}
+    for s in allows:
+        if s["Action"] in ("ec2:RunInstances", "iam:PassRole"):
+            assert s["Condition"]["ForAnyValue:StringEquals"] == via["ForAnyValue:StringEquals"], s["Sid"]
+    assert next(s for s in allows if s["Sid"] == "OwnerPasswordSecretButNotItsValue")["Resource"].endswith("secret:koz-owner-password-*")

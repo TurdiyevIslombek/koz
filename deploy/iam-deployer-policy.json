@@ -36,10 +36,7 @@
     {
       "Sid": "ReadEc2",
       "Effect": "Allow",
-      "Action": [
-        "ec2:Describe*",
-        "ec2:GetConsoleOutput"
-      ],
+      "Action": "ec2:Describe*",
       "Resource": "*",
       "Condition": {
         "StringEquals": {
@@ -80,6 +77,11 @@
       "Condition": {
         "StringEquals": {
           "ec2:InstanceType": "t3.micro"
+        },
+        "ForAnyValue:StringEquals": {
+          "aws:CalledVia": [
+            "cloudformation.amazonaws.com"
+          ]
         }
       }
     },
@@ -94,7 +96,14 @@
         "arn:aws:ec2:eu-central-1:*:security-group/*",
         "arn:aws:ec2:eu-central-1:*:volume/*",
         "arn:aws:ec2:eu-central-1:*:launch-template/*"
-      ]
+      ],
+      "Condition": {
+        "ForAnyValue:StringEquals": {
+          "aws:CalledVia": [
+            "cloudformation.amazonaws.com"
+          ]
+        }
+      }
     },
     {
       "Sid": "StopOnlyThatServer",
@@ -141,6 +150,11 @@
       "Condition": {
         "StringEquals": {
           "iam:PassedToService": "ec2.amazonaws.com"
+        },
+        "ForAnyValue:StringEquals": {
+          "aws:CalledVia": [
+            "cloudformation.amazonaws.com"
+          ]
         }
       }
     },
@@ -178,44 +192,12 @@
         "secretsmanager:TagResource",
         "secretsmanager:GetResourcePolicy"
       ],
-      "Resource": "arn:aws:secretsmanager:eu-central-1:*:secret:*OwnerPassword*"
+      "Resource": "arn:aws:secretsmanager:eu-central-1:*:secret:koz-owner-password-*"
     },
     {
       "Sid": "GeneratePassword",
       "Effect": "Allow",
       "Action": "secretsmanager:GetRandomPassword",
-      "Resource": "*",
-      "Condition": {
-        "StringEquals": {
-          "aws:RequestedRegion": "eu-central-1"
-        }
-      }
-    },
-    {
-      "Sid": "ReadTheInstallLogOnThatServer",
-      "Effect": "Allow",
-      "Action": "ssm:SendCommand",
-      "Resource": "arn:aws:ec2:eu-central-1:*:instance/*",
-      "Condition": {
-        "StringEquals": {
-          "ssm:resourceTag/aws:cloudformation:stack-name": "koz"
-        }
-      }
-    },
-    {
-      "Sid": "ShellDocumentOnly",
-      "Effect": "Allow",
-      "Action": "ssm:SendCommand",
-      "Resource": "arn:aws:ssm:eu-central-1::document/AWS-RunShellScript"
-    },
-    {
-      "Sid": "CommandResults",
-      "Effect": "Allow",
-      "Action": [
-        "ssm:GetCommandInvocation",
-        "ssm:ListCommandInvocations",
-        "ssm:DescribeInstanceInformation"
-      ],
       "Resource": "*",
       "Condition": {
         "StringEquals": {

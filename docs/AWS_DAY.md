@@ -88,15 +88,26 @@ Then tell Claude **"done"**.
 2. Claude shows you the exact command that creates the stack `koz` → **you say yes** → Claude runs
    it and watches it (about 5 minutes) and the server's own install (about 10 minutes). If creating
    fails, CloudFormation removes what it made by itself; any other delete, Claude asks first.
+   If the link doesn't work after 15 minutes, Claude asks you to read the install log (Claude has no
+   shell on the server, on purpose): **EC2** → **Instances** → **koz-web** → **Connect** →
+   **Session Manager** → **Connect**, type `sudo tail -50 /var/log/koz-install.log`, and send the
+   last lines.
 3. Meanwhile, the 20-sentence test with Bedrock (your key from A5). **If either set is under 18/20,
    the rule planner stays the default** and the key line comes out of `.env`.
 4. When it's ready: the `https://…` link opens with a valid lock; the judges' view (no login) has no
    camera picture and no eye; the costs stay inside the free plan.
+5. **You remove Claude's write rights** (they are needed only for the deploy): IAM → **Users** →
+   **koz-deployer** → tab **Permissions** → tick **koz-deployer** → **Remove** → **Remove policy**.
+
+Why step 5: whoever deploys the server writes the script it runs at start, so in principle could make
+it reveal the owner password. The policy blocks the direct ways (no reading the secret, no shell on
+the server, no server made by hand with its role: only through the `koz` stack), and you approve
+every create or change; removing the policy after the deploy closes the rest.
 
 ## Part C. You, after Claude says the server is ready
 
-**C1. The owner password.** Console search **Secrets Manager** → the secret whose name starts with
-**OwnerPassword** → **Retrieve secret value** → copy. Open the `https://…` link Claude gives you →
+**C1. The owner password.** Console search **Secrets Manager** → the secret named
+**koz-owner-password** → **Retrieve secret value** → copy. Open the `https://…` link Claude gives you →
 log in with it. Don't paste it anywhere else.
 
 **C2. The runner token.** In the web app: **Create runner token** → **Copy** (shown once; a new one
@@ -130,7 +141,11 @@ these; the $1 budget warns you if real money is charged.
 ## What was done (log)
 
 - Oct 19: $1 budget (Islombek).
-- Oct 20: AWS CLI 2.38.3 installed with Homebrew (Claude). A security review of Claude's first
+- Oct 20–21: AWS CLI 2.38.3 installed with Homebrew (Claude). A security review of Claude's first
   deployer policy found two holes (it could make a role with any powers; a `Name` tag could be put on
   any server); fixed before anything was made: the stack makes no IAM, the server role is made once
-  in the console, and the deployer can't change IAM (`tests/test_deploy.py`).
+  in the console, and the deployer can't change IAM (`tests/test_deploy.py`). A second review found
+  the deployer could still reach the password through the server (a shell command on it, or a server
+  made by hand with its role): removed the shell and the console output, servers and the role only
+  through CloudFormation, the password secret has a fixed name the server role names exactly, and
+  the write rights are removed after the deploy (B5).
