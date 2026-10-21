@@ -7,6 +7,12 @@
       "Default": "/aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id",
       "Description": "Canonical's official Ubuntu 24.04 LTS image (leave as it is)."
     },
+    "ServerInstanceProfile": {
+      "Type": "String",
+      "Default": "koz-web-ec2",
+      "AllowedPattern": "^[A-Za-z0-9+=,.@_-]{1,128}$",
+      "Description": "The server role's instance profile, made once in the IAM console (docs/AWS_DAY.md): EC2 only, its table and its password."
+    },
     "RepoUrl": {
       "Type": "String",
       "Default": "https://github.com/TurdiyevIslombek/koz.git",
@@ -71,80 +77,6 @@
           "AttributeName": "expires_at",
           "Enabled": true
         }
-      }
-    },
-    "Role": {
-      "Type": "AWS::IAM::Role",
-      "Properties": {
-        "RoleName": "koz-web-ec2",
-        "AssumeRolePolicyDocument": {
-          "Version": "2012-10-17",
-          "Statement": [
-            {
-              "Effect": "Allow",
-              "Principal": {
-                "Service": "ec2.amazonaws.com"
-              },
-              "Action": "sts:AssumeRole"
-            }
-          ]
-        },
-        "ManagedPolicyArns": [
-          "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-        ],
-        "Policies": [
-          {
-            "PolicyName": "koz-web-table-and-password",
-            "PolicyDocument": {
-              "Version": "2012-10-17",
-              "Statement": [
-                {
-                  "Effect": "Allow",
-                  "Action": [
-                    "dynamodb:GetItem",
-                    "dynamodb:PutItem",
-                    "dynamodb:UpdateItem",
-                    "dynamodb:DeleteItem",
-                    "dynamodb:Query",
-                    "dynamodb:BatchGetItem",
-                    "dynamodb:BatchWriteItem",
-                    "dynamodb:TransactWriteItems",
-                    "dynamodb:DescribeTable"
-                  ],
-                  "Resource": [
-                    {
-                      "Fn::GetAtt": [
-                        "Table",
-                        "Arn"
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "Effect": "Allow",
-                  "Action": [
-                    "secretsmanager:GetSecretValue"
-                  ],
-                  "Resource": [
-                    {
-                      "Ref": "OwnerPassword"
-                    }
-                  ]
-                }
-              ]
-            }
-          }
-        ]
-      }
-    },
-    "InstanceProfile": {
-      "Type": "AWS::IAM::InstanceProfile",
-      "Properties": {
-        "Roles": [
-          {
-            "Ref": "Role"
-          }
-        ]
       }
     },
     "SecurityGroup": {
@@ -217,7 +149,7 @@
         },
         "Monitoring": false,
         "IamInstanceProfile": {
-          "Ref": "InstanceProfile"
+          "Ref": "ServerInstanceProfile"
         },
         "SecurityGroupIds": [
           {

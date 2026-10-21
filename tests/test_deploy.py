@@ -34,12 +34,15 @@ def test_the_table_deletes_old_rows_by_itself():
 
 
 def test_the_server_role_can_touch_only_its_table_and_its_password():
-    statements = RES["Role"]["Properties"]["Policies"][0]["PolicyDocument"]["Statement"]
+    """Islombek makes the role once in the IAM console (EC2 use case: trusted by EC2 only) with this
+    policy; the stack makes no IAM at all, so the deployer needs no right to make roles (Oct 20)."""
+    assert not any(r["Type"].startswith("AWS::IAM::") for r in RES.values())
+    assert RES["Instance"]["Properties"]["IamInstanceProfile"] == {"Ref": "ServerInstanceProfile"}
+    statements = json.loads((DEPLOY / "iam-server-role-policy.json").read_text())["Statement"]
     actions = [a for s in statements for a in s["Action"]]
     assert all("*" not in a for a in actions)
-    assert {json.dumps(r) for s in statements for r in s["Resource"]} == {
-        json.dumps({"Fn::GetAtt": ["Table", "Arn"]}), json.dumps({"Ref": "OwnerPassword"})}
-    assert RES["Role"]["Properties"]["ManagedPolicyArns"] == ["arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"]
+    assert [r for s in statements for r in s["Resource"]] == [
+        "arn:aws:dynamodb:eu-central-1:*:table/koz-web", "arn:aws:secretsmanager:eu-central-1:*:secret:*OwnerPassword*"]
 
 
 def test_the_password_is_made_by_aws_and_never_in_user_data():
@@ -78,3 +81,34 @@ def test_nginx_keeps_the_app_private_and_streams_events_unbuffered():
     assert "access_log off;" in https
     service = (DEPLOY / "koz-web.service").read_text()
     assert "User=koz" in service and "ProtectSystem=strict" in service and "NoNewPrivileges=true" in service
+
+
+def test_the_deployer_policy_is_frankfurt_only_and_cannot_read_the_password():
+    """deploy/iam-deployer-policy.json: what Claude's AWS CLI user may do (Oct 20). Islombek creates
+    it in the console; root credentials are never used."""
+    text = (DEPLOY / "iam-deployer-policy.json").read_text()
+    assert len(re.sub(r"\s", "", text)) <= 6144                      # fits a customer managed policy
+    statements = json.loads(text)["Statement"]
+    allows = [s for s in statements if s["Effect"] == "Allow"]
+    for s in allows:
+        actions = [s["Action"]] if isinstance(s["Action"], str) else s["Action"]
+        assert "*" not in actions and not any(a.endswith(":*") and a != "dynamodb:*" for a in actions)
+        assert not any(a.startswith("secretsmanager:GetSecretValue") for a in actions)
+    deny = {s["Sid"]: s for s in statements if s["Effect"] == "Deny"}
+    assert deny["NeverReadTheOwnerPassword"]["Action"] == "secretsmanager:GetSecretValue"
+    region = deny["NothingOutsideFrankfurt"]
+    assert region["Condition"] == {"StringNotEquals": {"aws:RequestedRegion": "eu-central-1"}}
+    assert set(region["NotAction"]) == {"iam:*", "sts:*", "signin:*", "freetier:*", "budgets:*"}   # global services only
+    run = [s for s in allows if s["Action"] == "ec2:RunInstances" and s["Resource"] == "arn:aws:ec2:eu-central-1:*:instance/*"]
+    assert run[0]["Condition"] == {"StringEquals": {"ec2:InstanceType": "t3.micro"}}
+    # IAM: pass the one server role to EC2 and read it; nothing that makes or changes IAM (review, Oct 20)
+    iam = [a for s in allows for a in ([s["Action"]] if isinstance(s["Action"], str) else s["Action"]) if a.startswith("iam:")]
+    assert all(a == "iam:PassRole" or a.startswith(("iam:Get", "iam:List")) for a in iam)
+    assert {"iam:Create*", "iam:Put*", "iam:Attach*", "iam:Update*"} <= set(deny["NoIamChanges"]["Action"])
+    passing = next(s for s in allows if s["Action"] == "iam:PassRole")
+    assert passing["Resource"].endswith("role/koz-web-ec2") and passing["Condition"]["StringEquals"]["iam:PassedToService"] == "ec2.amazonaws.com"
+    # stopping a server or running a command on it: only the stack's own, by CloudFormation's aws: tag,
+    # which nobody can set by hand (a Name tag could be put on any server)
+    tagged = [s for s in allows if s["Sid"] in ("StopOnlyThatServer", "ReadTheInstallLogOnThatServer")]
+    assert [list(s["Condition"]["StringEquals"]) for s in tagged] == [
+        ["aws:ResourceTag/aws:cloudformation:stack-name"], ["ssm:resourceTag/aws:cloudformation:stack-name"]]
