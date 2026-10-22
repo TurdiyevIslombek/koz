@@ -43,17 +43,15 @@ Claude copies `deploy/iam-deployer-policy.json` for you.
 2. Click **JSON** → click in the box → Cmd+A → Cmd+V → **Next**.
 3. **Policy name**: `koz-deployer` → **Create policy**.
 
-**A4. Claude's user.**
-1. IAM → left menu **Users** → **Create user**.
-2. **User name**: `koz-deployer`.
-3. Tick **Provide user access to the AWS Management Console**. If it asks who will use it, choose
-   **I want to create an IAM user**.
-4. **Console password**: **Custom password** → type a new password (keep it to yourself; never in
-   chat). Untick **Users must create a new password at next sign-in**. → **Next**.
-5. **Permissions options**: **Attach policies directly**. Search `koz-deployer` → tick it. Search
-   `SignInLocalDevelopmentAccess` → tick it. → **Next** → **Create user**.
-6. The last page shows the **Console sign-in URL** (`https://<numbers>.signin.aws.amazon.com/console`):
-   write it down. Don't download the .csv.
+**A4. Claude's user** (in this kind of account IAM users have no console sign-in: a key only).
+1. IAM → left menu **IAM users** → **Create user** → **User name** `koz-deployer` → **Next**.
+2. **Attach policies directly** → search `koz-deployer` → tick it → **Next** → **Create user**.
+3. Click **koz-deployer** → tab **Security credentials** → **Create access key** → use case
+   **Command Line Interface (CLI)** → tick the confirmation → **Next** → **Create access key**.
+4. Keep that page open (the secret is shown once). Don't download the .csv. Never paste the key in chat.
+5. Open the Mac's **Terminal app** (Cmd+Space, type Terminal, Enter; not the terminal inside the Claude
+   app) and type `aws configure --profile koz-deployer`. Paste the **Access key** → Enter, the
+   **Secret access key** (click Show, copy) → Enter, type `ap-southeast-2` → Enter, `json` → Enter.
 
 **A5. The Bedrock key for the planner** (only the typed sentence goes to Bedrock).
 1. Console search: **Amazon Bedrock** → open it (it opens in Sydney by itself).
@@ -68,15 +66,6 @@ Claude copies `deploy/iam-deployer-policy.json` for you.
    (The planner calls Bedrock in Europe by default, which the project allows; no other line needed.)
 5. If Bedrock asks you to request model access for **Nova 2 Lite**: **Model catalog** → **Nova 2 Lite** →
    request access, if a button is shown.
-
-**A6. Log the CLI in as `koz-deployer`** (in Terminal, you type it):
-```bash
-aws login
-```
-A browser page opens: **Choose AWS sessions**. It shows your own session (**Proof of Concept**):
-**don't choose it** (it would give Claude all your rights). Choose **Add session** → **IAM user** →
-the account ID or the sign-in URL from A4, user name `koz-deployer`, your password → allow the
-access. Terminal says it is logged in (for up to 12 hours; run `aws login` again after that).
 
 Then tell Claude **"done"**.
 
@@ -96,8 +85,9 @@ Then tell Claude **"done"**.
    the rule planner stays the default** and the key line comes out of `.env`.
 4. When it's ready: the `https://…` link opens with a valid lock; the judges' view (no login) has no
    camera picture and no eye; the costs stay inside the free plan.
-5. **You remove Claude's write rights** (they are needed only for the deploy): IAM → **Users** →
-   **koz-deployer** → tab **Permissions** → tick **koz-deployer** → **Remove** → **Remove policy**.
+5. **You remove Claude's write rights** (they are needed only for the deploy): IAM → **IAM users** →
+   **koz-deployer** → tab **Security credentials** → the access key → **Actions** → **Deactivate**
+   (and after judging, **Delete**).
 
 Why step 5: whoever deploys the server writes the script it runs at start, so in principle could make
 it reveal the owner password. The policy blocks the direct ways (no reading the secret, no shell on
