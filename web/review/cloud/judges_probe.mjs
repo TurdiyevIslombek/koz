@@ -29,5 +29,6 @@ try {
   }
   console.log('responses:', [...new Set(responses)].join(' | '));
   console.log('websockets:', sockets.join(', ') || 'none');
-  console.log('any picture responses:', responses.filter(r => /image\//.test(r)).join(' | ') || 'none');
+  const drawings = responses.filter(r => /image\/svg\+xml,/.test(r));   // inline drawings in the stylesheet (the dropdown arrow), not pictures
+  console.log('any picture responses:', responses.filter(r => /image\//.test(r) && !drawings.includes(r)).join(' | ') || 'none', `(+ ${drawings.length} inline drawing(s) from the stylesheet)`);
 } finally { ws.close(); chrome.kill(); }

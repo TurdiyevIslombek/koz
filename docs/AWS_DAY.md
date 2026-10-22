@@ -194,4 +194,10 @@ these; the $1 budget warns you if real money is charged.
   fixes and the finished look. HTTPS with the new styles after ~7 minutes (certificate 3 of 5 this
   week). Checked: one server running; unknown pages 404; `/api/eye` 404; events 401 without login;
   judges' view loads no picture and no socket.
+- Oct 22, 11:15 UTC: **third server update** (Release `a332f19`, Islombek's yes): judges see "Not
+  shared yet" with a sample run, styled dropdowns, the "what Koʻz can do" and Trials lines. HTTPS
+  after ~10 minutes (certificate 4 of 5 this week: one left before Oct 29). Checked: one server;
+  unknown pages 404; `/api/eye` 404; events 401; judges' view: no camera picture, no socket (the
+  one inline drawing is the dropdown arrow in the stylesheet). The planner change runs on the Mac
+  (restart Koʻz there).
 
