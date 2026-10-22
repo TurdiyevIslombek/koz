@@ -190,4 +190,8 @@ these; the $1 budget warns you if real money is charged.
   login; snapshots carry the server clock; judges' view loads no picture and no socket; one server running.
   (The CLI's first update request went through but its answer was lost; its automatic retry then saw
   the update already finishing.)
+- Oct 22, 10:38 UTC: **second server update** (Release `c9849d7`, Islombek's yes): the design-review
+  fixes and the finished look. HTTPS with the new styles after ~7 minutes (certificate 3 of 5 this
+  week). Checked: one server running; unknown pages 404; `/api/eye` 404; events 401 without login;
+  judges' view loads no picture and no socket.
 
