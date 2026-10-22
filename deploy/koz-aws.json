@@ -25,6 +25,12 @@
       "AllowedPattern": "^[A-Za-z0-9._/-]{1,64}$",
       "Description": "Branch or tag to install."
     },
+    "Release": {
+      "Type": "String",
+      "Default": "first",
+      "AllowedPattern": "^[A-Za-z0-9._-]{1,64}$",
+      "Description": "Change it (e.g. to the new commit) to replace the server with a fresh install of RepoRef. The fixed IP, table, owner password and device token stay; the server is down about 12 minutes."
+    },
     "CertEmail": {
       "Type": "String",
       "Default": "",
@@ -122,6 +128,19 @@
                 "DeleteOnTermination": true
               }
             }
+          ],
+          "TagSpecifications": [
+            {
+              "ResourceType": "volume",
+              "Tags": [
+                {
+                  "Key": "koz-release",
+                  "Value": {
+                    "Ref": "Release"
+                  }
+                }
+              ]
+            }
           ]
         }
       }
@@ -179,7 +198,7 @@
         ],
         "UserData": {
           "Fn::Base64": {
-            "Fn::Sub": "#!/bin/bash\nset -eu\nexec >>/var/log/koz-install.log 2>&1\n# Wait for the Elastic IP first: attaching it changes the address, which would cut a download.\nfor i in $(seq 1 120); do\n  T=$(curl -fsS -X PUT http://169.254.169.254/latest/api/token -H 'X-aws-ec2-metadata-token-ttl-seconds: 60' || true)\n  [ \"$(curl -fsS -H \"X-aws-ec2-metadata-token: $T\" http://169.254.169.254/latest/meta-data/public-ipv4 || true)\" = '${ElasticIp}' ] && break\n  sleep 5\ndone\napt-get update -y\napt-get install -y git\ngit clone --depth 1 --branch '${RepoRef}' '${RepoUrl}' /opt/koz\nbash /opt/koz/deploy/install.sh --ip '${ElasticIp}' --secret '${OwnerPassword}' --region '${AWS::Region}' --table '${Table}' --email '${CertEmail}'\n"
+            "Fn::Sub": "#!/bin/bash\nset -eu\nexec >>/var/log/koz-install.log 2>&1\n# Wait for the Elastic IP first: attaching it changes the address, which would cut a download.\nfor i in $(seq 1 120); do\n  T=$(curl -fsS -X PUT http://169.254.169.254/latest/api/token -H 'X-aws-ec2-metadata-token-ttl-seconds: 60' || true)\n  [ \"$(curl -fsS -H \"X-aws-ec2-metadata-token: $T\" http://169.254.169.254/latest/meta-data/public-ipv4 || true)\" = '${ElasticIp}' ] && break\n  sleep 5\ndone\napt-get update -y\napt-get install -y git\ngit clone --depth 1 --branch '${RepoRef}' '${RepoUrl}' /opt/koz\ngit -C /opt/koz log -1 --format='installed commit %H (release ${Release})'\nbash /opt/koz/deploy/install.sh --ip '${ElasticIp}' --secret '${OwnerPassword}' --region '${AWS::Region}' --table '${Table}' --email '${CertEmail}'\n"
           }
         }
       }

@@ -166,4 +166,18 @@ these; the $1 budget warns you if real money is charged.
   password: AccessDenied (explicit deny), as designed.
 - Bedrock: not measurable (docs/TRIALS.md, Oct 21): the project denies the API key outside Sydney,
   and in Sydney the new account's daily Bedrock tokens are zero. The rule planner stays the default.
+- Oct 22: **the Mac connected and a real job ran through AWS** (rule planner, count people, privacy
+  approved, entries and exits counted). Two problems on the way, both fixed with tests:
+  - The page said "No device connected" while the Mac was live: **the Mac's clock was 4.9 s fast**
+    (measured against time.apple.com and the server), and the page compared the server's times with
+    its own clock (3 s limit). Now the server sends its clock with every update and the page corrects
+    for the difference (checked in a real browser with the page clock 5 s fast, 5 s slow, 60 s off).
+  - Each press of "Create device token" made a new token and disconnected the Mac, and the runner
+    reads `.env` only at start. Now the window shows whether the Mac is connected and needs
+    "Replace device token…" plus a warning before a new token; the Mac asks for the server address
+    and the token once (hidden) and saves them itself (`start-koz-cloud.command`), and asks again if
+    the server refuses its token. Also: unknown pages answer 404.
+- Server updates without changing the address: a new `Release` parameter replaces only the server
+  (fresh install from GitHub, commit in the install log); IP, table, password and device token stay.
+  Let's Encrypt allows 5 certificates for the same IP a week: at most 3 more updates before Oct 29.
 

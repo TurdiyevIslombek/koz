@@ -103,3 +103,14 @@ export function eyeClosedReason(step){
  return {privacyStop:'eyeClosedPrivacy',confirming:'eyeChecking',cameraLost:'eyeLate',offline:'eyeOffline',
   testing:'eyeWaiting',running:'eyeWaiting',unknownOutput:'eyeWaiting',planning:'eyePlanning'}[step.step]||'eyeClosedStopped';
 }
+
+// The Connect device window (Oct 22). A new token disconnects the camera computer at once, so it is
+// never one press away while that computer is connected: first "Replace…", then a warning to confirm.
+// connected: the server has a live device. asking: the owner pressed Replace. token: just made (shown once).
+export function deviceDialog({connected=false,asking=false,token=''}={}){
+ const status=connected?'deviceConnectedNow':'deviceNotConnectedNow';
+ if(token)return {status,actions:['copy-token'],note:'tokenPasteHint',showToken:true};
+ if(connected&&asking)return {status,actions:['token','token-cancel'],warning:'tokenReplaceWarning'};
+ if(connected)return {status,actions:['token-ask']};
+ return {status,actions:['token'],note:'tokenFirstHint'};
+}

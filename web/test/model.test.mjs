@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import { createModel,ingest,liveView,evidenceChains,trialRows,summaryFor,expiry,DAY,trialUsed } from '../src/model.js';
+import { createModel,ingest,liveView,evidenceChains,trialRows,summaryFor,expiry,DAY,trialUsed,clockOffset,localTime } from '../src/model.js';
 import { sampleEvidence,known,unknown,recipeFor,DemoRunner } from '../src/demo.js';
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 function counter(){const m=createModel(),events=sampleEvidence();const s=events[0];s.data.state='running';s.trial_id=null;s.minute=Math.floor(Date.now()/60000);const o=events[2];o.trial_id=null;o.minute=s.minute;o.data.round=null;o.data.target=null;o.data.occupancy=known(0);o.data.entered=known(7);o.data.exited=known(7);ingest(m,s);ingest(m,o);return {m,s,o};}
@@ -22,4 +22,13 @@ test('a trial result settles finish_trial and closes the trial at once, even whe
  const result={...sampleEvidence().find(e=>e.type==='trial_result'),session_id:s.session_id,job_id:s.job_id,trial_id:trial,seq:6,minute:s.minute};
  assert.equal(ingest(m,result),true);
  assert.equal(m.pending,null);assert.equal(m.trial,null);assert.equal(trialUsed(m),false);
+});
+test('a viewer clock 5 s off still sees a fresh status as live (Oct 22: the Mac was 5 s fast)',()=>{
+ const {s}=counter(),viewerNow=Date.now(),serverNow=viewerNow-5000;   // the server stamps with its own clock
+ const asIs=createModel();ingest(asIs,{...s,seq:9},serverNow);
+ assert.equal(liveView(asIs,viewerNow).offline,true);                  // the bug: compared as it is
+ const offset=clockOffset(serverNow,viewerNow),fixed=createModel();ingest(fixed,{...s,seq:9},localTime(serverNow,offset));
+ assert.equal(offset,5000);assert.equal(liveView(fixed,viewerNow).offline,false);
+ assert.equal(clockOffset(undefined,viewerNow),0);assert.equal(clockOffset(Number.NaN,viewerNow),0);   // an old server: no correction
+ assert.equal(localTime(0,offset),0);                                  // "no status yet" stays 0
 });

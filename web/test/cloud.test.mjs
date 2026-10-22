@@ -44,7 +44,7 @@ test('Bedrock/cameras connect; anonymous judges see only the selected job and ca
  try{
   ({ws}=await f.runner());const events=sampleEvidence();for(const e of events){if(e.type==='status'){e.data.planner='bedrock';e.data.cameras=['mac_camera','esp32_cam'];}ws.send(JSON.stringify(e));}await delay(50);
   const owner=(await f.request('snapshot')).body;assert.equal(owner.events.find(r=>r.event.type==='status').event.data.planner,'bedrock');
-  const hidden=await f.request('public/snapshot',undefined,'GET',false);assert.deepEqual(hidden.body.events,[]);assert.equal(hidden.body.published,false);
+  const hidden=await f.request('public/snapshot',undefined,'GET',false);assert.deepEqual(hidden.body.events,[]);assert.ok(Number.isFinite(hidden.body.now));assert.equal(hidden.body.published,false);
   for(const path of ['commands','runner-token','replay','publication','summaries'])assert.equal((await f.request(path,{},'POST',false)).status,401);
   assert.equal((await f.request('snapshot',undefined,'GET',false)).status,401);
   assert.equal((await f.request('history',undefined,'GET',false)).status,401);
@@ -78,7 +78,7 @@ test('the public event stream filters private jobs and resets immediately when s
  try{
   ({ws}=await f.runner());const chosen=sampleEvidence()[0];ws.send(JSON.stringify(chosen));await delay(20);
   await f.request('publication',{session_id:chosen.session_id,job_id:chosen.job_id,summary_ids:[]});
-  await new Promise((resolve,reject)=>{stream=http.get(`${f.origin}/api/events/public`,{headers:f.headers},res=>{let buffer='';res.on('data',chunk=>{buffer+=chunk;let end;while((end=buffer.indexOf('\n\n'))>=0){const block=buffer.slice(0,end);buffer=buffer.slice(end+2);if(block.startsWith('data: '))packets.push(JSON.parse(block.slice(6)));else if(block.startsWith(': connected'))resolve();}});});stream.on('error',reject);});
+  await new Promise((resolve,reject)=>{stream=http.get(`${f.origin}/api/events/public`,{headers:f.headers},res=>{let buffer='';res.on('data',chunk=>{buffer+=chunk;let end;while((end=buffer.indexOf('\n\n'))>=0){const block=buffer.slice(0,end);buffer=buffer.slice(end+2);if(block.startsWith('data: '))packets.push((({now,...packet})=>{assert.ok(Number.isFinite(now));return packet;})(JSON.parse(block.slice(6))));else if(block.startsWith(': connected'))resolve();}});});stream.on('error',reject);});
   ws.send(JSON.stringify({...chosen,seq:2}));await delay(20);assert.equal(packets.at(-1).event.job_id,chosen.job_id);
   ws.send(JSON.stringify({...chosen,seq:100,job_id:'e'.repeat(32)}));await delay(20);assert.deepEqual(packets.at(-1),{reset:true});assert.equal(JSON.stringify(packets).includes('e'.repeat(32)),false);
   ws.send(JSON.stringify({...chosen,seq:50}));await delay(20);assert.deepEqual(packets.at(-1),{reset:true});assert.equal((await f.request('public/snapshot',undefined,'GET',false)).body.statusAt,0);

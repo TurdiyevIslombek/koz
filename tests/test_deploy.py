@@ -63,7 +63,7 @@ def test_the_server_waits_for_its_fixed_ip_before_downloading():
     user_data = RES["Instance"]["Properties"]["UserData"]["Fn::Base64"]["Fn::Sub"]
     assert user_data.index("meta-data/public-ipv4") < user_data.index("apt-get") < user_data.index("git clone")
     braces = [m for m in re.findall(r"\$\{([^}]*)\}", user_data)]
-    assert set(braces) <= {"RepoRef", "RepoUrl", "ElasticIp", "OwnerPassword", "AWS::Region", "Table", "CertEmail"}
+    assert set(braces) <= {"RepoRef", "RepoUrl", "ElasticIp", "OwnerPassword", "AWS::Region", "Table", "CertEmail", "Release"}
 
 
 def test_installer_syntax_and_its_safety_steps():
@@ -135,3 +135,20 @@ def test_security_group_texts_use_only_what_ec2_accepts():
     sg = RES["SecurityGroup"]["Properties"]
     for text in [sg["GroupDescription"]] + [r["Description"] for r in sg["SecurityGroupIngress"]]:
         assert allowed.match(text), text
+
+
+def test_a_new_release_replaces_only_the_server_and_says_what_it_installed():
+    """Updating the code (Oct 22): a new Release changes the launch template, so CloudFormation makes
+    a fresh server and moves the fixed IP to it; table, password secret and IP are untouched. The
+    install log names the commit. The deployer may make the new launch template version."""
+    assert TEMPLATE["Parameters"]["Release"]["Default"] == "first"
+    tags = RES["LaunchTemplate"]["Properties"]["LaunchTemplateData"]["TagSpecifications"]
+    assert tags == [{"ResourceType": "volume", "Tags": [{"Key": "koz-release", "Value": {"Ref": "Release"}}]}]
+    assert RES["Instance"]["Properties"]["LaunchTemplate"]["Version"] == {"Fn::GetAtt": ["LaunchTemplate", "LatestVersionNumber"]}
+    for name in ("Table", "OwnerPassword", "ElasticIp"):
+        assert "Release" not in json.dumps(RES[name])
+    user_data = RES["Instance"]["Properties"]["UserData"]["Fn::Base64"]["Fn::Sub"]
+    assert "installed commit %H (release ${Release})" in user_data
+    policy = json.loads((DEPLOY / "iam-deployer-policy.json").read_text())
+    network = next(s for s in policy["Statement"] if s["Sid"] == "StackNetworkAndTemplate")
+    assert {"ec2:CreateLaunchTemplateVersion", "ec2:ModifyLaunchTemplate"} <= set(network["Action"])

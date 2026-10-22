@@ -45,3 +45,7 @@ dialog.eye-large img{display:block;max-width:min(96vw,1100px);max-height:calc(10
 .eye-large-note{margin:0;padding:0 16px;color:#e8e9e1;font-size:.82rem;text-align:center}
 @keyframes eye-large-in{from{opacity:0}to{opacity:1}}
 
+
+.device-status{font-weight:600;margin-bottom:12px}.device-status.is-live{color:var(--good,inherit)}
+.dialog-warning{border-left:3px solid var(--bad,currentColor);padding:6px 0 6px 12px;margin:12px 0}
+.dialog-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:12px 0}

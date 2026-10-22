@@ -21,6 +21,11 @@ def test_koz_cannot_save_frames_or_open_audio():
                  "write_bytes", "write_text", "open("]
     for path in KOZ.rglob("*.py"):
         source = path.read_text(encoding="utf-8")
+        if path == KOZ / "agent" / "choose.py":   # the one exception (Oct 22): save_env, one short text setting
+            body = source[source.index("def save_env"):]
+            body = body[:body.index("\n\n\n")] if "\n\n\n" in body else body
+            assert source.replace(body, "").count("open(") == 0 and "write_bytes" not in source
+            source = source.replace(body, "")
         for word in forbidden:
             assert word not in source, f"{word} in {path.relative_to(KOZ)}"
         assert "imencode" not in source or path == KOZ / "eye.py", f"imencode in {path.relative_to(KOZ)}"

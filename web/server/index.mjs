@@ -36,7 +36,7 @@ export async function createApplication({password='',dataDir=resolve(root,'.data
  const selected=event=>Boolean(publication&&event&&event.session_id===publication.session_id&&event.job_id===publication.job_id);
  const publicEvent=event=>selected(event)&&event.type!=='command_result';
  const publicTransport=()=>({...transport,state:selected(model.status)?transport.state:'disconnected'});
- const writePacket=(response,packet)=>{if(!response.write(`data: ${JSON.stringify(packet)}\n\n`))response.destroy();};
+ const writePacket=(response,packet)=>{if(!response.write(`data: ${JSON.stringify({...packet,now:Date.now()})}\n\n`))response.destroy();};   // now: the server clock, so pages can correct their own
  const broadcast=packet=>{for(const response of subscribers)writePacket(response,packet);for(const response of publicClients){
   if(packet.reset)writePacket(response,{reset:true});
   else if(packet.event){if(publicEvent(packet.event))writePacket(response,selected(model.status)&&transport.state==='connected'?{event:packet.event,receivedAt:packet.receivedAt,transport:publicTransport()}:{reset:true});}
@@ -102,7 +102,7 @@ export async function createApplication({password='',dataDir=resolve(root,'.data
     }
     if(cloud&&url.pathname==='/api/public/snapshot'&&req.method==='GET')return json(res,200,{
      events:[...model.events.filter(r=>r.expiresAt>Date.now()&&publicEvent(r.event)&&r.event!==model.status),...(selected(model.status)&&model.statusAt>0?[{event:model.status,receivedAt:model.statusAt}]:[])],statusAt:selected(model.status)?model.statusAt:0,pending:null,activeTrial:null,
-     saved:saved.filter(s=>publication?.summary_ids.includes(s.trial_id)),transport:publicTransport(),published:Boolean(publication),storageIncomplete});
+     saved:saved.filter(s=>publication?.summary_ids.includes(s.trial_id)),transport:publicTransport(),published:Boolean(publication),storageIncomplete,now:Date.now()});
     if(cloud&&url.pathname==='/api/events/public'&&req.method==='GET'){
      if(publicClients.size>=40)return json(res,503,{code:'BUSY'});
      res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-store','Connection':'keep-alive','X-Accel-Buffering':'no'});res.write(': connected\n\n');publicClients.add(res);req.on('close',()=>publicClients.delete(res));return;
@@ -120,7 +120,7 @@ export async function createApplication({password='',dataDir=resolve(root,'.data
     if(url.pathname==='/api/snapshot'&&req.method==='GET'){
      const rows=model.events.filter(r=>r.expiresAt>Date.now());
      const latest=model.status&&model.statusAt>0&&{event:model.status,receivedAt:model.statusAt};
-     return json(res,200,{events:latest?[...rows.filter(r=>r.event!==model.status),latest]:rows,pending:model.pending,statusAt:model.statusAt,activeTrial,saved,transport,publication,storageIncomplete,historyCursor,summariesCursor});
+     return json(res,200,{events:latest?[...rows.filter(r=>r.event!==model.status),latest]:rows,pending:model.pending,statusAt:model.statusAt,activeTrial,saved,transport,publication,storageIncomplete,historyCursor,summariesCursor,now:Date.now()});
     }
     if(url.pathname==='/api/events'&&req.method==='GET'){
      if(subscribers.size>=10)return json(res,503,{code:'BUSY'});
@@ -163,7 +163,7 @@ export async function createApplication({password='',dataDir=resolve(root,'.data
    if(req.method!=='GET'&&req.method!=='HEAD')return json(res,405,{code:'INVALID_COMMAND'});
    const name=url.pathname==='/'?'index.html':decodeURIComponent(url.pathname).replace(/^\//,'');
    const path=resolve(root,'dist',name);if(!path.startsWith(resolve(root,'dist')+'/'))return json(res,404,{code:'INVALID_COMMAND'});
-   const content=await readFile(path);const types={'.html':'text/html','.js':'text/javascript','.css':'text/css','.ttf':'font/ttf','.txt':'text/plain'};
+   let content;try{content=await readFile(path);}catch(error){if(['ENOENT','EISDIR','ENOTDIR'].includes(error.code))return json(res,404,{code:'INVALID_COMMAND'});throw error;}const types={'.html':'text/html','.js':'text/javascript','.css':'text/css','.ttf':'font/ttf','.txt':'text/plain'};
    res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
    res.writeHead(200,{'Content-Type':`${types[extname(path)]||'application/octet-stream'}; charset=utf-8`,'Cache-Control':'no-cache'});res.end(req.method==='HEAD'?undefined:content);
   }catch(error){json(res,error instanceof ContractError?400:500,{code:error instanceof ContractError?error.code:'INTERNAL_ERROR'});}

@@ -13,7 +13,10 @@ from outside. The same events and commands as locally, checked the same way:
   - a reconnect never replays a command, starts a job or arms motors (contract section 5);
   - the web origin and token are local config (.env), never printed and never from a command."""
 import asyncio
+import getpass
 import json
+import os
+import re
 import urllib.parse
 from collections import deque
 
@@ -72,6 +75,77 @@ async def heartbeat(hub):
         hub.heartbeat()
 
 
+TOKEN_PATTERN = re.compile(r"^[0-9a-f]{64}$")   # the web app makes 32 random bytes, in hex
+
+
+def ask_value(kind, prompt=None, say=print, tries=3):
+    """Ask in Terminal for the server `address` or the device `token` (hidden while typing or pasting).
+    Returns the checked value, or None (Enter alone, end of input, or `tries` wrong answers).
+    What was typed is never repeated."""
+    if prompt is None:
+        prompt = getpass.getpass if kind == "token" else input
+    question = {"token": "Device token (hidden; paste it, then press Enter): ",
+                "address": "Server address (web app -> Connect device -> Server address): "}[kind]
+    for _ in range(tries):
+        try:
+            answer = prompt(question).strip()
+        except EOFError:
+            return None
+        if not answer:
+            return None
+        if kind == "token" and TOKEN_PATTERN.match(answer):
+            return answer
+        if kind == "address":
+            try:
+                return check_cloud_url(answer)
+            except ValueError:
+                pass
+        say("That doesn't look like a device token (64 letters and digits from the web app). Try again."
+            if kind == "token" else "That doesn't look like the server address (it starts with wss://). Try again.")
+    return None
+
+
+def cloud_settings(url, env_path=None, interactive=True, prompt=None, say=print, environ=None):
+    """The cloud address and device token for this start: from the command line or .env, else asked
+    once in Terminal and saved in .env (Oct 22). None (with a message said) if Ko'z can't start."""
+    from .agent.choose import load_env, save_env
+    environ = os.environ if environ is None else environ
+    saved = load_env(env_path)
+    if url is None:
+        url = saved.get("KOZ_CLOUD_URL")
+        if not url and interactive:
+            say("Ko'z needs the server address once. In the web app: Connect device -> Server address. Copy it here.")
+            url = ask_value("address", prompt, say)
+            if url:
+                save_env("KOZ_CLOUD_URL", url, env_path)
+    elif url != saved.get("KOZ_CLOUD_URL"):
+        try:
+            save_env("KOZ_CLOUD_URL", check_cloud_url(url), env_path)
+        except ValueError:
+            pass
+    if not url:
+        say("Ko'z did not start: it needs the server address. Double-click start-koz-cloud.command, "
+            "or start it with --cloud wss://SERVER/v1/runner.")
+        return None
+    try:
+        check_cloud_url(url)
+    except ValueError:
+        say("Ko'z did not start: the server address must start with wss://.")
+        return None
+    token = environ.get("KOZ_RUNNER_TOKEN") or saved.get("KOZ_RUNNER_TOKEN")
+    if not token and interactive:
+        say("Ko'z needs the device token once. In the web app: Connect device -> Create device token -> Copy.")
+        token = ask_value("token", prompt, say)
+        if token:
+            save_env("KOZ_RUNNER_TOKEN", token, env_path)
+            say("Saved on this Mac: Ko'z won't ask again.")
+    if not token:
+        say("Ko'z did not start: it needs the device token. Double-click start-koz-cloud.command "
+            "(it asks once and remembers it).")
+        return None
+    return url, token
+
+
 def check_cloud_url(url):
     """wss:// for the cloud; ws:// only to this computer (tests, a local web app)."""
     parts = urllib.parse.urlsplit(url)
@@ -80,9 +154,10 @@ def check_cloud_url(url):
     raise ValueError("the cloud address must be wss://")
 
 
-async def link_cloud(hub, url, token, connected=None, retry_s=RETRY_S):
+async def link_cloud(hub, url, token, connected=None, retry_s=RETRY_S, ask_new_token=None):
     """Keep one outbound connection to the cloud web app until cancelled. `connected` (an
-    asyncio.Event) is set each time a connection is up (for tests)."""
+    asyncio.Event) is set each time a connection is up (for tests). `ask_new_token` (optional,
+    called in a thread) asks for a new token when the web app refuses this one (Oct 22)."""
     from websockets.asyncio.client import connect
     from websockets.asyncio.server import broadcast
     from websockets.exceptions import ConnectionClosed, InvalidHandshake, InvalidStatus
@@ -119,8 +194,16 @@ async def link_cloud(hub, url, token, connected=None, retry_s=RETRY_S):
                 hub.say("Disconnected from the web app; reconnecting.")
             except InvalidStatus as error:
                 code = error.response.status_code
-                hub.say(f"The web app refused the connection (HTTP {code})"
-                        + (": check KOZ_RUNNER_TOKEN in .env." if code == 401 else "."))
+                if code == 401 and ask_new_token is not None:
+                    hub.say("The web app refused this token (HTTP 401): a newer token replaced it. Click this "
+                            "Terminal window and paste the new one (web app -> Connect device).")
+                    new = await asyncio.to_thread(ask_new_token)
+                    if new:
+                        token, failures = new, 0
+                        continue
+                else:
+                    hub.say(f"The web app refused the connection (HTTP {code})"
+                            + (": check KOZ_RUNNER_TOKEN in .env." if code == 401 else "."))
             except (OSError, ConnectionClosed, InvalidHandshake, TimeoutError):
                 hub.say("The web app can't be reached; trying again.")
             await asyncio.sleep(retry_s[min(failures, len(retry_s) - 1)])

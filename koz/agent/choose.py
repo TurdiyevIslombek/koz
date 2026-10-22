@@ -6,6 +6,8 @@ people-counting job (docs/TRIALS.md, "Planner on this Mac"). Asked again for eve
 next one in the list is asked, down to the rule planner, which always answers. The plan says
 which planner made it (Plan.source); the terminal prints it and status.planner carries it."""
 import os
+import re
+from pathlib import Path
 
 from .. import ROOT
 from ..errors import KozError
@@ -30,6 +32,29 @@ def load_env(path=None):
     except OSError:
         pass
     return values
+
+
+def save_env(key, value, path=None):
+    """Set KEY=value in .env (Oct 22: Ko'z saves the device token and server address itself, so nobody
+    edits .env by hand). Every older KEY= line is replaced by one; other lines stay as they are. The file
+    is written whole, then renamed, and readable only by this user (0600). The value is never printed.
+    The only file writer in koz/ (rule 8, tests/test_rules_static.py): one short line of plain text,
+    so it can't carry a picture: a KEY of capitals, a value of at most 512 printable characters."""
+    if not re.fullmatch(r"[A-Z][A-Z0-9_]{0,63}", key) or not re.fullmatch(r"[\x21-\x7e]{1,512}", value or ""):
+        raise ValueError("save_env takes one short setting")
+    path = Path(path) if path else ROOT / ".env"
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        lines = []
+    kept = [line for line in lines if line.strip().split("=", 1)[0].strip() != key or "=" not in line]
+    kept.append(f"{key}={value}")
+    temporary = path.with_name(path.name + ".new")
+    fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as file:
+        file.write("\n".join(kept) + "\n")
+    os.chmod(temporary, 0o600)
+    os.replace(temporary, path)
 
 
 class AutoPlanner:

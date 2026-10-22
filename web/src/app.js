@@ -1,9 +1,9 @@
-import { createModel, ingest, liveView, trialRows, evidenceChains, summaryFor, invalidateLive, trialUsed } from './model.js';
+import { createModel, ingest, liveView, trialRows, evidenceChains, summaryFor, invalidateLive, trialUsed, clockOffset, localTime } from './model.js';
 import { readRecipe, validateCommandData, codeMessage, CODES, newId } from './protocol.js';
 import { DemoRunner, recipeFor, sampleEvidence } from './demo.js';
 import { t, escapeHTML as esc } from './i18n.js';
 import { sceneSVG, targetSVG, icon, pulseCrossing } from './scene.js';
-import { plannerPresentation, liveKind, cameraChoice, withCamera, liveStep, retryStart, eyeClosedReason, TEST_SECONDS } from './presentation.js';
+import { plannerPresentation, liveKind, cameraChoice, withCamera, liveStep, retryStart, eyeClosedReason, deviceDialog, TEST_SECONDS } from './presentation.js';
 import { createOwnerConnection } from './owner-connection.js';
 import { createEyeConnection } from './eye-connection.js';
 
@@ -16,6 +16,8 @@ let demoMode=new URL(location.href).searchParams.get('demo')==='1';
 let transport={mode:'inbound',state:'disconnected',source:'runner',replayOwned:false};
 let model=createModel(),demo=null,authenticated=false,configured=false,saved=[],signature='',notice='',noticeError=false;
 let screen=['setup','live','trials'].includes(location.hash.slice(1))?location.hash.slice(1):'live';
+let tokenAsking=false; // the owner pressed "Replace device token…" (presentation.js: deviceDialog)
+let serverOffset=0; // this page's clock minus the server's (model.js: clockOffset)
 let lastStart=null; // {input, camera_id, job_id}: what this page last started, so Try again runs the same job on the same camera
 let prompt='',candidate=null,exampleKind='counter',trialDemo='red_ball',trialIndex=1,activeTrialDemo=null;
 let ownerState='starting',cameraSelection={},cloudMode=false,publicView=false,eyeAvailable=false,publication=null,published=false,storageIncomplete=false,historyCursor=null;
@@ -46,17 +48,18 @@ const ownerConnection=createOwnerConnection({
  api,
  onSession(session){authenticated=session.authenticated;configured=session.configured;cloudMode=Boolean(session.cloud);publicView=cloudMode&&!authenticated;eyeAvailable=Boolean(session.eye);transport=session.transport||transport;},
  onSnapshot(snapshot){
-  model=createModel();publication=snapshot.publication||null;published=Boolean(snapshot.published);storageIncomplete=Boolean(snapshot.storageIncomplete);historyCursor=snapshot.historyCursor||null;
-  for(const row of snapshot.events.sort((a,b)=>a.receivedAt-b.receivedAt||a.event.seq-b.event.seq)){try{ingest(model,row.event,row.receivedAt);}catch{notice=msg('INVALID_EVENT');noticeError=true;}}
-  transport=snapshot.transport||transport;model.pending=snapshot.pending;model.statusAt=snapshot.statusAt;saved=snapshot.saved;
+  serverOffset=clockOffset(snapshot.now);model=createModel();publication=snapshot.publication||null;published=Boolean(snapshot.published);storageIncomplete=Boolean(snapshot.storageIncomplete);historyCursor=snapshot.historyCursor||null;
+  for(const row of snapshot.events.sort((a,b)=>a.receivedAt-b.receivedAt||a.event.seq-b.event.seq)){try{ingest(model,row.event,localTime(row.receivedAt,serverOffset));}catch{notice=msg('INVALID_EVENT');noticeError=true;}}
+  transport=snapshot.transport||transport;model.pending=snapshot.pending;model.statusAt=localTime(snapshot.statusAt,serverOffset);saved=snapshot.saved;
   if(snapshot.activeTrial){activeTrialDemo=snapshot.activeTrial.demo;trialDemo=activeTrialDemo;trialIndex=snapshot.activeTrial.index;}else activeTrialDemo=null;
   ownerState='connected';render(true);
  },
  onPacket(packet){
+  if(Number.isFinite(packet.now))serverOffset=clockOffset(packet.now);
   if(packet.storageIncomplete)storageIncomplete=true;
   if(packet.transport){transport=packet.transport;if(transport.state!=='connected')invalidateLive(model);}
   if(packet.activeTrial){activeTrialDemo=packet.activeTrial.demo;trialIndex=packet.activeTrial.index;}else if(packet.activeTrial===null)activeTrialDemo=null;
-  if(packet.event){receive(packet.event,packet.receivedAt);if(cloudMode){const anchors=model.events.filter(r=>[model.recipe,model.fault].includes(r.event));model.events=[...new Set([...anchors,...model.events.slice(-998)])];if(model.seen.size>4000)model.seen=new Set([...model.seen].slice(-2000));if(model.highest.size>100)model.highest=new Map([...model.highest].slice(-100));}}
+  if(packet.event){receive(packet.event,localTime(packet.receivedAt,serverOffset));if(cloudMode){const anchors=model.events.filter(r=>[model.recipe,model.fault].includes(r.event));model.events=[...new Set([...anchors,...model.events.slice(-998)])];if(model.seen.size>4000)model.seen=new Set([...model.seen].slice(-2000));if(model.highest.size>100)model.highest=new Map([...model.highest].slice(-100));}}
   if(packet.error)setNotice(msg(packet.error),true);
   if(packet.commandExpired&&model.pending?.command_id===packet.commandExpired){model.pending=null;setNotice(tr('pendingExpired'),true);}
   render();
@@ -176,14 +179,16 @@ function render(force=false){
 }
 async function command(name,data){try{if(!ready())return setNotice(tr('noDevice'),true);validateCommandData(name,data,model.status.data.capabilities,model.status.data.cameras||[]);const response=demoMode?demo.command(name,data,language):await api('commands',{command:name,data});model.pending=response;notice='';noticeError=false;render(true);return true;}catch(error){setNotice(msg(error.code||'INTERNAL_ERROR'),true);return false;}}
 function fillExample(kind){candidate=null;exampleKind=kind;prompt=tr(kind==='counter'?'sampleCounter':kind==='classroom'?'sampleClassroom':kind==='red_ball'?'sampleBall':'samplePrivacy');if(demo)demo.kind=kind;render(true);document.querySelector('#prompt')?.focus();}
+function deviceHTML(token){const d=deviceDialog({connected:transport.state==='connected'&&transport.source!=='replay',asking:tokenAsking,token}),make={'token-ask':()=>button('token-ask','tokenReplace','link'),'token':()=>button('token',d.warning?'tokenMakeNew':'token','primary'),'token-cancel':()=>button('token-cancel','tokenKeep','link'),'copy-token':()=>button('copy-token','copy','primary')};
+ return `<p class="device-status${d.status==='deviceConnectedNow'?' is-live':''}" role="status">${tr(d.status)}</p>${d.showToken?`<code class="token-value">${esc(token)}</code>`:''}${d.warning?`<p class="dialog-warning">${tr(d.warning)}</p>`:''}${d.note?`<p>${tr(d.note)}</p>`:''}<div class="dialog-actions">${d.actions.map(a=>make[a]()).join('')}</div><p class="small muted">${tr('serverAddress')}: <code>${location.origin.replace(/^http/,'ws')}/v1/runner</code></p><p class="small muted">${tr('localSetup')}</p>`;}
 function connectionHTML(error='',token=''){
  if(transport.mode==='local'&&authenticated){dialog.innerHTML=`<div class="dialog-head"><h2>${tr('localConnection')}</h2>${button('close-dialog','close','icon-button')}</div>${error?`<p class="dialog-error" role="alert">${esc(error)}</p>`:''}<p>${tr('localConnectionHint')}</p><p><code>ws://127.0.0.1:8765</code></p><p>${tr('replayHint')}</p>${button('replay-start',transport.source==='replay'?'replayAgain':'replayTitle','primary',transport.state==='connected'&&transport.source!=='replay')}${transport.replayOwned?button('replay-stop','replayStop','link'):''}`;return;}
- dialog.innerHTML=`<div class="dialog-head"><h2>${tr(authenticated?'connect':'login')}</h2>${button('close-dialog','close','icon-button',false,`aria-label="${tr('close')}"`)}</div>${error?`<p class="dialog-error" role="alert">${esc(error)}</p>`:''}${authenticated?`<p>${tr('localSetup')}</p><p>${tr('tokenHint')}</p>${token?`<code class="token-value">${esc(token)}</code>${button('copy-token','copy','link')}<p><code>${location.origin.replace(/^http/,'ws')}/v1/runner</code></p>`:button('token','token','primary')}<hr style="border:0;border-top:1px solid var(--rule);margin-top:24px">${button('logout','logout','link')}`:configured?`<form id="login-form"><label for="owner-password">${tr('password')}</label><input type="password" id="owner-password" autocomplete="current-password" required maxlength="256"><button type="submit" class="primary">${tr('login')}</button></form>`:`<p>${tr('setupUnavailable')}</p><details><summary>${tr('details')}</summary><p>${tr('loginHint')}</p></details>`}${cloudMode&&authenticated?publicationHTML():''}${!demoMode?button('demo','tryDemo','link'):''}`;
+ dialog.innerHTML=`<div class="dialog-head"><h2>${tr(authenticated?'connect':'login')}</h2>${button('close-dialog','close','icon-button',false,`aria-label="${tr('close')}"`)}</div>${error?`<p class="dialog-error" role="alert">${esc(error)}</p>`:''}${authenticated?`${deviceHTML(token)}<hr style="border:0;border-top:1px solid var(--rule);margin-top:24px">${button('logout','logout','link')}`:configured?`<form id="login-form"><label for="owner-password">${tr('password')}</label><input type="password" id="owner-password" autocomplete="current-password" required maxlength="256"><button type="submit" class="primary">${tr('login')}</button></form>`:`<p>${tr('setupUnavailable')}</p><details><summary>${tr('details')}</summary><p>${tr('loginHint')}</p></details>`}${cloudMode&&authenticated?publicationHTML():''}${!demoMode?button('demo','tryDemo','link'):''}`;
 }
 function publicationHTML(){return `<section class="publication"><h3>${tr('publicLink')}</h3><p>${tr('publicationHint')}</p><a href="${location.origin}/#live" target="_blank" rel="noopener">${tr('publicLink')}</a>${saved.map(s=>`<label class="share-summary"><input type="checkbox" value="${s.trial_id}" ${publication?.summary_ids.includes(s.trial_id)?'checked':''}>${tr(s.demo==='privacy_guard'?'privacy_guard_demo':s.demo)} · ${s.index} · ${esc(s.date)}</label>`).join('')}${button('publish','publishCurrent','primary',!model.status?.job_id)}${publication?button('unpublish','unpublish','link'):''}</section>`;}
 async function act(action){const [name,arg]=action.split(':');
  if(name==='theme'){theme=theme==='dark'?'light':'dark';persist('koz-theme',theme);render(true);}
- else if(name==='connect'){connectionHTML();dialog.showModal();}
+ else if(name==='connect'){tokenAsking=false;connectionHTML();dialog.showModal();}
  else if(name==='close-dialog')dialog.close();
  else if(name==='reload')location.reload();
  else if(name==='demo'){dialog.close();startDemo();}
@@ -209,7 +214,8 @@ async function act(action){const [name,arg]=action.split(':');
  else if(name==='delete'){saved=demoMode?saved.filter(s=>s.trial_id!==arg):(await api(`summaries/${arg}`,null,'DELETE')).saved;render(true);}
  else if(name==='publish'||name==='unpublish'){const data=name==='unpublish'?null:{session_id:model.status.session_id,job_id:model.status.job_id,summary_ids:[...dialog.querySelectorAll('.share-summary input:checked')].map(i=>i.value)};publication=(await api('publication',data,'POST')).publication;connectionHTML();}
  else if(name==='history'){const page=await api(`history?session=${model.status.session_id}&cursor=${encodeURIComponent(historyCursor)}`);const current=model.events.filter(r=>[model.status,model.recipe,model.fault,model.observation].includes(r.event));model.events=[...page.rows,...current];historyCursor=page.nextCursor;render(true);}
- else if(name==='token'){const result=await api('runner-token',{});connectionHTML('',result.token);}
+ else if(name==='token'){tokenAsking=false;const result=await api('runner-token',{});connectionHTML('',result.token);}
+ else if(name==='token-ask'||name==='token-cancel'){tokenAsking=name==='token-ask';connectionHTML();}
  else if(name==='copy-token'){await navigator.clipboard.writeText(dialog.querySelector('.token-value').textContent);announce(tr('copied'));}
  else if(name==='logout'){await api('logout',{});authenticated=false;ownerConnection.stop();ownerState='signed-out';dialog.close();if(!demoMode){model=createModel();saved=[];candidate=null;prompt='';}render(true);}
 }
@@ -219,6 +225,6 @@ document.addEventListener('change',async event=>{const {id,value}=event.target;i
 document.addEventListener('submit',async event=>{event.preventDefault();if(event.target.id==='prompt-form'){const started=candidate?{input:'recipe',recipe:candidate}:{input:'prompt',language,text:prompt},input=withCamera(started,model.status,cameraSelection);if(await command('start_job',input)){rememberStart(input);prompt='';candidate=null;go('live');}}if(event.target.id==='login-form'){try{await api('login',{password:document.querySelector('#owner-password').value});authenticated=true;dialog.close();if(!demoMode)await connectOwner();render(true);}catch(error){connectionHTML(msg(error.code||'INTERNAL_ERROR'));}}if(event.target.id==='trial-form'){await command('finish_trial',{result:formResult,reason:formResult==='pass'?'none':formReason,expected_count:(activeTrialDemo||trialDemo)==='classroom'&&formExpected!==''?Number(formExpected):null});}});
 document.addEventListener('keydown',event=>{if((event.key==='Enter'||event.key===' ')&&event.target.id==='live-eye'&&!event.target.classList.contains('is-closed')){event.preventDefault();openLargeEye();}});
 window.addEventListener('hashchange',()=>{const page=location.hash.slice(1);if(['setup','live','trials'].includes(page)){screen=page;notice='';render(true);window.scrollTo(0,0);}});
-setInterval(()=>{if(model.pending&&Date.now()/1000>model.pending.expires_at){model.pending=null;notice=tr('pendingExpired');noticeError=true;}render();},250);
+setInterval(()=>{if(model.pending&&(Date.now()-(demoMode?0:serverOffset))/1000>model.pending.expires_at){model.pending=null;notice=tr('pendingExpired');noticeError=true;}render();},250);
 render(true);
 if(demoMode)startDemo();else await connectOwner();

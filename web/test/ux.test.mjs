@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createModel, ingest, liveView } from '../src/model.js';
 import { sampleEvidence } from '../src/demo.js';
-import { liveStep, stopWhy, todoFor, eyeClosedReason, TEST_SECONDS } from '../src/presentation.js';
+import { liveStep, stopWhy, todoFor, eyeClosedReason, TEST_SECONDS, deviceDialog } from '../src/presentation.js';
 import { validateEvent } from '../src/protocol.js';
 import { t, languages } from '../src/i18n.js';
 
@@ -169,4 +169,17 @@ test('inside a trial whose job already ran, the one button is "Finish trial and 
   assert.deepEqual(idle.actions, ['finishRetry', 'newJob']);
   for (const key of ['finishRetry', 'trialRetryTodo', 'unknownTitle'])
     assert.ok(languages.every(language => t(language, key) !== key), key);
+});
+
+test('Connect device never replaces the token by itself (Oct 22: each open-and-press disconnected the Mac)',()=>{
+ const live=deviceDialog({connected:true});
+ assert.equal(live.status,'deviceConnectedNow');assert.deepEqual(live.actions,['token-ask']);   // no one-press new token
+ const asking=deviceDialog({connected:true,asking:true});
+ assert.deepEqual(asking.actions,['token','token-cancel']);assert.equal(asking.warning,'tokenReplaceWarning');
+ const none=deviceDialog({connected:false});
+ assert.equal(none.status,'deviceNotConnectedNow');assert.deepEqual(none.actions,['token']);assert.equal(none.note,'tokenFirstHint');
+ const made=deviceDialog({connected:false,token:'a'.repeat(64)});
+ assert.deepEqual(made.actions,['copy-token']);assert.equal(made.note,'tokenPasteHint');assert.equal(made.showToken,true);
+ for(const d of [live,asking,none,made])for(const key of [d.status,d.warning,d.note].filter(Boolean))
+  for(const lang of ['uz','ru','en'])assert.notEqual(t(lang,key),key,`${key} in ${lang}`);
 });

@@ -5,6 +5,11 @@ export const expiry=(event,receivedAt)=>Math.min(event.minute,Math.floor(receive
 // lastStop: the job's latest fault, kept after a later idle until a new job starts (UX pass, Oct 18).
 // stoppedBy: 'owner' once this page's stop_job ended the job. testing: {revision, since} of the round on test.
 export function createModel(){return {events:[],seen:new Set(),highest:new Map(),status:null,statusAt:0,observation:null,fault:null,lastStop:null,stoppedBy:null,testing:null,recipe:null,pending:null,trial:null};}
+// The page's clock against the server's (Oct 22: a Mac 5 s fast made every status look 5 s old, so the
+// page said "not connected" while the device was live). The server sends its clock (`now`) with every
+// snapshot and packet; its times are moved to this clock before any comparison. 0 stays 0 (no status).
+export const clockOffset=(serverNow,localNow=Date.now())=>Number.isFinite(serverNow)?localNow-serverNow:0;
+export const localTime=(serverTime,offset)=>serverTime?serverTime+offset:serverTime;
 export function invalidateLive(model){model.statusAt=0;model.observation=null;model.pending=null;}
 export function ingest(model,event,receivedAt=Date.now()) {
   validateEvent(event,receivedAt);

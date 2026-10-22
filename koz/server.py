@@ -575,9 +575,10 @@ def main(argv=None):
     parser.add_argument("--window", action="store_true", help="show the camera view (faces blurred) of each job")
     parser.add_argument("--no-report-planner", dest="report_planner", action="store_false",
                         help="don't send status.planner (contract 8.1; the web app accepts it since Oct 16)")
-    parser.add_argument("--cloud", metavar="WSS_URL",
+    parser.add_argument("--cloud", metavar="WSS_URL", nargs="?", const="",
                         help="connect out to the cloud web app instead of listening here, e.g. "
-                             "wss://WEB-IP/v1/runner (token: KOZ_RUNNER_TOKEN in .env)")
+                             "wss://WEB-IP/v1/runner; without an address: the one saved in .env. The address "
+                             "and the device token are asked once in Terminal and saved in .env (Oct 22)")
     parser.add_argument("--port", type=int, default=PORT)
     args = parser.parse_args(argv)
     print_stops()   # every stop says why, with the last privacy check
@@ -633,19 +634,21 @@ def main(argv=None):
     for sig in (signal.SIGTERM, signal.SIGHUP):
         signal.signal(sig, interrupted)
 
-    token = None
-    if args.cloud:
-        from .agent.choose import load_env
-        from .cloud import check_cloud_url
-        token = {**load_env(), **os.environ}.get("KOZ_RUNNER_TOKEN")
-        try:
-            check_cloud_url(args.cloud)
-        except ValueError:
-            print("Ko'z did not start: --cloud must be a wss:// address.")
+    token = cloud_url = ask_new_token = None
+    if args.cloud is not None:
+        from .agent.choose import save_env
+        from .cloud import ask_value, cloud_settings
+        interactive = sys.stdin.isatty()
+        settings = cloud_settings(args.cloud or None, interactive=interactive, say=lambda text: print(text, flush=True))
+        if settings is None:
             return 1
-        if not token:
-            print("Ko'z did not start: put KOZ_RUNNER_TOKEN=... in .env (from the web app's Runner token page).")
-            return 1
+        cloud_url, token = settings
+        if interactive:
+            def ask_new_token():   # the web app refused the saved token: ask for the new one, save it
+                new = ask_value("token")
+                if new:
+                    save_env("KOZ_RUNNER_TOKEN", new)
+                return new
         print("Ko'z runner: connecting out to the cloud web app. Ctrl+C stops.", flush=True)
     else:
         print(f"Ko'z runner on ws://{HOST}:{args.port}. The web app connects here. Ctrl+C stops.", flush=True)
@@ -654,9 +657,9 @@ def main(argv=None):
 
     def run_server():
         try:
-            if args.cloud:
+            if cloud_url:
                 from .cloud import link_cloud
-                asyncio.run(link_cloud(hub, args.cloud, token))
+                asyncio.run(link_cloud(hub, cloud_url, token, ask_new_token=ask_new_token))
             else:
                 asyncio.run(serve(hub, port=args.port))
         except OSError as error:   # most often: another runner already uses the port
