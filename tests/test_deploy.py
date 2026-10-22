@@ -40,7 +40,13 @@ def test_the_server_role_can_touch_only_its_table_and_its_password():
     assert RES["Instance"]["Properties"]["IamInstanceProfile"] == {"Ref": "ServerInstanceProfile"}
     statements = json.loads((DEPLOY / "iam-server-role-policy.json").read_text())["Statement"]
     actions = [a for s in statements for a in s["Action"]]
-    assert all("*" not in a for a in actions)
+    # exactly what web/server/dynamo.mjs calls (a TransactWriteItems of Puts needs PutItem; "TransactWriteItems"
+    # itself is not an IAM action: the IAM console rejected it, Oct 21)
+    assert actions == ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:DeleteItem", "dynamodb:Query",
+                       "secretsmanager:GetSecretValue"]
+    used = set(re.findall(r"\b(GetItem|PutItem|DeleteItem|Query|UpdateItem|BatchGetItem|BatchWriteItem|Scan)Command\b",
+                          (DEPLOY.parent / "web/server/dynamo.mjs").read_text()))
+    assert {"dynamodb:" + u for u in used} <= set(actions)
     assert [r for s in statements for r in s["Resource"]] == [   # exactly that secret (+ AWS's 6 random characters)
         "arn:aws:dynamodb:ap-southeast-2:*:table/koz-web", "arn:aws:secretsmanager:ap-southeast-2:*:secret:koz-owner-password-??????"]
     assert RES["OwnerPassword"]["Properties"]["Name"] == "koz-owner-password"

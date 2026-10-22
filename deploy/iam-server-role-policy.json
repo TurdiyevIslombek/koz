@@ -7,13 +7,8 @@
       "Action": [
         "dynamodb:GetItem",
         "dynamodb:PutItem",
-        "dynamodb:UpdateItem",
         "dynamodb:DeleteItem",
-        "dynamodb:Query",
-        "dynamodb:BatchGetItem",
-        "dynamodb:BatchWriteItem",
-        "dynamodb:TransactWriteItems",
-        "dynamodb:DescribeTable"
+        "dynamodb:Query"
       ],
       "Resource": [
         "arn:aws:dynamodb:ap-southeast-2:*:table/koz-web"
