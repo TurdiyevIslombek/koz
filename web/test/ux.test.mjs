@@ -211,3 +211,18 @@ test('plain words: no bare "rules" planner, no first person in the plan box, sho
  assert.ok(t('ru','live').split(' ').length===1,'one Russian word fits the tab');
  assert.notEqual(t('en','held'),'on hold');
 });
+
+test('judges before anything is shared: "Not shared yet" with a sample run, never "not connected" (Oct 22)',()=>{
+ const offline={offline:true,status:null,counts:[null,null,null]};
+ const step=liveStep(offline,{notShared:true});
+ assert.equal(step.step,'notShared');assert.equal(step.tone,'neutral');assert.equal(step.cta,'demo');assert.deepEqual(step.actions,[]);
+ assert.equal(liveStep(offline,{}).step,'offline');   // the owner's own page still says offline
+ for(const key of ['notSharedTitle','notSharedWhy','notSharedPill','capabilityHint','targetNotFoundTodo','trialsScope'])
+  for(const lang of ['uz','ru','en'])assert.notEqual(t(lang,key),key,`${key} in ${lang}`);
+});
+test('a colour job that found nothing says what Koʻz can find (Oct 22: "three attempts failed")',()=>{
+ assert.equal(todoFor('ADJUSTMENT_LIMIT','target'),'targetNotFoundTodo');
+ assert.equal(todoFor('ADJUSTMENT_LIMIT','counter'),'checkFailedTodo');
+ assert.equal(todoFor('UNSUPPORTED_CAPABILITY'),'capabilityHint');   // a refusal lists what Koʻz can do
+ assert.match(t('en','targetNotFoundTodo'),/round/);assert.match(t('en','capabilityHint'),/ball/);
+});

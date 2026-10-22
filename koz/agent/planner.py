@@ -242,6 +242,19 @@ COLOURS = [("orange", [r"\borange\b", r"\bto'q sariq\b", r"оранжев\w*"]),
            ("purple", [r"\bpurple\b", r"\bbinafsha\w*", r"фиолетов\w*"])]
 
 
+# Things the colour finder can't find: it looks for a round, single-coloured thing (roundness >= 0.65,
+# fixed in color_finder.py). Islombek, Oct 22: "find my blue backpack" or "the phone" were planned as a
+# colour job and failed three times; now they are refused at once. Counting jobs that mention them
+# ("customers with bags") still count.
+NOT_ROUND_OBJECTS = [
+    r"\b(back ?packs?|bags?|handbags?|suitcases?|phones?|smartphones?|cups?|mugs?|bottles?|books?|boxe?s|laptops?|"
+    r"keys?|wallets?|shoes?|sneakers?|umbrellas?|chairs?|bikes?|bicycles?|pens?|glasses|hats?|jackets?)\b",
+    r"\b(sumka\w*|ryukzak\w*|telefon\w*|stakan\w*|piyola\w*|shisha\w*|kitob\w*|quti\w*|noutbuk\w*|kalit\w*|"
+    r"hamyon\w*|poyabzal\w*|soyabon\w*|stul\w*|velosiped\w*|ruchka\w*|ko'zoynak\w*|shapka\w*|kurtka\w*)",
+    r"\b(рюкзак\w*|сумк\w*|чемодан\w*|телефон\w*|смартфон\w*|чашк\w*|кружк\w*|бутылк\w*|книг\w*|коробк\w*|ноутбук\w*|"
+    r"ключ\w*|кошел\w*|обув\w*|ботин\w*|кроссовк\w*|зонт\w*|стул\w*|велосипед\w*|ручк\w*|очки|шапк\w*|куртк\w*)"]
+
+
 def refusal_for(text):
     """The error code if Ko'z refuses this request, else None (the same for every planner)."""
     if len(text) > MAX_TEXT:
@@ -250,6 +263,8 @@ def refusal_for(text):
     for code, patterns in REFUSALS:
         if _any(patterns, t):
             return code
+    if _any(NOT_ROUND_OBJECTS, t) and not _any(COUNT_WORDS, t):
+        return "UNSUPPORTED_CAPABILITY"   # not a round thing: the colour finder would never find it
     return None
 
 

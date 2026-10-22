@@ -18,6 +18,8 @@ import {createDynamoStore} from '../../server/dynamo.mjs';
 import {FakeDynamo} from '../../test/fake-dynamo.mjs';
 import {sampleEvidence,recipeFor,known,unknown} from '../../src/demo.js';
 const {chromium}=await import(process.env.KOZ_PLAYWRIGHT_MODULE||'playwright');
+// Design versions (Oct 22): KOZ_SKIN=a style layer to try on the real app; KOZ_SHOOT_LANGS / KOZ_SHOOT_ONLY narrow the run.
+const skin=process.env.KOZ_SKIN?await readFile(process.env.KOZ_SKIN,'utf8'):'',onlyLangs=process.env.KOZ_SHOOT_LANGS?.split(','),only=process.env.KOZ_SHOOT_ONLY?.split(',');
 const out=process.argv[2];if(!out)throw Error('usage: shoot-cloud.mjs OUT_DIR');await mkdir(out,{recursive:true});
 const temporary=await mkdtemp(join(tmpdir(),'koz-shoot-cloud-'));
 execFileSync('openssl',['req','-x509','-newkey','rsa:2048','-nodes','-keyout',join(temporary,'key.pem'),'-out',join(temporary,'cert.pem'),'-days','1','-subj','/CN=localhost'],{stdio:'ignore'});
@@ -33,6 +35,8 @@ const base=sampleEvidence()[0],observation=sampleEvidence().find(e=>e.type==='ob
 const emit=(type,data,extra={})=>ws?.readyState===1&&ws.send(JSON.stringify({...base,session_id:session,seq:++seq,type,job_id:job,trial_id:trial,revision,minute:Math.floor(Date.now()/60000),data,...extra}));
 const status=()=>emit('status',{...base.data,state,privacy,camera_on:['running','evaluating','checking'].includes(state),planner:'rules',cameras:['mac_camera']});
 async function shoot(page,name,{langs=['uz','ru','en'],themes=['dark'],full=true,prepare=null}={}){
+ if(only&&!only.includes(name)){if(prepare){await page.evaluate(()=>document.querySelector('#connection')?.close());await prepare();await sleep(300);}return;}   // skipped: still do its clicks
+ langs=onlyLangs||langs;
  for(const theme of themes){if(await page.locator('html').getAttribute('data-theme')!==theme)await page.evaluate(()=>document.querySelector('#theme').click());   // works under an open dialog
   for(const lang of langs){await page.evaluate(l=>{const s=document.querySelector('#language');s.value=l;s.dispatchEvent(new Event('change',{bubbles:true}));},lang);await sleep(350);if(prepare){await page.evaluate(()=>document.querySelector('#connection')?.close());await prepare();await sleep(300);}
    const width=page.viewportSize().width,file=`${name}-${lang}-${theme}-${width}.png`;await page.screenshot({path:join(out,file),fullPage:full});shots.push({name,lang,theme,width,file});
@@ -51,6 +55,7 @@ try{
   session=randomBytes(16).toString('hex');seq=0;job=null;trial=null;state='idle';   // a new device session per pass
  privacy='approved';revision=null;
   const owner=await browser.newContext({viewport:{width,height},ignoreHTTPSErrors:true}),judge=await browser.newContext({viewport:{width,height},ignoreHTTPSErrors:true});
+  if(skin)for(const c of [owner,judge])await c.addInitScript(css=>addEventListener('DOMContentLoaded',()=>{const s=document.createElement('style');s.textContent=css;document.head.append(s);}),skin);
   const page=await owner.newPage(),viewer=await judge.newPage();for(const p of [page,viewer])p.on('pageerror',e=>errors.push(e.message));
   const open=(...then)=>async()=>{await page.click('[data-action="connect"]');for(const action of then)await page.click(`[data-action="${action}"]`);};   // a window opens after the language is set, as for a person
   await page.goto(origin+'/#setup');await shoot(page,'01-login',{full:false,prepare:open()});

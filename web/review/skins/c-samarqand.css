@@ -1,0 +1,14 @@
+/* Version C · "Samarqand" (Uzbek tiles): deep cobalt, turquoise and gold, cream text, a quiet tile border. */
+:root,:root[data-theme=light],:root[data-theme=dark]{--bg:#0b1a44;--surface:#122660;--surface-2:#19316f;--ink:#fbf4e4;--muted:#b9c2dc;--rule:#22397a;--line-strong:#30498d;
+ --accent:#41d1c3;--accent-ink:#06213a;--good:#41d1c3;--warn:#f0c14b;--bad:#ff8a7a;--stop:#e8553f;--stop-ink:#fff;
+ --eye:#f6ecd6;--eye-rim:#e3c98f;--silhouette:#1c3a8a;--face:#0b1a44;--floor:#e7d9b8;--line:#d4402b;--radius:22px;color-scheme:dark}
+body{background:var(--bg)}
+.status,.readout,.scene,.plan,.table-wrap,.trials-layout>section.proof{box-shadow:inset 0 0 0 1px var(--line-strong)}
+.status[data-tone=good],.status[data-tone=warn],.status[data-tone=bad]{background:color-mix(in srgb,var(--tone) 12%,var(--surface))}
+.scene{background:var(--surface);background-image:linear-gradient(var(--surface),var(--surface)),repeating-linear-gradient(45deg,#f0c14b22 0 6px,transparent 6px 12px);background-clip:padding-box,border-box;border:6px solid transparent}
+.wordmark{color:var(--warn)}
+.count,.crossings dd{color:var(--ink)}
+.tabs{background:var(--surface)}.tabs a[aria-current=page]{background:var(--accent);color:var(--accent-ink);box-shadow:none}
+.link-state.is-on .dot{background:var(--accent)}
+.examples button,.privacy-strip>span,.link-state{background:var(--surface-2)}
+.dock{background:#0b1a44e6}

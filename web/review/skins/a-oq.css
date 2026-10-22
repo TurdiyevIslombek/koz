@@ -1,0 +1,15 @@
+/* Version A · "Oq" (clean light): bright cards on soft grey, big black numbers, iOS blue, a red capsule Stop. */
+:root,:root[data-theme=light],:root[data-theme=dark]{--bg:#f2f2f6;--surface:#ffffff;--surface-2:#f2f3f7;--ink:#111316;--muted:#6b7078;--rule:#e4e5ea;--line-strong:#d3d5dc;
+ --accent:#0a6cff;--accent-ink:#fff;--good:#1f9d4b;--warn:#b26b00;--bad:#d93025;--stop:#ff3b30;--stop-ink:#fff;
+ --eye:#eef2f7;--eye-rim:#d6dde8;--silhouette:#8a94a3;--face:#2b3240;--floor:#dfe4ec;--line:#0a6cff;--radius:26px;color-scheme:light}
+body{background:var(--bg)}
+.status,.readout,.scene,.plan,.table-wrap,.trials-layout>section.proof,dialog{box-shadow:0 1px 2px #0000000d,0 8px 24px -12px #00000026}
+.status[data-tone=good],.status[data-tone=warn],.status[data-tone=bad]{background:var(--surface);box-shadow:0 1px 2px #0000000d,0 8px 24px -12px #00000026}
+.status h2{color:var(--ink)!important}.status[data-tone] h2 .icon{color:#fff;background:var(--tone)}
+.status[data-tone=neutral] h2 .icon,.status:not([data-tone]) h2 .icon{background:var(--surface-2);color:var(--ink)}
+.count{font-weight:700;letter-spacing:-.06em}.crossings dd{font-weight:700}
+.tabs{background:#e6e7ec}.tabs a[aria-current=page]{background:#fff;box-shadow:0 1px 3px #0000001f}
+.link-state{background:#fff;box-shadow:0 1px 2px #0000000f}
+.stop-button,.dock-actions button{border-radius:999px}
+.dock{background:#f2f2f6d9}
+.privacy-strip>span{background:#fff}

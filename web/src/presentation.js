@@ -41,7 +41,9 @@ export function stopWhy(code,seen){
  if(code==='LENS_COVERED'||code==='PRIVACY_UNCERTAIN')return {key:`why_${code}`};
  return {code};
 }
-export function todoFor(code){
+export function todoFor(code,kind='unknown'){
+ if(code==='UNSUPPORTED_CAPABILITY')return 'capabilityHint';   // say what Koʻz can do (Oct 22)
+ if(code==='ADJUSTMENT_LIMIT'&&kind==='target')return 'targetNotFoundTodo';   // the colour finder finds round things only
  if(REFUSALS.has(code))return 'refusedTodo';
  if(code?.startsWith('PRIVATE_')||code==='SCENE_CHANGED')return 'privacyTodo';
  return TODO[code]||'restartTodo';
@@ -50,20 +52,22 @@ export function todoFor(code){
 // view: liveView(model). fault: the job's latest fault data ({code, effect, seen?}), kept after a
 // later idle. stoppedBy: 'owner' when this page's Stop ended the job. canRetry: the same job can be
 // started again. testing: {since, revision} of the current test round.
-export function liveStep(view,{fault=null,stoppedBy=null,canRetry=false,hasJob=false,testing=null,kind='unknown',motors=false,trialUsed=false,now=Date.now()}={}){
+export function liveStep(view,{fault=null,stoppedBy=null,canRetry=false,hasJob=false,testing=null,kind='unknown',motors=false,trialUsed=false,notShared=false,now=Date.now()}={}){
  // In a trial whose one job already ran, "Try again" would be refused (one job per trial): the same
  // button finishes the trial first (recorded as unknown, interrupted), then starts the job again.
  const retry=trialUsed?'finishRetry':'retry';
  const actions=list=>list.map(a=>a==='retry'?retry:a).filter(a=>a===retry?canRetry:true);
  const withNote=step=>trialUsed&&step.actions.includes('finishRetry')?{...step,note:'trialRetryTodo'}:step;
+ // Judges before the owner shares a job: the server tells them nothing, which is not "offline" (Oct 22).
+ if(notShared)return {step:'notShared',tone:'neutral',title:'notSharedTitle',why:{key:'notSharedWhy'},actions:[],cta:'demo'};
  if(view.offline)return {step:'offline',tone:'unknown',title:'offlineTitle',why:{key:'offlineReason'},todo:'offlineTodo',actions:[]};
  const state=view.status.state;
  // A fault wins at once, whatever the status still says (a privacy stop shows before "held" arrives).
  if(fault&&state!=='planning'){
   const code=fault.code;
-  if(PRIVACY_STOPS.has(code))return withNote({step:'privacyStop',tone:'bad',title:'privacyStopTitle',why:stopWhy(code,fault.seen),todo:todoFor(code),actions:actions(['retry','newJob'])});
+  if(PRIVACY_STOPS.has(code))return withNote({step:'privacyStop',tone:'bad',title:'privacyStopTitle',why:stopWhy(code,fault.seen),todo:todoFor(code,kind),actions:actions(['retry','newJob'])});
   if(REFUSALS.has(code))return {step:'refused',tone:'bad',title:'refusedTitle',why:{code},todo:'refusedTodo',actions:['newJob']};
-  return withNote({step:'problem',tone:'bad',title:'stopped',why:{code},todo:todoFor(code),actions:actions(['retry','newJob'])});
+  return withNote({step:'problem',tone:'bad',title:'stopped',why:{code},todo:todoFor(code,kind),actions:actions(['retry','newJob'])});
  }
  if(state==='planning')return {step:'planning',tone:'warn',title:'planningTitle',why:{key:'planningWhy'},actions:['stop']};
  if(state==='checking')return {step:'confirming',tone:'warn',title:'confirmingTitle',why:{key:'confirmingWhy'},actions:['stop']};

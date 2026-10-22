@@ -1,0 +1,18 @@
+/* Version B · "Tungi koʻz" (night scope): black, electric cyan instrument lines, technical numerals, the eye as a scope. */
+:root,:root[data-theme=light],:root[data-theme=dark]{--bg:#030505;--surface:#070b0b;--surface-2:#0c1313;--ink:#e9fffb;--muted:#7fa7a1;--rule:#123634;--line-strong:#1d5a55;
+ --accent:#38f2d7;--accent-ink:#00201c;--good:#38f2d7;--warn:#ffd23f;--bad:#ff5d73;--stop:#ff2e55;--stop-ink:#fff;
+ --eye:#041615;--eye-rim:#1f7b72;--silhouette:#7ff8e6;--face:#030505;--floor:#0f3b37;--line:#ffd23f;--radius:6px;color-scheme:dark}
+body{background:var(--bg)}
+.status,.readout,.scene,.plan,.table-wrap,.trials-layout>section.proof,dialog{box-shadow:inset 0 0 0 1px var(--line-strong);background:var(--surface)}
+.status[data-tone=good],.status[data-tone=warn],.status[data-tone=bad]{background:var(--surface);box-shadow:inset 0 0 0 1px var(--tone)}
+.status h2{text-transform:uppercase;letter-spacing:.04em;font-size:1.35rem!important}
+.status h2 .icon{border-radius:4px;background:color-mix(in srgb,var(--tone) 18%,transparent)}
+.count,.crossings dd,.trial-toolbar .tally,.count-word{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:500;letter-spacing:-.04em}
+.count-label,.crossings dt,.scene-heading span,.target-legend{text-transform:uppercase;letter-spacing:.08em;font-size:.75rem!important}
+.crossings>div{background:transparent;box-shadow:inset 0 0 0 1px var(--rule);border-radius:4px}
+.tabs{background:transparent;box-shadow:inset 0 0 0 1px var(--rule);border-radius:6px}.tabs a{border-radius:4px}
+.tabs a[aria-current=page]{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.link-state,.privacy-strip>span,.connection-strip button.link,.examples button,.scene-cover b{border-radius:4px}
+.stop-button,.dock-actions button,.prompt-form .primary,button.primary,select,textarea,.prompt-form textarea{border-radius:6px}
+.wordmark{letter-spacing:.02em}
+.dock{background:#030505e6;border-top-color:var(--line-strong)}
