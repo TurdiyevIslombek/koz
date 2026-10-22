@@ -307,6 +307,27 @@ upset… in all three languages). These sentences now test only that nothing goe
 (`tests/test_agent.py`); a new set is needed for an honest number. Yesterday's 20 sentences:
 still 20/20 (also not a fair score: tuned on them yesterday).
 
+## Planner on AWS Bedrock: could not be measured (Oct 21)
+
+**Question.** Does Amazon Nova 2 Lite on Bedrock plan the 40 test sentences (Islombek's 20 and the
+measured 20) at least 18/20 each? Below that, the rule planner stays the default (same bar as Gemma).
+
+**Run.** `scripts/score_sentences.py --planner bedrock` with Islombek's 30-day Bedrock API key:
+**0/20 and 0/20 from the model alone: every one of the 40 calls failed** (`PLANNER_UNAVAILABLE`,
+0.3–1.2 s each). The "with this planner" lines (20/20) only show the rule planner taking over, so
+they are not a Bedrock score. Why, from one tiny test call per option (the key never printed):
+- The account is a "new AWS experience" project in Sydney. Its AWS-managed policy **denies the API
+  key outside Sydney**: `eu.amazon.nova-2-lite-v1:0` in eu-central-1 and `us.…` in us-east-1 →
+  403 "not authorized to perform bedrock:CallWithBearerToken … explicit deny in a service control
+  policy".
+- In Sydney, every Amazon text model (Nova 2 Lite global profile; Nova Lite, Micro and Pro, in-Region
+  and APAC profiles) → 429 **"Too many tokens per day"** on the first 5-token call: the new
+  account's daily Bedrock allowance is zero.
+
+**Decision** (Islombek's rule): no Bedrock score, so the **rule planner stays the default**. The key
+line comes out of `.env`. A quota increase (Service Quotas → Amazon Bedrock → tokens per day for
+Nova Lite) could make a later run possible; not needed for the Oct 26 submission.
+
 ## What stopped the camera during the planner measurement (Oct 16)
 
 During the Gemma measurement (Oct 15) the guard stopped the camera job 4 times and the reason

@@ -139,3 +139,31 @@ these; the $1 budget warns you if real money is charged.
   made by hand with its role): removed the shell and the console output, servers and the role only
   through CloudFormation, the password secret has a fixed name the server role names exactly, and
   the write rights are removed after the deploy (B5).
+- Oct 21: the account turned out to be a new-experience project (Google sign-in, no region menu):
+  AWS puts projects from Uzbekistan in **Sydney ap-southeast-2** and blocks other regions for
+  servers and databases. Islombek chose Sydney (free plan, nothing irreversible) over upgrading for
+  Frankfurt; deploy files, the web server's region check and the Uz/Ru/En notice switched. IAM users
+  in a project have no console sign-in, so Claude's user `koz-deployer` got a CLI access key that
+  Islombek typed into `aws configure` himself. He made the server role, the two policies and the user;
+  the IAM console rejected `dynamodb:TransactWriteItems` (not an IAM action): the role now has exactly
+  the four table actions the web server uses.
+- Oct 21–22, Claude (each create or change shown first and approved): read-only checks (Claude is
+  `koz-deployer`; free plan ACTIVE, $120 credits, until 2027-04-14; $1 budget, $0 spent; template
+  valid; t3.micro free-plan eligible). Stack try 1 failed: EC2 refuses an apostrophe in a security
+  group text ("Ko'z"); CloudFormation removed everything; fixed with a test; the empty failed record
+  deleted with Islombek's yes. Try 2: **CREATE_COMPLETE** (also shows servers can be made only
+  through CloudFormation). Installed from commit `9c9f5dd`; **HTTPS ready after ~11 minutes**.
+- Checked from the Mac (no AWS rights needed): `https://16.178.45.27/` 200 with a valid Let's Encrypt
+  IP certificate (6 days, renews by itself); HTTP → HTTPS; HSTS, CSP, no-referrer, nosniff;
+  `/api/eye` 404 (no eye on the cloud); events, status and summaries 401 without login; commands 403;
+  the runner socket without its token 401. **Judges' view with no login** (headless Chrome,
+  `web/review/cloud/judges_probe.mjs`): Live and Trials only, "the owner hasn't shared the demo yet",
+  no start or stop button, **no picture loaded, no socket**; the only `<img>` is the hidden large-view
+  box, which only the local eye can fill. Found: any unknown path answers 500 `INTERNAL_ERROR`
+  instead of 404 (no data in it; web fix for later).
+- Running: one t3.micro, 8 GiB encrypted gp3, the fixed IP, table `koz-web` (TTL on), secret
+  `koz-owner-password`. About $0.48 a day from the credits. `koz-deployer` tried to read the owner
+  password: AccessDenied (explicit deny), as designed.
+- Bedrock: not measurable (docs/TRIALS.md, Oct 21): the project denies the API key outside Sydney,
+  and in Sydney the new account's daily Bedrock tokens are zero. The rule planner stays the default.
+
