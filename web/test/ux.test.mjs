@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createModel, ingest, liveView } from '../src/model.js';
 import { sampleEvidence } from '../src/demo.js';
-import { liveStep, stopWhy, todoFor, eyeClosedReason, TEST_SECONDS, deviceDialog } from '../src/presentation.js';
+import { liveStep, stopWhy, todoFor, eyeClosedReason, TEST_SECONDS, deviceDialog, dockActions, diagramCover } from '../src/presentation.js';
 import { validateEvent } from '../src/protocol.js';
 import { t, languages } from '../src/i18n.js';
 
@@ -182,4 +182,32 @@ test('Connect device never replaces the token by itself (Oct 22: each open-and-p
  assert.deepEqual(made.actions,['copy-token']);assert.equal(made.note,'tokenPasteHint');assert.equal(made.showToken,true);
  for(const d of [live,asking,none,made])for(const key of [d.status,d.warning,d.note].filter(Boolean))
   for(const lang of ['uz','ru','en'])assert.notEqual(t(lang,key),key,`${key} in ${lang}`);
+});
+
+test('the bottom bar shows Live actions only on the Live tab; Stop stays reachable everywhere (design review, Oct 22)',()=>{
+ const stopped={step:'privacyStop',actions:['retry','newJob']},running={step:'running',actions:['stop']},idle={step:'idle',actions:['newJob']};
+ assert.deepEqual(dockActions(stopped,'live',{hasJob:true}),['retry','newJob']);
+ assert.deepEqual(dockActions(stopped,'trials',{hasJob:true}),['openLive']);   // no "Try again" out of context
+ assert.deepEqual(dockActions(stopped,'setup',{hasJob:true}),['openLive']);
+ assert.deepEqual(dockActions(running,'setup',{hasJob:true}),['stop']);        // a running job (or a car) can always be stopped
+ assert.deepEqual(dockActions(running,'trials',{hasJob:true}),['stop']);
+ assert.deepEqual(dockActions(idle,'setup',{hasJob:false}),[]);                // no second "New job" under "Test it"
+ assert.deepEqual(dockActions(idle,'live',{hasJob:false}),['newJob']);
+});
+test('the AWS diagram never claims to be a view: it says the job state (design review, Oct 22)',()=>{
+ assert.equal(diagramCover({step:'running'}),null);
+ assert.equal(diagramCover({step:'testing'}),'coverTesting');
+ assert.equal(diagramCover({step:'privacyStop'}),'coverPrivacy');
+ assert.equal(diagramCover({step:'cameraLost'}),'coverWaiting');assert.equal(diagramCover({step:'unknownOutput'}),'coverWaiting');
+ assert.equal(diagramCover({step:'offline'}),'coverOffline');
+ for(const step of ['stopped','stoppedByYou','refused','problem','idle'])assert.equal(diagramCover({step}),'coverStopped');
+ for(const key of ['diagramHeading','targetHeading','coverTesting','coverPrivacy','coverWaiting','coverOffline','coverStopped','openLive','cameraComputer','shareTitle','ownerLogin','moreNotRun'])
+  for(const lang of ['uz','ru','en'])assert.notEqual(t(lang,key),key,`${key} in ${lang}`);
+ assert.doesNotMatch(t('en','diagramHeading'),/sees/);
+});
+test('plain words: no bare "rules" planner, no first person in the plan box, short Russian tab (design review, Oct 22)',()=>{
+ for(const lang of ['uz','ru','en'])assert.ok(t(lang,'planner_rules').length>8,lang);
+ assert.doesNotMatch(t('en','planPromise'),/\bI\b/);assert.doesNotMatch(t('uz','planPromise'),/raman\b/);assert.doesNotMatch(t('ru','planPromise'),/проверю|скрою/);
+ assert.ok(t('ru','live').split(' ').length===1,'one Russian word fits the tab');
+ assert.notEqual(t('en','held'),'on hold');
 });

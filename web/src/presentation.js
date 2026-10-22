@@ -114,3 +114,20 @@ export function deviceDialog({connected=false,asking=false,token=''}={}){
  if(connected)return {status,actions:['token-ask']};
  return {status,actions:['token'],note:'tokenFirstHint'};
 }
+
+// The bottom bar (design review, Oct 22). Live's own actions (Try again, New job) only on the Live
+// tab; Stop stays on every tab while something runs (a car must always be stoppable); elsewhere a
+// stopped job gets one quiet "Open live job", and nothing else (no second "New job" under "Test it").
+export function dockActions(step,screen,{hasJob=false}={}){
+ if(screen==='live')return step.actions;
+ if(step.actions.includes('stop'))return ['stop'];
+ return hasJob&&step.step!=='idle'?['openLive']:[];
+}
+
+// The AWS page draws a counting diagram, never a picture (rule 9), so its cover says the job state,
+// not "view unavailable". null: running, nothing on top.
+export function diagramCover(step){
+ const covers={running:null,testing:'coverTesting',privacyStop:'coverPrivacy',confirming:'coverChecking',cameraLost:'coverWaiting',
+  unknownOutput:'coverWaiting',offline:'coverOffline',planning:'coverPlanning'};
+ return step.step in covers?covers[step.step]:'coverStopped';
+}

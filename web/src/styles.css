@@ -47,5 +47,15 @@ dialog.eye-large img{display:block;max-width:min(96vw,1100px);max-height:calc(10
 
 
 .device-status{font-weight:600;margin-bottom:12px}.device-status.is-live{color:var(--good,inherit)}
-.dialog-warning{border-left:3px solid var(--bad,currentColor);padding:6px 0 6px 12px;margin:12px 0}
+.dialog-warning{background:var(--surface);color:var(--warn);padding:10px 12px;border-radius:8px;margin:12px 0}
 .dialog-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:12px 0}
+
+/* Design review, Oct 22 */
+@media(max-width:759px){.live-grid .readout{order:2}.live-grid .scene{order:3;margin-top:18px}}  /* phones: the reading before the diagram */
+.dialog-section{padding:16px 0;border-top:1px solid var(--rule)}.dialog-section:first-of-type{border-top:0;padding-top:0}
+.dialog-section h3{font-size:.95rem;margin-bottom:8px}.dialog-foot{display:flex;flex-wrap:wrap;gap:8px 20px;padding-top:14px;border-top:1px solid var(--rule)}
+.icon-button .icon{width:18px;height:18px}
+.status[data-step="stopped"] h2 .icon path,.status[data-step="stoppedByYou"] h2 .icon path{fill:currentColor}
+.more-rows td{padding-top:12px;font-size:.85rem}
+@media(min-width:760px){.trials-layout section.proof section.proof{margin-top:36px;padding-top:24px;border-top:1px solid var(--rule)}}
+.dialog-section .publication{margin-top:0;border-top:0;padding-top:0}  /* the section already draws the line */
