@@ -5,6 +5,7 @@ fake guard / face / person models, so they are fast and deterministic. The colou
 and the tuner are the real OpenCV code, on recorded clips."""
 import json
 
+import cv2
 import numpy as np
 import pytest
 from helpers import (FULL_FRAME, GREEN, ORANGE_RED, RED, Approve, EndlessCamera, FakeClock, FakeFaces, Refuse,
@@ -212,15 +213,37 @@ def test_chain_log_prints_one_line_per_step(clips):
     assert "decide    round 2: target_visible pass" in text
 
 
-def test_no_fix_from_the_numbers_stops_with_check_failed(clips):
-    """Nothing coloured at all: lower saturation once, then there is no allowed fix left."""
+def test_no_ball_in_view_the_job_runs_and_waits_for_it(clips):
+    """Islombek, Oct 22: "track the red ball" stopped every time he started it before the ball was
+    there. Nothing round of that colour in view means there is nothing to fix: the job runs and shows
+    the target as lost until a ball comes (decision: target_visible unknown -> run). No setting is
+    changed, so a ball that comes later is found with the colour that was asked for."""
     run = Run(clip_camera(clips["empty"]))
     result = run.agent.run("find the red ball")
-    assert (result.state, result.code) == ("held", "CHECK_FAILED")
-    assert [d["next"] for d in result.decisions] == ["adjust", "stop"]
-    assert result.decisions[0]["change"] == {"setting": "color_finder.saturation_min", "before": 120, "after": 80}
-    assert run.of("fault")[-1]["data"] == {"code": "CHECK_FAILED", "effect": "held"}
-    assert run.of("status")[-1]["data"]["state"] == "held" and run.camera.is_open is False
+    assert (result.state, result.code) == ("running", None)
+    assert [(d["round"], d["check"], d["result"], d["next"]) for d in result.decisions] == [
+        (1, "target_visible", "unknown", "run")]
+    assert result.agent_changes == [] and [r["revision"] for r in run.of("recipe")] == [1]
+    assert not run.of("fault") and run.of("status")[-1]["data"]["state"] == "running"
+    result.runner.stop()
+
+
+def test_a_red_thing_that_is_not_round_never_pulls_the_colour(tmp_path):
+    """A wall, a shirt, skin: reddish but not round. The tuner used to move the colour towards it,
+    so a real ball was no longer found. Now a change is proposed only if, with it, a ROUND thing
+    would be found; here none would, so nothing changes and the job waits for a ball (Oct 22)."""
+    path = tmp_path / "wall.avi"
+    writer = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*"MJPG"), 10, (320, 240))
+    for _ in range(60):
+        frame = np.full((240, 320, 3), 128, np.uint8)
+        cv2.rectangle(frame, (20, 40), (300, 110), ORANGE_RED, -1)   # a long orange-red band
+        writer.write(frame)
+    writer.release()
+    run = Run(clip_camera(path))
+    result = run.agent.run("find the red ball")
+    assert result.state == "running"
+    assert all(d["next"] != "adjust" for d in result.decisions) and result.agent_changes == []
+    result.runner.stop()
 
 
 def test_three_failed_rounds_stop_with_adjustment_limit(clips, monkeypatch):

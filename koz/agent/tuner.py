@@ -9,6 +9,9 @@ Colour finder, target not found:
   1. Look for the most common strongly coloured hue within HUE_SEARCH of the asked colour
      (so "red" can become orange-red, but never green). If there is one, move hue_center there.
   2. Otherwise, if the colour may just be pale, lower saturation_min by 40 (not below 50).
+  Either change is proposed only if, with it, a ROUND thing would be found in the round's frames
+  (Oct 22): reddish skin, a shirt or a wall used to pull the colour away from the ball. With no
+  such change, the agent runs the job as asked and waits for the ball (koz/agent/loop.py).
 People counter: nothing to adjust from the numbers alone (no change; the loop stops).
 
 Fly-brain car, ball seen but not kept in the middle (target_centered): the brain turns too weakly.
@@ -49,12 +52,19 @@ def propose(recipe, check, frames):
     hue = dominant_hue(frames, s["hue_center"], s["saturation_min"], s["value_min"])
     if hue is not None:
         off = min(abs(hue - s["hue_center"]), 180 - abs(hue - s["hue_center"]))
-        if off > s["hue_half_width"] / 2:
+        if off > s["hue_half_width"] / 2 and finds_round({**s, "hue_center": hue}, frames):
             return {"setting": "color_finder.hue_center", "before": s["hue_center"], "after": hue}
-    if s["saturation_min"] - 40 >= 50:
+    if s["saturation_min"] - 40 >= 50 and finds_round({**s, "saturation_min": s["saturation_min"] - 40}, frames):
         return {"setting": "color_finder.saturation_min", "before": s["saturation_min"],
                 "after": s["saturation_min"] - 40}
     return None
+
+
+def finds_round(settings, frames):
+    """Would the colour finder, with these settings, find a round target in any of the frames?"""
+    from ..blocks.color_finder import ColorFinder
+    finder = ColorFinder(settings)
+    return any(finder.find(frame).label != "lost" for frame in frames)
 
 
 def apply(recipe, change):

@@ -205,6 +205,14 @@ class Agent:
                 new = check_recipe(tuner.apply(checked.data, change), local_school=self.setup.school) if change else None
             except KozError:
                 new = None   # a change that breaks a rule is never tried
+            if change is None and job == "find_colour" and check == "target_visible":   # nothing to fix (a rejected fix still stops)
+                # Nothing round of that colour in view, so nothing to fix (Islombek, Oct 22: start and
+                # wait): run as asked; the target shows as lost until a ball comes. Not for the car,
+                # which must never start driving without its target.
+                self._decide(decisions, number, evidence, check, "unknown", "run", revision, None, None)
+                runner.finish_evaluation()
+                self.phase = "done"
+                return JobResult(plan, "running", None, runner, decisions, changes)
             if new is None:
                 self._decide(decisions, number, evidence, check, "fail", "stop", revision, None, "CHECK_FAILED")
                 return self._hold(plan, runner, "CHECK_FAILED", decisions, changes)

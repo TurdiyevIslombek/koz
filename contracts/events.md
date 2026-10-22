@@ -550,6 +550,10 @@ the web may show a round as a 3-second test.)
   job is held. No new loop starts by itself.
 - Planner timeout → `PLANNER_UNAVAILABLE`. A failed check with no allowed fix →
   `CHECK_FAILED`.
+- Finding a colour (not the car), Oct 22: when nothing round of that colour is in view, there is
+  nothing to fix; the decision is `target_visible` `unknown` → `run`, and the job runs as asked,
+  showing the target as `lost` until it appears. A fix is proposed only if, with it, a round thing
+  would be found. The car still needs its ball in the test (it must never start without a target).
 - A failed check never gives the planner permission to weaken safety.
 
 The dashboard shows the label **"OpenCV output changed the next action"** only

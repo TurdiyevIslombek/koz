@@ -130,6 +130,15 @@ def test_a_ball_that_never_gets_centred_turns_the_brain_up_then_stops():
     assert [r["data"]["recipe"]["brain"]["settings"]["turn_gain"] for r in revisions] == [1.0, 1.5, 2.0]
 
 
+def test_the_car_never_starts_without_its_ball():
+    """Find jobs wait for their ball (Oct 22); the car doesn't: a car must never start driving with
+    no target in view. No ball in the test: the job stops and the motors are disarmed."""
+    run = CarRun(np.full((240, 320, 3), 120, np.uint8))
+    result = run.agent.run("Chase the red ball")
+    assert result.state in ("held", "idle") and result.code == "CHECK_FAILED"
+    assert run.link.sent[-1] == "DISARM" and run.link.state == 0
+
+
 # --- the runner server: the web can't arm; a person on this computer can --------------------------------
 
 def test_the_web_cannot_arm_but_a_person_here_can():
