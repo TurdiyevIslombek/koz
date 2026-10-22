@@ -59,3 +59,150 @@ dialog.eye-large img{display:block;max-width:min(96vw,1100px);max-height:calc(10
 .more-rows td{padding-top:12px;font-size:.85rem}
 @media(min-width:760px){.trials-layout section.proof section.proof{margin-top:36px;padding-top:24px;border-top:1px solid var(--rule)}}
 .dialog-section .publication{margin-top:0;border-top:0;padding-top:0}  /* the section already draws the line */
+
+/* ── Visual pass (Oct 22): direction D, finished ──────────────────────────────────────────────
+   Islombek: "easy to use and understand, cutting edge"; too plain, text too small and grey, not
+   like a real app, colours and the eye. Same idea (eye, giant reading, Stop bar), finished: one
+   level of panels instead of thin rules, a tinted status panel per state, a dark lens for the
+   eye, nothing under 13 px, app-like controls. Panels never nest; no gradients or glows; one
+   soft shadow only on floating layers (windows). */
+:root{--bg:#0b0e0c;--surface:#141815;--surface-2:#1d221e;--ink:#f3f2ea;--muted:#a9b0a5;--rule:#262c27;--line-strong:#363e37;
+ --accent:#9cb7ff;--accent-ink:#0c1a3a;--good:#a6df8a;--warn:#f1cd70;--bad:#ff9e8b;--stop:#cf3f2a;--stop-ink:#fff;
+ --eye:#18201b;--eye-rim:#3a4a40;--silhouette:#c6d0c0;--face:#0b0e0c;--floor:#2e3a32;--line:#7f9fff;--radius:20px;--shadow:0 24px 60px -24px #000d}
+:root[data-theme=light]{--bg:#f3f2eb;--surface:#fff;--surface-2:#eceee5;--ink:#1a201b;--muted:#566052;--rule:#dfe2d6;--line-strong:#c9cdbf;
+ --accent:#2348c4;--accent-ink:#fff;--good:#2d6a1d;--warn:#7a5600;--bad:#a12f1e;--stop:#c63a26;--stop-ink:#fff;
+ --eye:#e5eae0;--eye-rim:#c3cbbb;--silhouette:#6c7866;--face:#1d281f;--floor:#cbd3c4;--line:#2348c4;--shadow:0 24px 50px -28px #4a503f66}
+small,.small{font-size:.8125rem}
+button,select,input,textarea{border-radius:12px;border-color:var(--line-strong)}
+button:hover:not(:disabled){border-color:var(--muted);background:var(--surface-2)}
+button:disabled{opacity:.45}
+button.primary{border-radius:14px}
+h1{font-size:2rem;font-weight:650;letter-spacing:-.03em;line-height:1.1}
+
+/* header: wordmark, a segmented tab switch, the connection as a pill */
+.topbar{padding:18px 0 12px}
+.wordmark{font-size:1.6rem;font-weight:780;letter-spacing:-.02em}
+.tools select,.icon-button{background:var(--surface);border-color:var(--rule);border-radius:12px}
+.tabs{border:0;background:var(--surface);border-radius:14px;padding:4px;gap:4px}
+.tabs a{border:0;border-radius:10px;min-height:42px;padding:8px 10px;font-size:.875rem;font-weight:560;color:var(--muted)}
+.tabs a[aria-current=page]{background:var(--surface-2);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line-strong)}
+.connection-strip{padding:14px 0 2px;min-height:auto;font-size:.8125rem}
+.link-state{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:var(--surface);font-weight:560}
+.link-state .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.link-state.is-on .dot{background:var(--good)}
+.link-state.is-off{color:var(--muted)}
+.connection-strip button.link{font-size:.8125rem;min-height:34px;padding:6px 14px;border:1px solid var(--line-strong);border-radius:999px}
+.notice{border-radius:14px;font-size:.875rem;padding:12px 16px}
+.page{padding-top:22px}
+
+/* Live: a status panel tinted by its state, the reading and the diagram on their own panels */
+.live-grid{gap:12px}
+.status,.readout,.scene{background:var(--surface);border-radius:var(--radius);padding:20px}
+.status{margin:0;--tone:var(--muted)}
+.status[data-tone=good]{--tone:var(--good)}.status[data-tone=warn]{--tone:var(--warn)}.status[data-tone=bad]{--tone:var(--bad)}
+.status[data-tone=good],.status[data-tone=warn],.status[data-tone=bad]{background:color-mix(in srgb,var(--tone) 9%,var(--surface));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tone) 24%,transparent)}
+.status h2,.screen-live .status h2{font-size:1.7rem;letter-spacing:-.02em;gap:12px}
+.status h2 .icon{width:34px;height:34px;flex-basis:34px;padding:7px;border-radius:50%;background:color-mix(in srgb,currentColor 16%,transparent)}
+.status p{font-size:.95rem;color:var(--ink);opacity:.88;margin-top:8px}
+.status .todo{opacity:1;margin-top:14px;padding:12px 14px;border-radius:14px;background:color-mix(in srgb,var(--bg) 50%,transparent);font-weight:600}
+.status .planner-report,.planner-report{display:inline-flex;align-items:center;gap:4px;margin-top:14px;padding:5px 11px;border-radius:999px;background:color-mix(in srgb,var(--bg) 50%,transparent);font-size:.8125rem;opacity:1}
+.status .test-round{font-size:.8125rem}
+.test-progress{height:8px;border-radius:4px;background:color-mix(in srgb,var(--bg) 60%,transparent)}
+.readout{padding:20px 22px}
+.reading{margin:0}
+.count{font-weight:620;letter-spacing:-.05em}
+.count-label{font-size:1rem;font-weight:600;max-width:190px}
+.count-label small{font-size:.8125rem;font-weight:500}
+.crossings{border-top:0;padding-top:0;margin-top:18px;gap:10px}
+.crossings>div{background:var(--surface-2);border-radius:14px;padding:12px 14px}
+.crossings dt{font-size:.8125rem}
+.crossings dd{font-size:2.2rem;font-weight:620}
+.coverage{font-size:.8125rem;margin-top:12px}
+.motor-detail,.motor-hint{font-size:.875rem}
+.scene-heading h2,.screen-live .scene-heading h2{font-size:1rem}
+.scene-heading span,.screen-live .scene-heading span{font-size:.8125rem;color:var(--muted)}
+.scene-frame,.screen-live .scene-frame{margin:14px 0 6px}
+.eye-ground{fill:var(--eye);stroke:var(--eye-rim);stroke-width:1.5}
+.floor-lines{stroke:var(--floor);stroke-width:1}
+.scene-frame.unavailable .eye-view{opacity:.3}
+.scene-cover b{padding:8px 16px;border-radius:999px;background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--line-strong);font-size:.9rem;font-weight:600}
+.scene-legend{font-size:.8125rem;color:var(--muted)}
+.target-axis{stroke:var(--floor);opacity:1}
+.target-legend{font-size:.8125rem}
+.privacy-detail{border-top:0;margin-top:20px;padding:0 4px}
+.privacy-detail h2{font-size:.95rem}
+.privacy-detail p{font-size:.875rem}
+
+/* the bottom bar: content scrolls under it; facts as chips; one solid Stop */
+.dock{background:color-mix(in srgb,var(--bg) 84%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top-color:var(--rule);padding:12px 16px max(14px,env(safe-area-inset-bottom))}
+.privacy-strip{gap:6px;margin-bottom:10px}
+.privacy-strip>span{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;background:var(--surface);font-size:.8125rem;color:var(--muted)}
+.privacy-strip .camera,.privacy-strip>span.camera{color:var(--ink);font-size:.8125rem}
+.privacy-strip .camera .icon{width:16px;height:16px;flex-basis:16px}
+.stop-button{border-radius:16px;min-height:56px;font-size:1.05rem;font-weight:700}
+.stop-button:hover:not(:disabled){filter:brightness(1.08)}
+.dock-actions button{min-height:54px;border-radius:16px;font-size:1rem}
+.dock-second{background:var(--surface);border-color:var(--line-strong)}
+.dock-note{font-size:.8125rem}.dock-note:empty{display:none}
+.dock-todo{font-size:.95rem}
+
+/* Set up a job: the text box is the main surface; examples as chips; the plan as a panel */
+.prompt-form label{font-size:1rem}
+.prompt-form textarea{background:var(--surface);border-color:var(--line-strong);border-radius:18px;padding:18px;font-size:1.05rem;min-height:160px}
+.prompt-form textarea:focus{outline:none;border-color:var(--accent)}
+.prompt-meta{font-size:.8125rem}
+.examples{gap:8px}
+.examples button{border-radius:999px;background:var(--surface);border-color:var(--rule);font-size:.875rem;padding:8px 14px}
+.prompt-form .primary{min-height:56px;border-radius:16px;font-size:1.05rem}
+.disclosure{font-size:.8125rem}
+.plan{background:var(--surface);border-radius:var(--radius);padding:20px}
+.plan-header small{font-size:.8125rem}
+.plan-list li{font-size:.95rem}
+.plan-foot{font-size:.875rem}
+.file-actions button{font-size:.875rem;background:var(--surface-2)}
+.camera-choice select{border-radius:14px;background:var(--surface)}
+
+/* Trials: the table on a panel, a clear tally */
+.trial-selector{border-radius:14px;background:var(--surface)}
+.trial-toolbar .tally{font-size:2.4rem}.trial-toolbar .tally small{font-size:.875rem}
+.trial-toolbar button{font-size:.875rem}
+.table-wrap{background:var(--surface);border-radius:var(--radius);padding:4px 16px}
+table{font-size:.875rem} th,caption{font-size:.8125rem} td small{font-size:.75rem}
+tbody tr:last-child td{border-bottom:0}
+.trial-form{border-radius:var(--radius)}
+.row-save{font-size:.75rem}
+.empty{font-size:.875rem}
+.chain-steps h3,.chain-index{font-size:.8125rem}
+
+/* windows float */
+dialog{background:var(--surface);border-color:var(--rule);border-radius:24px;padding:22px;box-shadow:var(--shadow)}
+dialog::backdrop{background:#000b}
+dialog p{font-size:.875rem}
+dialog label{font-size:.9rem}
+dialog .token-value{border-radius:12px;background:var(--surface-2)}
+.dialog-section h3{font-size:1rem}
+.device-status{font-size:.95rem}
+
+@media(min-width:760px){
+ .shell{padding:0 40px}
+ .topbar{padding:28px 0 16px}
+ .tabs{display:inline-flex}
+ .tabs a{padding:8px 18px;font-size:.9rem}
+ h1{font-size:2.5rem}
+ .live-grid{grid-template-columns:1.15fr 1fr;gap:16px}
+ .scene{align-self:stretch;display:flex;flex-direction:column}
+ .scene .scene-frame{flex:1;display:flex;align-items:center}
+ .status{align-self:stretch}
+ .setup-grid{gap:32px}
+ .trials-layout{gap:32px}
+ .trials-layout>section.proof{background:var(--surface);border-radius:var(--radius);padding:20px}
+ .dock{padding:14px 40px}
+ .privacy-strip{margin:0}
+}
+
+/* Visual pass, round 2: the lens stands out from its panel; phone tabs stay on one line */
+:root{--eye:#1f2923;--eye-rim:#4b5e51;--floor:#364539}
+:root[data-theme=light]{--eye:#e5eae0;--eye-rim:#c3cbbb;--floor:#cbd3c4}
+@media(max-width:759px){.shell{padding:0 16px}.tabs a{padding:8px 4px;font-size:.8125rem;line-height:1.2}}
+.tabs a,.tabs a[aria-current=page]{font-weight:600}  /* same width active or not: the active tab is marked by its surface, so labels never jump or wrap */
+@media(max-width:759px){.plan-header{flex-direction:column;align-items:flex-start;gap:4px}.plan-header small{text-align:left}}  /* the title never squeezes beside its hint */

@@ -2,22 +2,43 @@
 
 One signature: an eye-shaped counting diagram. The rest behaves like an instrument: one large reading, a plain status and a Stop control anchored to the bottom. No marketing surface or entrance choreography.
 
-## Visual tokens
+## Visual tokens (finished look, Oct 22)
+
+Islombek, after the design review: easy to use and understand, cutting edge; it looked too plain,
+with text too small and grey, not like a real app. Same direction D (eye, giant reading, Stop bar),
+finished. The tokens live at the end of `src/styles.css` ("Visual pass").
 
 | Token | Dark | Light |
 |---|---|---|
-| Background | `#141614` | `#f2f1e9` |
-| Secondary surface | `#20231f` | `#e8e8df` |
-| Main ink | `#f1f0e7` | `#202820` |
-| Secondary ink | `#b8bcb3` | `#53604f` |
-| Rule | `#454b43` | `#b8bfb1` |
-| Interactive accent | `#a8c2ff` | `#254dcc` |
-| Running / pass | `#b9d5a8` | `#385b25` |
-| Waiting / warning | `#edd28e` | `#785507` |
-| Blocked / fail | `#ffc0b2` | `#9d3428` |
-| Stop surface / text | `#f1d2c8` / `#602b21` | `#572c23` / `#fff0e8` |
+| Background | `#0b0e0c` | `#f3f2eb` |
+| Panel | `#141815` | `#ffffff` |
+| Raised (inputs, tiles, active tab) | `#1d221e` | `#eceee5` |
+| Main ink | `#f3f2ea` | `#1a201b` |
+| Secondary ink | `#a9b0a5` | `#566052` |
+| Rule / strong rule | `#262c27` / `#363e37` | `#dfe2d6` / `#c9cdbf` |
+| Interactive accent | `#9cb7ff` | `#2348c4` |
+| Running / pass | `#a6df8a` | `#2d6a1d` |
+| Waiting / warning | `#f1cd70` | `#7a5600` |
+| Blocked / fail | `#ff9e8b` | `#a12f1e` |
+| Stop (solid) / text | `#cf3f2a` / `#fff` | `#c63a26` / `#fff` |
+| Eye lens / rim / floor / figures / line | `#1f2923` / `#4b5e51` / `#364539` / `#c6d0c0` / `#7f9fff` | `#e5eae0` / `#c3cbbb` / `#cbd3c4` / `#6c7866` / `#2348c4` |
 
-The light palette inherits C's warm paper, gray-green surfaces and a single blue accent. Semantic colors only express state; all states also have words/icons. There are no gradients, glows, shadows or card grids.
+- **One level of panels** (20 px radius) instead of thin rules: the status, the reading, the
+  diagram, the plan, the trials table, the windows. Panels never nest; tiles inside a panel (entered
+  / exited) use the raised surface.
+- **The status panel is tinted by its state** (9 % of the state colour over the panel, a 24 % inner
+  line) and carries a round icon badge; the instruction ("what to do") sits in its own box; the
+  planner is a small chip. Running green, waiting amber, stopped red, unknown neutral.
+- **The eye is a dark lens** with bright figures and a vivid counting line (light theme: a pale
+  lens with dark figures). On the AWS page it is titled "How Koʻz counts" and a cover label names
+  the job state; the local page keeps "What Koʻz sees" with the real picture.
+- **App controls:** a segmented tab switch (same weight active or not, so labels never jump or
+  wrap), the connection as a pill with a dot, "Connect device" as a pill button, example chips,
+  rounded inputs (12–18 px), a solid red Stop (56 px), the bottom bar frosted so content scrolls
+  under it, its facts as chips.
+- **Text:** nothing under 13 px (`.8125rem`); secondary text only for secondary facts.
+- Semantic colours only express state; every state also has words and an icon. No gradients and no
+  glows; the one soft shadow is on floating windows. A thick coloured side border is never used.
 
 ## Typography and structure
 

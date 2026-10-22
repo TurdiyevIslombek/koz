@@ -40,6 +40,7 @@ async function shoot(page,name,{langs=['uz','ru','en'],themes=['dark'],full=true
     for(const el of document.querySelectorAll('button,a,h1,h2,h3,p,span,small,strong,label,code,summary,li,dt,dd')){const s=getComputedStyle(el);if(!el.offsetParent&&s.position!=='fixed')continue;
      if(el.scrollWidth>el.clientWidth+2&&['hidden','clip'].includes(s.overflowX))issues.push(`clipped: <${el.tagName.toLowerCase()}> "${el.textContent.trim().slice(0,50)}"`);
      const r=el.getBoundingClientRect();if(r.right>innerWidth+1&&r.width>0)issues.push(`past the edge: <${el.tagName.toLowerCase()}> "${el.textContent.trim().slice(0,50)}"`);}
+    for(const tab of document.querySelectorAll('.tabs a'))if(tab.getBoundingClientRect().height>46)issues.push(`tab label on two lines: "${tab.textContent.trim()}"`);
     const dock=document.querySelector('.dock');if(dock){const top=dock.getBoundingClientRect().top;for(const el of document.querySelectorAll('main p, main small')){const r=el.getBoundingClientRect();if(r.bottom>top&&r.top<top&&window.scrollY+innerHeight>=document.documentElement.scrollHeight-2)issues.push(`under the bottom bar at the end of the page: "${el.textContent.trim().slice(0,50)}"`);}}
     return [...new Set(issues)];});
    for(const issue of found)problems.push({screen:name,lang,width,issue});}}
