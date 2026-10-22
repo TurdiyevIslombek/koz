@@ -90,3 +90,100 @@ time box moved from Oct 19 with the car day).
    ```
    (This list is from Oct 18, after your hardware fixes; the Oct 16 one would flag those edits. New run
    files in `runs/` are fine. A `.DS_Store` line only means Finder changed its view settings.)
+
+## g. The robot's camera as Ko'z's camera (the website eye shows what the robot sees)
+
+Added Oct 22. Your stage-3 camera sketch already does what Ko'z needs: it streams MJPEG video at
+`http://<camera address>:81/stream` (320 × 240). Ko'z reads that stream as its `esp32_cam` camera,
+checks and blurs it on the Mac, and the website's eye box shows it **on this Mac only**
+(`127.0.0.1`); the picture never goes to AWS. Your car folder is used **read-only**: nothing in
+`~/Downloads/flybrain_car` is changed.
+
+**One thing to know first.** With an empty Wi-Fi name (as now) the camera makes its own Wi-Fi,
+`FlyCar-CAM`, at `192.168.4.1`. That Wi-Fi has no internet, so a Mac on it can't reach the AWS
+website. Two ways:
+
+- **For the AWS website (recommended):** put the camera on your home Wi-Fi (2.4 GHz), using a
+  **copy** of your sketch (step 1). Then the Mac stays on home Wi-Fi with internet.
+- **Local website only:** keep the camera's own Wi-Fi, join `FlyCar-CAM` on the Mac (name and
+  password: `HOW_TO_RUN.txt` in your car folder) and use `start-koz.command` (the website on this
+  Mac). Skip to step 2 and use `http://192.168.4.1:81/stream`.
+
+**Safety:** Ko'z doesn't drive in these steps (no `--motors`), but the car's battery powers the
+camera: keep your physical motor switch off, or the wheels in the air.
+
+### 1. Camera on your home Wi-Fi, from a copy (once, about 5 minutes)
+
+Don't use `upload_camera.sh` for this: when you answer "y" it writes the Wi-Fi into your original
+folder. Instead, in Terminal:
+
+```bash
+mkdir -p ~/koz-camera-copy && cp -R ~/Downloads/flybrain_car/esp32cam/camera_stream ~/koz-camera-copy/
+```
+
+```bash
+open -e ~/koz-camera-copy/camera_stream/wifi_settings.h
+```
+
+In TextEdit, type your home Wi-Fi name and password between the quotes of `WIFI_NAME` and
+`WIFI_PASSWORD` (2.4 GHz only), save, close. This copy stays on your Mac: never put it in the Ko'z
+folder, git, or a message.
+
+ESP32-CAM on its ESP32-CAM-MB board, USB to the Mac, Arduino unplugged. Find its port:
+
+```bash
+tools/bin/arduino-cli board list
+```
+
+Upload the copy (put your port in place of `/dev/cu.usbserial-110`):
+
+```bash
+tools/bin/arduino-cli compile --fqbn esp32:esp32:esp32cam --upload -p /dev/cu.usbserial-110 ~/koz-camera-copy/camera_stream
+```
+
+If it fails: hold IO0 on the MB board, press and release RST, let go of IO0, run it again (the
+same trick as your `upload_camera.sh`). Then read the address it prints (Ctrl+C to stop):
+
+```bash
+tools/bin/arduino-cli monitor -p /dev/cu.usbserial-110 -c baudrate=115200
+```
+
+It prints `CAMERA READY: http://<address>:81/stream`. Write the address down. (If it says it made
+its own Wi-Fi, the name or password was wrong, or the network is 5 GHz only.) Put the camera back
+on the car, powered from the LM2596 as before, and check in Safari that `http://<address>/` shows
+video. **Close that Safari tab**: the camera sends its stream to one viewer at a time, and that
+must be Ko'z.
+
+Check your car folder is unchanged (as in step f):
+
+```bash
+cd ~/Downloads && shasum -a 256 -c --quiet ~/AI/competitions/_backups/flybrain_car_2026-10-18.sha256 && echo "all 202 unchanged"
+```
+
+To go back to the camera's own Wi-Fi later: `bash upload_camera.sh` in your car folder, answer "N".
+
+### 2. Start Ko'z with both cameras (the Mac and the robot)
+
+In Terminal, in the Ko'z folder (your address in place of `192.168.1.50`):
+
+```bash
+.venv/bin/python -m koz.server --i-own-this-camera --window --planner rules --cloud --camera mac_camera=0 --camera esp32_cam=http://192.168.1.50:81/stream --upside-down esp32_cam
+```
+
+This is `start-koz-cloud.command` plus the two cameras. `--upside-down esp32_cam` turns the
+picture because your camera is mounted upside down (`CAMERA_FLIP = True` in your `config.py`), and
+the privacy guard and blur see it the right way up. `http://flycar-cam.local:81/stream` usually
+works too, if you'd rather not write the address.
+
+### 3. See what the robot sees on the website
+
+1. On this Mac, open the website and log in as the owner.
+2. **Set up** → camera: **Robot camera (ESP32-CAM)**.
+3. Type a job that doesn't drive, e.g. `Qizil koptokni top` (find the red ball), then **Test**.
+4. The eye box on **Live** shows the robot's view, faces blurred, with the target ring.
+5. Check left and right: hold the ball on the car's **left**; it must show on the **left**. If it's
+   on the right, start again without `--upside-down esp32_cam`, or add `--mirror esp32_cam`.
+
+If the eye stays empty: the stream has another viewer (close Safari and the car app), the Mac is
+on another Wi-Fi than the camera, or the privacy guard is checking or has stopped (the Live page
+says which). The chase itself (motors) is steps c–d; the camera part is the same.

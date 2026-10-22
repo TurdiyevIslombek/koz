@@ -70,7 +70,7 @@ const observation = d => {
   return true;
 };
 const decision = (d,e) => closed(d,{round:v=>integer(v,1,3),evidence_seq:list(v=>integer(v,1,Number.MAX_SAFE_INTEGER),1,10),check:checks,result:results,next:one('run','adjust','stop'),next_revision:nullable(v=>integer(v,1,3)),change:nullable(isChange),code:nullable(code)}) &&
-  (d.next==='adjust'?e.revision<3&&d.next_revision===e.revision+1&&d.change!==null&&d.code===null : d.next==='run'?d.next_revision===e.revision&&d.change===null&&d.code===null&&d.result==='pass':d.next_revision===null&&d.change===null&&d.code!==null);
+  (d.next==='adjust'?e.revision<3&&d.next_revision===e.revision+1&&d.change!==null&&d.code===null : d.next==='run'?d.next_revision===e.revision&&d.change===null&&d.code===null&&d.result!=='fail':d.next_revision===null&&d.change===null&&d.code!==null);
 const agentChange = v => closed(v,{from_revision:n=>integer(n,1,2),to_revision:n=>integer(n,2,3),check:checks,before_label:labels,change:isChange,executed:one(true),after_label:labels,after_result:results})&&v.to_revision===v.from_revision+1;
 const trialResult = d => closed(d,{demo:one('red_ball','classroom','privacy_guard'),index:v=>integer(v,1,10),result:results,basis:one('owner_report'),reason:one('none','missed_target','wrong_direction','count_mismatch','privacy_miss','safety_stop','interrupted','unknown'),expected_count:nullable(integer),observed_count:nullable(isCount),fault_code:nullable(code),evidence:one('complete','incomplete'),agent_changes:list(agentChange,0,2)}) &&
   (d.demo==='classroom'||d.expected_count===null&&d.observed_count===null) && (d.result!=='pass'||d.reason==='none'&&(d.demo==='privacy_guard'||d.observed_count?.state!=='unknown'));

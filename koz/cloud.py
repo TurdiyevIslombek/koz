@@ -163,7 +163,7 @@ async def link_cloud(hub, url, token, connected=None, retry_s=RETRY_S, ask_new_t
     from websockets.exceptions import ConnectionClosed, InvalidHandshake, InvalidStatus
 
     from .events import MAX_MESSAGE_BYTES
-    from .server import BadMessage
+    from .errors import BadMessage
 
     check_cloud_url(url)
     outbox = Outbox(hub, asyncio.get_running_loop(), broadcast)

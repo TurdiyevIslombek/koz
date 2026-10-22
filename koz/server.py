@@ -31,7 +31,7 @@ from . import policy
 from .agent import Agent, make_planner
 from .agent.choose import CHOICES, planned_by
 from .agent.planner import MAX_TEXT
-from .errors import CODES, KozError
+from .errors import CODES, BadMessage, KozError
 from .events import CAMERA_SLOTS, ID_PATTERN, MAX_MESSAGE_BYTES, EventLog, count_unknown
 from .runner import OPENCV_MAJOR, print_stops
 
@@ -43,10 +43,6 @@ REASONS = ("none", "missed_target", "wrong_direction", "count_mismatch", "privac
            "interrupted", "unknown")
 IDLE_STATES = ("idle", "held", "refused")
 STOP_WAIT_S = 3.0   # on Ctrl+C, wait this long for the job to stop
-
-
-class BadMessage(Exception):
-    """A message that isn't even a command we can answer (no valid command_id): close."""
 
 
 def _id(v, nullable=True):

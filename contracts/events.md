@@ -433,7 +433,8 @@ One structured step of the check-and-adjust loop. Never LLM reasoning text.
 | `change` | a SettingChange for `adjust`, else null |
 | `code` | null for `run`/`adjust`; an error code for `stop` |
 
-An `adjust` decision is sent only after the next candidate passed every check
+A `run` decision follows `pass`, or `unknown` when a find job starts and waits for its
+target (section 9); never `fail`. An `adjust` decision is sent only after the next candidate passed every check
 and its single change was verified. The next `recipe` event refers to it.
 
 ```json

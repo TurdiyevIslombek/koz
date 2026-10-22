@@ -4,9 +4,12 @@ It is a locked block: second in every recipe, right after the privacy guard, wit
 nothing to tune. Every later block, and the local preview, sees only blurred faces.
 It finds faces only; it never recognises who someone is.
 
-The blur is heavy pixelation: each face box (grown by FACE_MARGIN) becomes at most
-FACE_PIXEL_CELLS x FACE_PIXEL_CELLS flat squares. A light Gaussian blur can sometimes be
-sharpened back; averaged squares can't.
+The blur keeps only FACE_PIXEL_CELLS x FACE_PIXEL_CELLS averages of each face box (grown by
+FACE_MARGIN). A light Gaussian blur can sometimes be sharpened back; averages can't: two faces
+with the same averages give exactly the same picture. The averages are enlarged smoothly, not
+as hard squares (Oct 22): the same information, but hard squares hid the head's shape, and the
+person detector then missed blurred people (measured on sample photos: a person scoring 0.88
+fell to 0.29 with squares and stayed at 0.69 smooth; Koʻz counts from 0.5).
 
 It fails closed: if the model file is missing, has the wrong SHA-256, or detection
 fails, the frame goes no further (BLUR_UNAVAILABLE)."""
@@ -76,4 +79,4 @@ def _pixelate(image, x0, y0, x1, y1):
     cells_x = max(1, min(policy.FACE_PIXEL_CELLS, width // policy.FACE_MIN_CELL_PX))
     cells_y = max(1, min(policy.FACE_PIXEL_CELLS, height // policy.FACE_MIN_CELL_PX))
     small = cv2.resize(image[y0:y1, x0:x1], (cells_x, cells_y), interpolation=cv2.INTER_AREA)
-    image[y0:y1, x0:x1] = cv2.resize(small, (width, height), interpolation=cv2.INTER_NEAREST)
+    image[y0:y1, x0:x1] = cv2.resize(small, (width, height), interpolation=cv2.INTER_CUBIC)

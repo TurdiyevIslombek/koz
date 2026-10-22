@@ -120,8 +120,8 @@ TRACK_MIN_IOU = 0.2
 # face_blur (proposed). A low score threshold blurs more: a false blur is safe, a missed face is not.
 FACE_SCORE_THRESHOLD = 0.5
 FACE_MARGIN = 0.25             # grow each face box by this share on every side
-FACE_PIXEL_CELLS = 6           # each face becomes at most 6 x 6 flat squares...
-FACE_MIN_CELL_PX = 4           # ...each at least 4 px wide, so a tiny face becomes one flat square
+FACE_PIXEL_CELLS = 6           # each face keeps at most 6 x 6 averages (enlarged smoothly)...
+FACE_MIN_CELL_PX = 4           # ...each of at least 4 x 4 px, so a tiny face keeps one average
 
 # Agent loop (koz/agent/loop.py): each try of a recipe runs on live frames this long, and a
 # job gets at most AGENT_MAX_ROUNDS tries (CLAUDE.md MVP item 4; contract section 9).

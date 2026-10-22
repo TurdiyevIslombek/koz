@@ -194,8 +194,9 @@ def _consistent(event_type, data, revision):
     if event_type == "decision":
         if revision is None:
             return False
-        if data["next"] == "run":
-            return data["next_revision"] == revision and data["change"] is None and data["code"] is None
+        if data["next"] == "run":   # after pass, or unknown when a find job starts and waits (section 9)
+            return (data["next_revision"] == revision and data["change"] is None and data["code"] is None
+                    and data["result"] != "fail")
         if data["next"] == "adjust":
             return (data["next_revision"] == revision + 1 and data["change"] is not None
                     and data["code"] is None and data["result"] == "fail")

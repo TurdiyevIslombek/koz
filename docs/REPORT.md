@@ -106,7 +106,7 @@ the CPU of a MacBook Air, no GPU.
 | Privacy guard: objects | `dnn.readNet` + `dnn.NMSBoxes`, **NanoDet-Plus** (COCO) | Is a bed, a toilet or a sink in view? |
 | Privacy guard: covered lens | `cvtColor` to grey, mean and spread over the allowed area | A dark or flat picture is never approved |
 | Privacy guard: camera moved | `resize` to a 32 × 24 grey thumbnail, compared with the last check | Check again on the next frame, not in 3 s |
-| Face blur | `FaceDetectorYN` (**YuNet**), then each face shrunk with `INTER_AREA` and blown up with `INTER_NEAREST` | Heavy pixelation that can't be sharpened back |
+| Face blur | `FaceDetectorYN` (**YuNet**), then each face shrunk to 6 × 6 averages with `INTER_AREA` and enlarged smoothly with `INTER_CUBIC` | Only 36 averages of a face survive, so it can't be sharpened back; smooth (not hard squares) so the person detector still sees a person |
 | Colour finder | `cvtColor` to HSV, a hue band, `morphologyEx` (opening), `findContours`, `contourArea`, `arcLength`, `minEnclosingCircle`, `moments` | The biggest *round* patch of one colour → left / center / right / lost |
 | Object finder | the same NanoDet-Plus, one COCO class from a fixed list (phone, backpack, bag, bottle…), then `cvtColor` to HSV on the middle of the box for an asked colour | Where the thing is → left / center / right / lost; never people or animals, never the car's input |
 | Person detector | the same NanoDet-Plus, "person" class only | People in the allowed area, boxes stay local |
@@ -249,6 +249,8 @@ with a still view, 82–86 while the camera swings (the camera itself gives abou
 | #3 (Oct 15) | Strict mode never started at home (his room read as "airplane_cabin 0.37") | Default: run anywhere, stop on what you see; strict mode only for schools and public cameras |
 | #4 (Oct 15) | Held on a toilet for 5+ s, it kept running (checked every 10 s) | Objects every 0.5 s, the room every 3 s, and on the next frame when the camera moves |
 | Desk (Oct 16) | 93 stops in 5 minutes at the desk: private rooms together 0.42–0.46, nothing seen | Limit raised to 0.55 (Islombek's decision): 43 stops in the first 100 s, then 191 s without a stop. Demos are filmed outside the bedroom |
+| Counter (Oct 22) | "0 people in view" with Islombek in the picture, face blurred | Two causes, measured on public-domain sample photos (not camera frames). (1) The hard 6 × 6 squares hid the head's shape: a person scoring 0.88 fell to 0.29 (Koʻz counts from 0.5); the same averages enlarged smoothly keep 0.69, and every person found before the blur was found after it, at 4 sizes. (2) When head and shoulders fill the picture, NanoDet finds no person even unblurred: the Live page now says "people Koʻz detects" and that people count from the waist up. Test: `tests/test_blur_keeps_people.py` |
+| AWS link (Oct 22) | The runner stopped after "find a colour" found nothing | The website accepted `run` only after `pass`, refused the new "start and wait" decision, and its reply crashed the runner (a class loaded twice by `python -m`). Both fixed; every job's events are now checked by the website's own validator in a test |
 
 Also found: in clips made by gluing two photos side by side, NanoDet saw a "bed" at 0.40–0.44
 while panning across the seam (a false stop, on the safe side).
@@ -290,7 +292,8 @@ No ball at all → one change, then `CHECK_FAILED`. A change that never helps �
   of that colour (a red plate, a red lamp). The object finder (Oct 22) is **not yet measured on
   real things**; small things far away (a phone across the room) are hard for NanoDet at 320 px,
   and "silver" is read as grey. Someone swaying on the counting line can be counted in
-  and out.
+  and out. **People who fill the picture are not counted** (sitting close to the camera, head and
+  shoulders only): the counter is for people seen from the waist up, e.g. at a door.
 - **The fly-brain car is measured only in simulation so far.** It zig-zags toward the ball.
 - **The planner scores above were tuned on the sentences they were measured on**; a fresh set is
   needed for an honest number.
@@ -330,6 +333,27 @@ people who agreed.
   reading a member's code identifies that member, which rule 4 (no identity, no badge reading) forbids
   today, and a door lock is the kind of actuator rule 11 keeps out. Before building, it needs its own
   rules (the code is checked and forgotten, no visit history, a manual way in for everyone).
+
+- **Open-vocabulary detection: find anything from words.** Today the object finder knows a fixed
+  list (NanoDet's COCO classes: phone, backpack, bottle…), so "find my keys" is refused. An
+  open-vocabulary detector (YOLO-World or OWL-ViT style, run with OpenCV DNN where it can) would take
+  the owner's words as the class name. The same rules would hold: no people, animals or private
+  objects as targets, the word list checked in code, never the car's input.
+- **Several cameras in one job.** Today a job runs on one chosen camera (the Mac, the robot's
+  ESP32-CAM or a phone). A job over two or three cameras (a shop's door and its till; a classroom's
+  two doors) needs one privacy guard per camera, counts merged without identities (no matching a
+  person between cameras, which rule 4 forbids), and a stop on any camera to hold the whole job.
+- **Exam-integrity mode, privacy first.** For a school exam: the owner draws **seat zones**, and Koʻz
+  watches zones, not people. It raises an alert when a zone shows something agreed in advance (two
+  people in one seat zone, a seat zone empty for longer than agreed, a phone on a desk; zone
+  timers only, never a timer per person), and **a human checks every alert**: Koʻz never accuses anyone. No names, no faces (blurred
+  first, as today), no per-student scores or rankings (rule 5). Optional evidence: a few blurred
+  frames around an alert, kept **only on the local computer**, deleted by themselves after a set
+  time (e.g. 7 days) unless the teacher keeps one for a review. Visible signs in the room say the
+  camera is on and what it looks for. **This would change today's rule that nothing is saved**
+  (rule 8: no code writes frames to disk), so it needs Islombek's decision, the school's consent
+  process and new rules before any code: who may see the evidence, for how long, and how a student
+  can ask about it.
 
 ## 12. Reproduce
 

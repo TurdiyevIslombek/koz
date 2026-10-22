@@ -250,3 +250,8 @@ test('a thing job (Oct 22: "a silver phone", "a blue backpack") is checked, show
  assert.throws(()=>validateRecipe({...recipe,blocks:[...recipe.blocks.slice(0,2),{type:'color_finder',settings:{hue_center:0,hue_half_width:10,saturation_min:120,value_min:70,min_area_ratio:.002}},recipe.blocks[2]]}));   // one finder per recipe (Codex, Oct 22)
  assert.match(t('en','capabilityHint'),/phone/);
 });
+
+test('the people count says what Koʻz detects, not who is in view (Oct 22: "0 people in view" while he was there)',()=>{
+ for(const lang of languages){assert.doesNotMatch(t(lang,'now'),/in view|в кадре|kadrda/);assert.ok(t(lang,'measuredZero').includes('·'));}
+ assert.match(t('en','measuredZero'),/waist/);
+});

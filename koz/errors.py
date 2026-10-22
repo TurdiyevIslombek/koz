@@ -20,6 +20,15 @@ CODES = frozenset({
 })
 
 
+class BadMessage(Exception):
+    """A message that isn't even a command we can answer (no valid command_id): close.
+
+    Here, not in server.py: `python -m koz.server` loads server.py twice (as __main__ and as
+    koz.server), and a class defined there twice is two classes. The cloud link caught one while
+    the hub raised the other, and a {"type":"protocol_error"} from the website stopped the runner
+    (Islombek's live test, Oct 22)."""
+
+
 class KozError(Exception):
     """A refusal or failure with a fixed code.
 

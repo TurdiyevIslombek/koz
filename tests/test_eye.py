@@ -39,9 +39,12 @@ def runner_with(guard=None, camera=None, clock=None):
     return runner, clock
 
 
-def colours(image, box):
+def detail(image, box):
+    """How much neighbouring pixels differ inside the box (0 = smooth; random noise is about 85).
+    The face blur keeps only 6 x 6 averages of a face, enlarged smoothly, so no detail survives."""
     x, y, w, h = box
-    return len(np.unique(image[y:y + h, x:x + w].reshape(-1, 3), axis=0))
+    part = image[y:y + h, x:x + w].astype(np.int16)
+    return float(np.abs(np.diff(part, axis=1)).mean())
 
 
 def test_the_eye_shows_only_approved_frames_after_face_blur():
@@ -52,7 +55,7 @@ def test_the_eye_shows_only_approved_frames_after_face_blur():
     assert runner.step() and runner.state == "running"
     image, seq, why = runner.eye_frame()
     assert why is None and image is not None and seq >= 1
-    assert colours(noisy_scene(), FACE) > 5000 and colours(image, FACE) <= 64   # the face is pixelated
+    assert detail(noisy_scene(), FACE) > 50 and detail(image, FACE) < 5   # the face is blurred
     jpeg = eye.encode(image)
     assert jpeg[:2] == b"\xff\xd8" and len(jpeg) <= eye.MAX_PREVIEW_BYTES
     shown = cv2.imdecode(np.frombuffer(jpeg, np.uint8), cv2.IMREAD_COLOR)
