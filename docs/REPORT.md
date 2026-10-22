@@ -108,6 +108,7 @@ the CPU of a MacBook Air, no GPU.
 | Privacy guard: camera moved | `resize` to a 32 × 24 grey thumbnail, compared with the last check | Check again on the next frame, not in 3 s |
 | Face blur | `FaceDetectorYN` (**YuNet**), then each face shrunk with `INTER_AREA` and blown up with `INTER_NEAREST` | Heavy pixelation that can't be sharpened back |
 | Colour finder | `cvtColor` to HSV, a hue band, `morphologyEx` (opening), `findContours`, `contourArea`, `arcLength`, `minEnclosingCircle`, `moments` | The biggest *round* patch of one colour → left / center / right / lost |
+| Object finder | the same NanoDet-Plus, one COCO class from a fixed list (phone, backpack, bag, bottle…), then `cvtColor` to HSV on the middle of the box for an asked colour | Where the thing is → left / center / right / lost; never people or animals, never the car's input |
 | Person detector | the same NanoDet-Plus, "person" class only | People in the allowed area, boxes stay local |
 | Line counter | geometry on the detector's boxes (overlap tracking, which side of the line) | Entered / exited counts, no identities |
 | Local preview | `rectangle`, `putText`, `imshow`; `resize` + `imencode` (JPEG) for the web's eye on the same computer | The owner sees the blurred view; nothing is saved |
@@ -286,7 +287,9 @@ No ball at all → one change, then `CHECK_FAILED`. A change that never helps �
 - **Software can't prove who owns a camera or where it points.** Ko'z asks the owner to confirm
   ownership and draw the allowed area, and says so.
 - **Face blur is not yet tested on real faces** (TODO). The colour finder counts any round thing
-  of that colour (a red plate, a red lamp). Someone swaying on the counting line can be counted in
+  of that colour (a red plate, a red lamp). The object finder (Oct 22) is **not yet measured on
+  real things**; small things far away (a phone across the room) are hard for NanoDet at 320 px,
+  and "silver" is read as grey. Someone swaying on the counting line can be counted in
   and out.
 - **The fly-brain car is measured only in simulation so far.** It zig-zags toward the ball.
 - **The planner scores above were tuned on the sentences they were measured on**; a fresh set is

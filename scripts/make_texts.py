@@ -11,11 +11,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from koz.agent.menu import REFUSAL_CODES  # noqa: E402
-from koz.agent.planner import COLOUR_WORDS, HUES, PLAN_TEXT, plan_message  # noqa: E402
+from koz.agent.planner import COLOUR_WORDS, HUES, OBJECT_WORDS, PLAN_TEXT, plan_message  # noqa: E402
 from koz.messages import _table  # noqa: E402
 
 OUT = ROOT / "docs" / "TEXTS.md"
 NAMES = {"en": "English", "ru": "Russian", "uz": "Uzbek"}
+# Find a thing: every thing once, with every colour once among them (and "any" colour).
+OBJECT_EXAMPLES = (("cell phone", "any"), ("backpack", "blue"), ("handbag", "red"), ("bottle", "green"),
+                   ("cup", "white"), ("laptop", "grey"), ("book", "black"), ("chair", "yellow"),
+                   ("bicycle", "orange"), ("suitcase", "purple"), ("umbrella", "any"))
 # The other codes a job can stop with before it runs: a request the planner can't handle.
 PLANNING_CODES = ("INVALID_COMMAND", "PLANNER_UNAVAILABLE")
 
@@ -49,6 +53,11 @@ def render():
                 check(lines, {lang: plan_message(job, lang, colour=colour) for lang in ("en", "ru", "uz")})
         else:
             check(lines, PLAN_TEXT[job])
+    lines += ["### Find a thing (phone, backpack, bottle...)", "",
+              "Each thing once; the colours are spread over them (\"any\" = no colour said).", ""]
+    for thing, colour in OBJECT_EXAMPLES:
+        lines.append(f"**{OBJECT_WORDS[thing]['en']}, {colour}**")
+        check(lines, {lang: plan_message("find_object", lang, colour=colour, thing=thing) for lang in ("en", "ru", "uz")})
 
     lines += ["## 2. Refusals", "",
               "When Ko'z refuses a job, before any camera opens. The same text for every planner.", ""]

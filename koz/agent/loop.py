@@ -41,6 +41,8 @@ def job_kind(recipe):
     types = {b["type"] for b in recipe["blocks"]}
     if recipe["brain"]["type"] == "flybrain":
         return "chase_colour"
+    if "object_finder" in types:
+        return "find_object"
     return "find_colour" if "color_finder" in types else "count_people" if "person_detector" in types else "other"
 
 
@@ -59,7 +61,7 @@ def judge(job, observations):
             return check, result, label
         known = [o["target"] for o in observations if o["privacy"] == "approved" and o["target"] in POSITIONS]
         return "target_centered", "pass" if 3 * known.count("center") >= len(known) else "fail", label
-    if job == "find_colour":
+    if job in ("find_colour", "find_object"):
         known = [o["target"] for o in observations if o["privacy"] == "approved" and o["target"] not in (None, "unknown")]
         if not known or 2 * len(known) < len(observations):
             return "target_visible", "unknown", "unknown"
@@ -205,7 +207,7 @@ class Agent:
                 new = check_recipe(tuner.apply(checked.data, change), local_school=self.setup.school) if change else None
             except KozError:
                 new = None   # a change that breaks a rule is never tried
-            if change is None and job == "find_colour" and check == "target_visible":   # nothing to fix (a rejected fix still stops)
+            if change is None and job in ("find_colour", "find_object") and check == "target_visible":   # nothing to fix (a rejected fix still stops)
                 # Nothing round of that colour in view, so nothing to fix (Islombek, Oct 22: start and
                 # wait): run as asked; the target shows as lost until a ball comes. Not for the car,
                 # which must never start driving without its target.

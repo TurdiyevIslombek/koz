@@ -236,3 +236,17 @@ test('the eye picture is asked of this computer only for the owner, on the AWS p
  assert.equal(macEyeWanted({cloud:true,owner:true,demo:true,step:'running'}),false);    // the sample run: no camera
  assert.equal(macEyeWanted({cloud:false,owner:true,demo:false,step:'running'}),false);   // the local app has its own eye
 });
+
+test('a thing job (Oct 22: "a silver phone", "a blue backpack") is checked, shown as a target, and named in every language',async()=>{
+ const { validateRecipe } = await import('../src/protocol.js');
+ const { liveKind } = await import('../src/presentation.js');
+ const recipe={version:1,language:'en',camera:{source:'device_camera',size:'640x480',fps:15},
+  blocks:[{type:'privacy_guard',settings:{}},{type:'face_blur',settings:{}},{type:'object_finder',settings:{object:'cell phone',colour:'grey',min_confidence:0.4}}],
+  brain:{type:'none'},actions:[{type:'dashboard'}],privacy:{school:false}};
+ assert.equal(validateRecipe(recipe),recipe);
+ assert.equal(liveKind(recipe),'target');
+ assert.throws(()=>validateRecipe({...recipe,blocks:[...recipe.blocks.slice(0,2),{type:'object_finder',settings:{object:'person',colour:'any',min_confidence:0.4}}]}));
+ for(const lang of languages)for(const key of ['thingTitle','object_finder'])assert.ok(t(lang,key)&&t(lang,key)!==key);
+ assert.throws(()=>validateRecipe({...recipe,blocks:[...recipe.blocks.slice(0,2),{type:'color_finder',settings:{hue_center:0,hue_half_width:10,saturation_min:120,value_min:70,min_area_ratio:.002}},recipe.blocks[2]]}));   // one finder per recipe (Codex, Oct 22)
+ assert.match(t('en','capabilityHint'),/phone/);
+});

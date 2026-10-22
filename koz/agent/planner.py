@@ -22,7 +22,7 @@ MAX_TEXT = 2000   # contract section 4: setup text is at most 2,000 characters
 @dataclass(frozen=True)
 class Plan:
     language: str          # uz | ru | en
-    job: str | None        # "find_colour" | "count_people"; None when refused
+    job: str | None        # "find_colour" | "chase_colour" | "find_object" | "count_people"; None when refused
     recipe: dict | None
     refusal: str | None    # an error code from contracts/events.md, when refused
     message: str           # what Ko'z will do, or why it won't, in the user's language
@@ -36,23 +36,33 @@ CAMERA = {"source": "device_camera", "size": "640x480", "fps": 15}
 HUES = {"red": 0, "orange": 12, "yellow": 28, "green": 60, "blue": 110, "purple": 140}   # OpenCV hue, 0..179
 
 
-def colour_recipe(colour, language):
+def colour_recipe(colour, language, school=False):
+    """school=True only when an AI planner said so: the recipe check then refuses it (SCHOOL_COUNTS_ONLY)."""
     return {"version": 1, "language": language, "camera": dict(CAMERA),
             "blocks": copy.deepcopy(LOCKED) + [{"type": "color_finder", "settings": {
                 "hue_center": HUES[colour], "hue_half_width": 10, "saturation_min": 120,
                 "value_min": 70, "min_area_ratio": 0.002}}],
-            "brain": {"type": "none"}, "actions": [{"type": "dashboard"}], "privacy": {"school": False}}
+            "brain": {"type": "none"}, "actions": [{"type": "dashboard"}], "privacy": {"school": school}}
 
 
-def chase_recipe(colour, language):
+def chase_recipe(colour, language, school=False):
     """The fly-brain car (CLAUDE.md demo 1): the colour finder feeds the fly brain, the brain drives
     the motors (option B, koz/brains/flybrain/steering.py). max_speed_ratio 0.25 is the contract's
     top; the runner uses the lower of it and the car's tested cap (LocalSetup.motor_cap)."""
-    recipe = colour_recipe(colour, language)
+    recipe = colour_recipe(colour, language, school)
     recipe["camera"] = {"source": "device_camera", "size": "320x240", "fps": 15}   # small: the brain keeps up
     recipe["brain"] = {"type": "flybrain", "settings": {"turn_gain": 1.0, "deadband": 0.1}}
     recipe["actions"] = [{"type": "dashboard"}, {"type": "motors", "max_speed_ratio": 0.25}]
     return recipe
+
+
+def object_recipe(thing, colour, language, school=False):
+    """One everyday thing (koz/blocks/object_finder.py), optionally of one colour; never the car.
+    school=True (an AI planner said so) is refused by the recipe check, like a colour job's."""
+    return {"version": 1, "language": language, "camera": dict(CAMERA),
+            "blocks": copy.deepcopy(LOCKED) + [{"type": "object_finder", "settings": {
+                "object": thing, "colour": colour, "min_confidence": 0.4}}],
+            "brain": {"type": "none"}, "actions": [{"type": "dashboard"}], "privacy": {"school": school}}
 
 
 def counter_recipe(school, language):
@@ -72,6 +82,32 @@ COLOUR_WORDS = {
     "green": {"en": "green", "ru": "зелёный", "uz": "yashil"},
     "blue": {"en": "blue", "ru": "синий", "uz": "ko'k"},
     "purple": {"en": "purple", "ru": "фиолетовый", "uz": "binafsha"},
+}
+# The object finder's things and colours, as the plan names them. Russian says "<thing> <colour>
+# цвета" (the colour in the genitive), which fits every noun's gender.
+OBJECT_WORDS = {
+    "cell phone": {"en": "phone", "ru": "телефон", "uz": "telefon"},
+    "backpack": {"en": "backpack", "ru": "рюкзак", "uz": "ryukzak"},
+    "handbag": {"en": "bag", "ru": "сумку", "uz": "sumka"},
+    "suitcase": {"en": "suitcase", "ru": "чемодан", "uz": "chamadon"},
+    "umbrella": {"en": "umbrella", "ru": "зонт", "uz": "soyabon"},
+    "bottle": {"en": "bottle", "ru": "бутылку", "uz": "shisha"},
+    "cup": {"en": "cup", "ru": "чашку", "uz": "piyola"},
+    "laptop": {"en": "laptop", "ru": "ноутбук", "uz": "noutbuk"},
+    "book": {"en": "book", "ru": "книгу", "uz": "kitob"},
+    "chair": {"en": "chair", "ru": "стул", "uz": "stul"},
+    "bicycle": {"en": "bicycle", "ru": "велосипед", "uz": "velosiped"},
+}
+OBJECT_COLOUR_WORDS = {
+    "red": {"en": "red", "ru": "красного", "uz": "qizil"},
+    "orange": {"en": "orange", "ru": "оранжевого", "uz": "to'q sariq"},
+    "yellow": {"en": "yellow", "ru": "жёлтого", "uz": "sariq"},
+    "green": {"en": "green", "ru": "зелёного", "uz": "yashil"},
+    "blue": {"en": "blue", "ru": "синего", "uz": "ko'k"},
+    "purple": {"en": "purple", "ru": "фиолетового", "uz": "binafsha"},
+    "white": {"en": "white", "ru": "белого", "uz": "oq"},
+    "black": {"en": "black", "ru": "чёрного", "uz": "qora"},
+    "grey": {"en": "grey (or silver)", "ru": "серого (или серебристого)", "uz": "kulrang (yoki kumushrang)"},
 }
 PLAN_TEXT = {
     "find_colour": {
@@ -93,6 +129,14 @@ PLAN_TEXT = {
               "haydaydi. Avval motorlarni shu kompyuterda yoqing; to'siq oldida mashina o'zi to'xtaydi. "
               "Yuzlar xiralashtiriladi, hech narsa saqlanmaydi.",
     },
+    "find_object": {
+        "en": "I will look for the {thing} with the object detector on this computer and say whether it is left, "
+              "center or right. Faces are blurred and nothing is saved.",
+        "ru": "Я буду искать {thing} детектором предметов на этом компьютере и говорить, где предмет: слева, "
+              "по центру или справа. Лица размываются, ничего не сохраняется.",
+        "uz": "{thing}ni shu kompyuterdagi narsa topuvchi bilan qidiraman va u chapda, o'rtada yoki o'ngda ekanini "
+              "aytaman. Yuzlar xiralashtiriladi, hech narsa saqlanmaydi.",
+    },
     "count_people": {
         "en": "I will count people crossing the line in the middle of the view (right to left = in). "
               "Faces are blurred; only the numbers are kept.",
@@ -112,7 +156,19 @@ PLAN_TEXT = {
 }
 
 
-def plan_message(job, language, colour=None, school=False):
+def object_name(thing, colour, language):
+    """"blue backpack", "рюкзак синего цвета", "ko'k ryukzak"; just the thing for "any" colour."""
+    word = OBJECT_WORDS[thing][language]
+    if colour == "any":
+        return word
+    tint = OBJECT_COLOUR_WORDS[colour][language]
+    return f"{word} {tint} цвета" if language == "ru" else f"{tint} {word}"
+
+
+def plan_message(job, language, colour=None, school=False, thing=None):
+    if job == "find_object":
+        text = PLAN_TEXT[job][language].format(thing=object_name(thing, colour, language))
+        return text[0].upper() + text[1:]
     if job in ("find_colour", "chase_colour"):
         word = COLOUR_WORDS[colour][language]
         text = PLAN_TEXT[job][language].format(colour=word)
@@ -242,17 +298,45 @@ COLOURS = [("orange", [r"\borange\b", r"\bto'q sariq\b", r"оранжев\w*"]),
            ("purple", [r"\bpurple\b", r"\bbinafsha\w*", r"фиолетов\w*"])]
 
 
-# Things the colour finder can't find: it looks for a round, single-coloured thing (roundness >= 0.65,
-# fixed in color_finder.py). Islombek, Oct 22: "find my blue backpack" or "the phone" were planned as a
-# colour job and failed three times; now they are refused at once. Counting jobs that mention them
-# ("customers with bags") still count.
-NOT_ROUND_OBJECTS = [
-    r"\b(back ?packs?|bags?|handbags?|suitcases?|phones?|smartphones?|cups?|mugs?|bottles?|books?|boxe?s|laptops?|"
-    r"keys?|wallets?|shoes?|sneakers?|umbrellas?|chairs?|bikes?|bicycles?|pens?|glasses|hats?|jackets?)\b",
-    r"\b(sumka\w*|ryukzak\w*|telefon\w*|stakan\w*|piyola\w*|shisha\w*|kitob\w*|quti\w*|noutbuk\w*|kalit\w*|"
-    r"hamyon\w*|poyabzal\w*|soyabon\w*|stul\w*|velosiped\w*|ruchka\w*|ko'zoynak\w*|shapka\w*|kurtka\w*)",
-    r"\b(рюкзак\w*|сумк\w*|чемодан\w*|телефон\w*|смартфон\w*|чашк\w*|кружк\w*|бутылк\w*|книг\w*|коробк\w*|ноутбук\w*|"
-    r"ключ\w*|кошел\w*|обув\w*|ботин\w*|кроссовк\w*|зонт\w*|стул\w*|велосипед\w*|ручк\w*|очки|шапк\w*|куртк\w*)"]
+# The things the object finder knows (koz/blocks/object_finder.py), checked in this order (a school
+# bag is a backpack). Cyrillic Uzbek is read as Latin too ("телефонимни" -> "telefonimni").
+OBJECTS = [
+    ("cell phone", [r"\b(phones?|smartphones?|cellphones?|iphones?)\b", r"\btelefon\w*", r"(телефон\w*|смартфон\w*|айфон\w*)"]),
+    ("backpack", [r"\b(back ?packs?|rucksacks?|school ?bags?)\b", r"\bryukzak\w*", r"рюкзак\w*"]),
+    ("handbag", [r"\b(hand ?bags?|bags?|purses?)\b", r"\bsumka\w*", r"сумк\w*"]),
+    ("suitcase", [r"\b(suitcases?|luggage)\b", r"\bchamadon\w*", r"чемодан\w*"]),
+    ("umbrella", [r"\bumbrellas?\b", r"\bsoyabon\w*", r"зонт\w*"]),
+    ("bottle", [r"\bbottles?\b", r"\b(shisha\w*|butilka\w*)", r"бутыл\w*"]),
+    ("cup", [r"\b(cups?|mugs?)\b", r"\b(piyola\w*|stakan\w*|finjon\w*|krujka\w*)", r"(чашк\w*|кружк\w*|стакан\w*)"]),
+    ("laptop", [r"\blaptops?\b", r"\bnoutbuk\w*", r"ноутбук\w*"]),
+    ("book", [r"\bbooks?\b", r"\bkitob\w*", r"книг\w*"]),
+    ("chair", [r"\bchairs?\b", r"\b(stul\w*|kursi\w*)", r"(стул\w*|стуль\w*)"]),
+    ("bicycle", [r"\b(bicycles?|bikes?)\b", r"\bvelosiped\w*", r"велосипед\w*"]),
+]
+# Colours a thing can be besides the colour finder's six (silver counts as grey).
+MORE_COLOURS = [("white", [r"\bwhite\b", r"\boq\b", r"бел(ый|ая|ое|ого|ую|ой|ые|ым)\b"]),
+                ("black", [r"\bblack\b", r"\bqora\b", r"ч[её]рн\w*"]),
+                ("grey", [r"\b(gr[ae]y|silver)\b", r"\b(kulrang\w*|kumush\w*)",
+                          r"(сер(ый|ая|ое|ого|ую|ой|ые|ым)\b|серебр\w*|серебрист\w*)"])]
+BALL_WORDS = [r"\b(balls?|toys?)\b", r"\b(koptok\w*|to'p\w*)", r"(мяч\w*|игрушк\w*)"]
+CAR_WORDS = [r"\b(car|robot|motors?|driv\w*)\b", r"\b(mashina\w*|robot\w*|motor\w*|hayda\w*)",
+             r"(машин\w*|робот\w*|мотор\w*|езжай|поезжай|едь)"]
+
+# Things Ko'z can't find: not round (the colour finder needs a ball) and not one of OBJECTS.
+# Islombek, Oct 22: "find my wallet" was planned as a red colour job and failed three times; now it
+# is refused at once. Counting jobs that mention them ("customers with umbrellas") still count.
+NOT_FINDABLE = [
+    r"\b(keys?|wallets?|shoes?|sneakers?|boots?|pens?|pencils?|glasses|sunglasses|hats?|caps?|jackets?|coats?|"
+    r"boxe?s|rings?|wrist ?watch(es)?|earphones?|headphones?|documents?|passports?|cards?|money)\b",
+    r"\b(kalit\w*|hamyon\w*|poyabzal\w*|tufli\w*|krossovka\w*|ruchka\w*|qalam\w*|ko'zoynak\w*|shapka\w*|"
+    r"kurtka\w*|quti\w*|uzuk\w*|qo'l soat\w*|naushnik\w*|hujjat\w*|pasport\w*|karta\w*|pul\b)",
+    r"(ключ\w*|кошел\w*|бумажник\w*|обув\w*|ботин\w*|кроссовк\w*|туфл\w*|ручк\w*|карандаш\w*|очк(и|ов)\b|"
+    r"шапк\w*|кепк\w*|куртк\w*|пальто|коробк\w*|кольц\w*|наручн\w* час\w*|наушник\w*|документ\w*|паспорт\w*|карт(а|у|очк)\w*|деньг\w*)"]
+
+
+def object_in(text):
+    """The OBJECTS name the (readable) text asks for, or None."""
+    return next((name for name, patterns in OBJECTS if _any(patterns, text)), None)
 
 
 def refusal_for(text):
@@ -263,8 +347,11 @@ def refusal_for(text):
     for code, patterns in REFUSALS:
         if _any(patterns, t):
             return code
-    if _any(NOT_ROUND_OBJECTS, t) and not _any(COUNT_WORDS, t):
-        return "UNSUPPORTED_CAPABILITY"   # not a round thing: the colour finder would never find it
+    if not _any(COUNT_WORDS, t):
+        if _any(NOT_FINDABLE, t):
+            return "UNSUPPORTED_CAPABILITY"   # Ko'z has no block that could find it
+        if object_in(t) and not _any(BALL_WORDS, t) and (_any(CHASE_WORDS, t) or _any(CAR_WORDS, t)):
+            return "UNSUPPORTED_CAPABILITY"   # only a ball steers the car (CLAUDE.md rule 11)
     return None
 
 
@@ -290,6 +377,11 @@ class FakePlanner:
             school = _any(SCHOOL_WORDS, t)
             return Plan(language, "count_people", counter_recipe(school, language), None,
                         plan_message("count_people", language, school=school))
+        thing = object_in(t)
+        if thing and not _any(BALL_WORDS, t):   # "find my blue backpack": the object finder
+            colour = next((name for name, patterns in COLOURS + MORE_COLOURS if _any(patterns, t)), "any")
+            return Plan(language, "find_object", object_recipe(thing, colour, language), None,
+                        plan_message("find_object", language, colour=colour, thing=thing))
         if _any(COLOUR_JOB_WORDS, t) or any(_any(p, t) for _, p in COLOURS):
             colour = next((name for name, patterns in COLOURS if _any(patterns, t)), "red")
             if _any(CHASE_WORDS, t):   # "chase the red ball": the fly-brain car

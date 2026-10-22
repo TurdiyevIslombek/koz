@@ -29,6 +29,7 @@
       "items": {
         "oneOf": [
           { "$ref": "#/$defs/color_finder" },
+          { "$ref": "#/$defs/object_finder" },
           { "$ref": "#/$defs/motion_zone" },
           { "$ref": "#/$defs/person_detector" },
           { "$ref": "#/$defs/line_counter" },
@@ -113,6 +114,14 @@
       }
     },
     {
+      "$comment": "One finder per recipe (Codex review, Oct 22): a thing must never stand in for the car's ball in a check.",
+      "not": {
+        "required": ["blocks"],
+        "properties": { "blocks": { "allOf": [{ "contains": { "$ref": "#/$defs/is_color_finder" } },
+                                             { "contains": { "$ref": "#/$defs/is_object_finder" } }] } }
+      }
+    },
+    {
       "$comment": "line_counter counts person_detector results.",
       "if": {
         "required": ["blocks"],
@@ -178,6 +187,27 @@
             "saturation_min": { "type": "integer", "minimum": 50, "maximum": 255 },
             "value_min": { "type": "integer", "minimum": 30, "maximum": 255 },
             "min_area_ratio": { "type": "number", "minimum": 0.001, "maximum": 0.25 }
+          }
+        }
+      }
+    },
+    "object_finder": {
+      "$comment": "Oct 22: one kind of everyday thing (COCO, NanoDet on OpenCV 5), optionally of one colour; reported like color_finder. Never people or animals (rules 4, 11); never the car's input.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "settings"],
+      "properties": {
+        "type": { "const": "object_finder" },
+        "settings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["object", "colour", "min_confidence"],
+          "properties": {
+            "object": { "enum": ["cell phone", "backpack", "handbag", "suitcase", "umbrella", "bottle", "cup", "bowl",
+                                 "laptop", "keyboard", "mouse", "remote", "book", "clock", "chair", "scissors",
+                                 "teddy bear", "apple", "banana", "tv", "vase", "potted plant", "bicycle"] },
+            "colour": { "enum": ["any", "red", "orange", "yellow", "green", "blue", "purple", "white", "black", "grey"] },
+            "min_confidence": { "type": "number", "minimum": 0.3, "maximum": 0.95 }
           }
         }
       }
@@ -299,6 +329,7 @@
       }
     },
     "is_color_finder": { "type": "object", "required": ["type"], "properties": { "type": { "const": "color_finder" } } },
+    "is_object_finder": { "type": "object", "required": ["type"], "properties": { "type": { "const": "object_finder" } } },
     "is_person_detector": { "type": "object", "required": ["type"], "properties": { "type": { "const": "person_detector" } } },
     "is_line_counter": { "type": "object", "required": ["type"], "properties": { "type": { "const": "line_counter" } } },
     "is_motors": { "type": "object", "required": ["type"], "properties": { "type": { "const": "motors" } } }

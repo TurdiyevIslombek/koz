@@ -20,6 +20,7 @@ import cv2
 from . import policy
 from .actions.motors import MotorsAction
 from .blocks import TASK_BLOCKS, FaceBlur, FrameContext, PersonDetector
+from .blocks.object_finder import ObjectFinder
 from .brains.flybrain.steering import FlyBrainSteering
 from .errors import KozError
 from .events import SEEN_OBJECTS, count_known, count_unknown
@@ -55,7 +56,7 @@ class Runner:
 
     def __init__(self, recipe, setup, camera, events, scene_checker=None, face_detector=None,
                  person_detector=None, revision=1, evaluation_round=None, clock=time.monotonic,
-                 motor_link=None, brain_driver=None, cancelled=None):
+                 motor_link=None, brain_driver=None, cancelled=None, object_detector=None):
         if not isinstance(recipe, CheckedRecipe):
             raise TypeError("Runner needs a CheckedRecipe from koz.recipe")
         if OPENCV_MAJOR != 5:
@@ -79,6 +80,7 @@ class Runner:
         self._gate = PrivacyGate(self.guard, clock)
         self._blur = FaceBlur({}, detector=face_detector)
         self._blocks = [PersonDetector(b["settings"], detector=person_detector) if b["type"] == "person_detector"
+                        else ObjectFinder(b["settings"], detector=object_detector) if b["type"] == "object_finder"
                         else TASK_BLOCKS[b["type"]](b["settings"]) for b in recipe.data["blocks"][2:]]
         self._configured = {b["type"] for b in recipe.data["blocks"][2:]}
         self._settings = {b["type"]: b["settings"] for b in recipe.data["blocks"][2:]}
@@ -148,7 +150,9 @@ class Runner:
         """The loaded checks and models, so the agent's next round reuses them (same camera,
         same setup) instead of loading the files again."""
         people = next((b.detector for b in self._blocks if isinstance(b, PersonDetector)), None)
+        objects = next((b.detector for b in self._blocks if isinstance(b, ObjectFinder)), None)
         return {"scene_checker": self.guard, "face_detector": self._blur.detector, "person_detector": people,
+                "object_detector": objects,
                 "brain_driver": self._brain.driver if self._brain is not None else None}
 
     def run(self, max_frames=None):
@@ -254,8 +258,9 @@ class Runner:
         trusted = results is not None and privacy == APPROVED
         reason = None if trusted or not (self._configured or privacy != APPROVED) else cause
         outputs = {"occupancy": None, "entered": None, "exited": None, "target": None}
-        if "color_finder" in self._configured:
-            outputs["target"] = results["color_finder"].label if trusted else "unknown"
+        for finder in ("color_finder", "object_finder"):
+            if finder in self._configured:
+                outputs["target"] = results[finder].label if trusted else "unknown"
         if "person_detector" in self._configured:
             outputs["occupancy"] = count_known(len(results["person_detector"])) if trusted else count_unknown(reason)
         if "line_counter" in self._configured:

@@ -103,11 +103,15 @@ A recipe that passes the schema is not yet permission to run it.
 **Checks:**
 - Each block type appears at most once, in this order (any may be left out
   except the first two): `privacy_guard`, `face_blur`, `color_finder`,
-  `motion_zone`, `person_detector`, `line_counter`, `looming`.
+  `object_finder`, `motion_zone`, `person_detector`, `line_counter`, `looming`.
 - `line_counter` needs `person_detector`. `flybrain` needs `color_finder`.
   `motors` only with `flybrain`.
 - The fly brain reads `color_finder` (and `looming` when present) only, never
-  person results or tracks.
+  person results or tracks. `object_finder` (a phone, a backpack...; Oct 22) is never
+  the car's input: a car recipe still needs `color_finder`, and the planners refuse
+  "drive the car to my backpack". Its `object` list has no people, animals, beds,
+  toilets or sinks; school recipes can't hold it. A recipe holds at most one finder
+  (`color_finder` or `object_finder`), so a thing never stands in for the ball in a check.
 - Alert `motion_detected` needs `motion_zone`; `count_changed` needs `person_detector`.
 - `rect`: left < right and top < bottom. `line`: two different points.
 - A stretch block that isn't built (`looming`) → `UNSUPPORTED_CAPABILITY`,
@@ -554,6 +558,8 @@ the web may show a round as a 3-second test.)
   nothing to fix; the decision is `target_visible` `unknown` → `run`, and the job runs as asked,
   showing the target as `lost` until it appears. A fix is proposed only if, with it, a round thing
   would be found. The car still needs its ball in the test (it must never start without a target).
+  Finding a thing (`object_finder`) works the same way: it has no settings to adjust, so a thing
+  that is not in view → `unknown` → `run`, shown as `lost` until it appears.
 - A failed check never gives the planner permission to weaken safety.
 
 The dashboard shows the label **"OpenCV output changed the next action"** only

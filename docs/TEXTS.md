@@ -102,6 +102,76 @@ What Ko'z says it will do, in the language of the job. A colour plan with each c
 - UZ: Ko'rinish o'rtasidagi chiziqdan o'tgan o'quvchilarni sanayman (o'ngdan chapga — kirdi). Maktab rejimi: faqat sanash, yuzlar xiralashtiriladi, hech narsa saqlanmaydi.
 - [ ] Russian OK   - [ ] Uzbek OK
 
+### Find a thing (phone, backpack, bottle...)
+
+Each thing once; the colours are spread over them ("any" = no colour said).
+
+**phone, any**
+- EN: I will look for the phone with the object detector on this computer and say whether it is left, center or right. Faces are blurred and nothing is saved.
+- RU: Я буду искать телефон детектором предметов на этом компьютере и говорить, где предмет: слева, по центру или справа. Лица размываются, ничего не сохраняется.
+- UZ: Telefonni shu kompyuterdagi narsa topuvchi bilan qidiraman va u chapda, o'rtada yoki o'ngda ekanini aytaman. Yuzlar xiralashtiriladi, hech narsa saqlanmaydi.
+- [ ] Russian OK   - [ ] Uzbek OK
+
+**backpack, blue**
+- EN: I will look for the blue backpack with the object detector on this computer and say whether it is left, center or right. Faces are blurred and nothing is saved.
+- RU: Я буду искать рюкзак синего цвета детектором предметов на этом компьютере и говорить, где предмет: слева, по центру или справа. Лица размываются, ничего не сохраняется.
+- UZ: Ko'k ryukzakni shu kompyuterdagi narsa topuvchi bilan qidiraman va u chapda, o'rtada yoki o'ngda ekanini aytaman. Yuzlar xiralashtiriladi, hech narsa saqlanmaydi.
+- [ ] Russian OK   - [ ] Uzbek OK
+
+**bag, red**
+- EN: I will look for the red bag with the object detector on this computer and say whether it is left, center or right. Faces are blurred and nothing is saved.
+- RU: Я буду искать сумку красного цвета детектором предметов на этом компьютере и говорить, где предмет: слева, по центру или справа. Лица размываются, ничего не сохраняется.
+- UZ: Qizil sumkani shu kompyuterdagi narsa topuvchi bilan qidiraman va u chapda, o'rtada yoki o'ngda ekanini aytaman. Yuzlar xiralashtiriladi, hech narsa saqlanmaydi.
+- [ ] Russian OK   - [ ] Uzbek OK
+
+**bottle, green**
+- EN: I will look for the green bottle with the object detector on this computer and say whether it is left, center or right. Faces are blurred and nothing is saved.
+- RU: Я буду искать бутылку зелёного цвета детектором предметов на этом компьютере и говорить, где предмет: слева, по центру или справа. Лица размываются, ничего не сохраняется.
+- UZ: Yashil shishani shu kompyuterdagi narsa topuvchi bilan qidiraman va u chapda, o'rtada yoki o'ngda ekanini aytaman. Yuzlar xiralashtiriladi, hech narsa saqlanmaydi.
+- [ ] Russian OK   - [ ] Uzbek OK
+
+**cup, white**
+- EN: I will look for the white cup with the object detector on this computer and say whether it is left, center or right. Faces are blurred and nothing is saved.
+- RU: Я буду искать чашку белого цвета детектором предметов на этом компьютере и говорить, где предмет: слева, по центру или справа. Лица размываются, ничего не сохраняется.
+- UZ: Oq piyolani shu kompyuterdagi narsa topuvchi bilan qidiraman va u chapda, o'rtada yoki o'ngda ekanini aytaman. Yuzlar xiralashtiriladi, hech narsa saqlanmaydi.
+- [ ] Russian OK   - [ ] Uzbek OK
+
+**laptop, grey**
+- EN: I will look for the grey (or silver) laptop with the object detector on this computer and say whether it is left, center or right. Faces are blurred and nothing is saved.
+- RU: Я буду искать ноутбук серого (или серебристого) цвета детектором предметов на этом компьютере и говорить, где предмет: слева, по центру или справа. Лица размываются, ничего не сохраняется.
+- UZ: Kulrang (yoki kumushrang) noutbukni shu kompyuterdagi narsa topuvchi bilan qidiraman va u chapda, o'rtada yoki o'ngda ekanini aytaman. Yuzlar xiralashtiriladi, hech narsa saqlanmaydi.
+- [ ] Russian OK   - [ ] Uzbek OK
+
+**book, black**
+- EN: I will look for the black book with the object detector on this computer and say whether it is left, center or right. Faces are blurred and nothing is saved.
+- RU: Я буду искать книгу чёрного цвета детектором предметов на этом компьютере и говорить, где предмет: слева, по центру или справа. Лица размываются, ничего не сохраняется.
+- UZ: Qora kitobni shu kompyuterdagi narsa topuvchi bilan qidiraman va u chapda, o'rtada yoki o'ngda ekanini aytaman. Yuzlar xiralashtiriladi, hech narsa saqlanmaydi.
+- [ ] Russian OK   - [ ] Uzbek OK
+
+**chair, yellow**
+- EN: I will look for the yellow chair with the object detector on this computer and say whether it is left, center or right. Faces are blurred and nothing is saved.
+- RU: Я буду искать стул жёлтого цвета детектором предметов на этом компьютере и говорить, где предмет: слева, по центру или справа. Лица размываются, ничего не сохраняется.
+- UZ: Sariq stulni shu kompyuterdagi narsa topuvchi bilan qidiraman va u chapda, o'rtada yoki o'ngda ekanini aytaman. Yuzlar xiralashtiriladi, hech narsa saqlanmaydi.
+- [ ] Russian OK   - [ ] Uzbek OK
+
+**bicycle, orange**
+- EN: I will look for the orange bicycle with the object detector on this computer and say whether it is left, center or right. Faces are blurred and nothing is saved.
+- RU: Я буду искать велосипед оранжевого цвета детектором предметов на этом компьютере и говорить, где предмет: слева, по центру или справа. Лица размываются, ничего не сохраняется.
+- UZ: To'q sariq velosipedni shu kompyuterdagi narsa topuvchi bilan qidiraman va u chapda, o'rtada yoki o'ngda ekanini aytaman. Yuzlar xiralashtiriladi, hech narsa saqlanmaydi.
+- [ ] Russian OK   - [ ] Uzbek OK
+
+**suitcase, purple**
+- EN: I will look for the purple suitcase with the object detector on this computer and say whether it is left, center or right. Faces are blurred and nothing is saved.
+- RU: Я буду искать чемодан фиолетового цвета детектором предметов на этом компьютере и говорить, где предмет: слева, по центру или справа. Лица размываются, ничего не сохраняется.
+- UZ: Binafsha chamadonni shu kompyuterdagi narsa topuvchi bilan qidiraman va u chapda, o'rtada yoki o'ngda ekanini aytaman. Yuzlar xiralashtiriladi, hech narsa saqlanmaydi.
+- [ ] Russian OK   - [ ] Uzbek OK
+
+**umbrella, any**
+- EN: I will look for the umbrella with the object detector on this computer and say whether it is left, center or right. Faces are blurred and nothing is saved.
+- RU: Я буду искать зонт детектором предметов на этом компьютере и говорить, где предмет: слева, по центру или справа. Лица размываются, ничего не сохраняется.
+- UZ: Soyabonni shu kompyuterdagi narsa topuvchi bilan qidiraman va u chapda, o'rtada yoki o'ngda ekanini aytaman. Yuzlar xiralashtiriladi, hech narsa saqlanmaydi.
+- [ ] Russian OK   - [ ] Uzbek OK
+
 ## 2. Refusals
 
 When Ko'z refuses a job, before any camera opens. The same text for every planner.

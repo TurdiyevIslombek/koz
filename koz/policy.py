@@ -5,14 +5,14 @@ in contracts/recipe.schema.json; this file holds what the schema can't say.
 Numbers marked "proposed" are not measurements yet (contracts/events.md, OPEN-1)."""
 
 # Every block a recipe may contain, in the only order allowed.
-BLOCK_ORDER = ("privacy_guard", "face_blur", "color_finder", "motion_zone",
+BLOCK_ORDER = ("privacy_guard", "face_blur", "color_finder", "object_finder", "motion_zone",
                "person_detector", "line_counter", "looming")
 # Always the first two blocks, with nothing to tune.
 LOCKED_BLOCKS = ("privacy_guard", "face_blur")
 
 # What is built so far. Anything else is refused with UNSUPPORTED_CAPABILITY
 # instead of being silently skipped.
-BUILT_BLOCKS = frozenset({"privacy_guard", "face_blur", "color_finder", "person_detector", "line_counter"})
+BUILT_BLOCKS = frozenset({"privacy_guard", "face_blur", "color_finder", "object_finder", "person_detector", "line_counter"})
 BUILT_BRAINS = frozenset({"none", "flybrain"})
 BUILT_ACTIONS = frozenset({"dashboard", "motors"})
 

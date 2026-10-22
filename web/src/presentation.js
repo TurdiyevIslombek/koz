@@ -9,7 +9,7 @@ export function plannerPresentation(status,offline=false,cloud=false){
 }
 
 export function liveKind(recipe){
- if(recipe?.blocks.some(b=>b.type==='color_finder'))return 'target';
+ if(recipe?.blocks.some(b=>b.type==='color_finder'||b.type==='object_finder'))return 'target';
  if(recipe?.blocks.some(b=>b.type==='line_counter'))return 'counter';
  return recipe?'privacy_guard':'unknown';
 }
@@ -43,7 +43,7 @@ export function stopWhy(code,seen){
 }
 export function todoFor(code,kind='unknown'){
  if(code==='UNSUPPORTED_CAPABILITY')return 'capabilityHint';   // say what Koʻz can do (Oct 22)
- if(code==='ADJUSTMENT_LIMIT'&&kind==='target')return 'targetNotFoundTodo';   // the colour finder finds round things only
+ if(code==='ADJUSTMENT_LIMIT'&&kind==='target')return 'targetNotFoundTodo';   // the colour finder finds round things only (a thing job never adjusts)
  if(REFUSALS.has(code))return 'refusedTodo';
  if(code?.startsWith('PRIVATE_')||code==='SCENE_CHANGED')return 'privacyTodo';
  return TODO[code]||'restartTodo';

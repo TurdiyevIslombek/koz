@@ -47,7 +47,7 @@ export function parseStrict(text, maxBytes = 32768, errorCode = 'INVALID_EVENT')
 
 export function validateRecipe(recipe, capabilities = null) {
   if(new TextEncoder().encode(JSON.stringify(recipe)).length>16384||!validateSchema(recipe))fail('INVALID_RECIPE');
-  const order=['privacy_guard','face_blur','color_finder','motion_zone','person_detector','line_counter','looming'];
+  const order=['privacy_guard','face_blur','color_finder','object_finder','motion_zone','person_detector','line_counter','looming'];
   const types=recipe.blocks.map(b=>b.type);
   if(new Set(types).size!==types.length||types.some((t,i)=>i>0&&order.indexOf(t)<=order.indexOf(types[i-1])))fail('INVALID_RECIPE');
   for(const b of recipe.blocks){
