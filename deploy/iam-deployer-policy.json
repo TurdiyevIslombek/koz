@@ -16,7 +16,7 @@
         "cloudformation:GetTemplate",
         "cloudformation:GetTemplateSummary"
       ],
-      "Resource": "arn:aws:cloudformation:eu-central-1:*:stack/koz/*"
+      "Resource": "arn:aws:cloudformation:ap-southeast-2:*:stack/koz/*"
     },
     {
       "Sid": "CheckTemplates",
@@ -29,7 +29,7 @@
       "Resource": "*",
       "Condition": {
         "StringEquals": {
-          "aws:RequestedRegion": "eu-central-1"
+          "aws:RequestedRegion": "ap-southeast-2"
         }
       }
     },
@@ -40,7 +40,7 @@
       "Resource": "*",
       "Condition": {
         "StringEquals": {
-          "aws:RequestedRegion": "eu-central-1"
+          "aws:RequestedRegion": "ap-southeast-2"
         }
       }
     },
@@ -65,7 +65,7 @@
       "Resource": "*",
       "Condition": {
         "StringEquals": {
-          "aws:RequestedRegion": "eu-central-1"
+          "aws:RequestedRegion": "ap-southeast-2"
         }
       }
     },
@@ -73,7 +73,7 @@
       "Sid": "OnlyOneSmallServer",
       "Effect": "Allow",
       "Action": "ec2:RunInstances",
-      "Resource": "arn:aws:ec2:eu-central-1:*:instance/*",
+      "Resource": "arn:aws:ec2:ap-southeast-2:*:instance/*",
       "Condition": {
         "StringEquals": {
           "ec2:InstanceType": "t3.micro"
@@ -90,12 +90,12 @@
       "Effect": "Allow",
       "Action": "ec2:RunInstances",
       "Resource": [
-        "arn:aws:ec2:eu-central-1::image/*",
-        "arn:aws:ec2:eu-central-1:*:subnet/*",
-        "arn:aws:ec2:eu-central-1:*:network-interface/*",
-        "arn:aws:ec2:eu-central-1:*:security-group/*",
-        "arn:aws:ec2:eu-central-1:*:volume/*",
-        "arn:aws:ec2:eu-central-1:*:launch-template/*"
+        "arn:aws:ec2:ap-southeast-2::image/*",
+        "arn:aws:ec2:ap-southeast-2:*:subnet/*",
+        "arn:aws:ec2:ap-southeast-2:*:network-interface/*",
+        "arn:aws:ec2:ap-southeast-2:*:security-group/*",
+        "arn:aws:ec2:ap-southeast-2:*:volume/*",
+        "arn:aws:ec2:ap-southeast-2:*:launch-template/*"
       ],
       "Condition": {
         "ForAnyValue:StringEquals": {
@@ -109,7 +109,7 @@
       "Sid": "StopOnlyThatServer",
       "Effect": "Allow",
       "Action": "ec2:TerminateInstances",
-      "Resource": "arn:aws:ec2:eu-central-1:*:instance/*",
+      "Resource": "arn:aws:ec2:ap-southeast-2:*:instance/*",
       "Condition": {
         "StringEquals": {
           "aws:ResourceTag/aws:cloudformation:stack-name": "koz"
@@ -129,7 +129,7 @@
       "Resource": "*",
       "Condition": {
         "StringEquals": {
-          "kms:ViaService": "ec2.eu-central-1.amazonaws.com"
+          "kms:ViaService": "ec2.ap-southeast-2.amazonaws.com"
         }
       }
     },
@@ -140,7 +140,7 @@
         "ssm:GetParameter",
         "ssm:GetParameters"
       ],
-      "Resource": "arn:aws:ssm:eu-central-1::parameter/aws/service/canonical/*"
+      "Resource": "arn:aws:ssm:ap-southeast-2::parameter/aws/service/canonical/*"
     },
     {
       "Sid": "ServerRoleOnlyToEc2",
@@ -178,8 +178,8 @@
       "Effect": "Allow",
       "Action": "dynamodb:*",
       "Resource": [
-        "arn:aws:dynamodb:eu-central-1:*:table/koz-web",
-        "arn:aws:dynamodb:eu-central-1:*:table/koz-web/*"
+        "arn:aws:dynamodb:ap-southeast-2:*:table/koz-web",
+        "arn:aws:dynamodb:ap-southeast-2:*:table/koz-web/*"
       ]
     },
     {
@@ -192,7 +192,7 @@
         "secretsmanager:TagResource",
         "secretsmanager:GetResourcePolicy"
       ],
-      "Resource": "arn:aws:secretsmanager:eu-central-1:*:secret:koz-owner-password-*"
+      "Resource": "arn:aws:secretsmanager:ap-southeast-2:*:secret:koz-owner-password-*"
     },
     {
       "Sid": "GeneratePassword",
@@ -201,22 +201,7 @@
       "Resource": "*",
       "Condition": {
         "StringEquals": {
-          "aws:RequestedRegion": "eu-central-1"
-        }
-      }
-    },
-    {
-      "Sid": "BedrockModelListOnly",
-      "Effect": "Allow",
-      "Action": [
-        "bedrock:ListFoundationModels",
-        "bedrock:ListInferenceProfiles",
-        "bedrock:GetInferenceProfile"
-      ],
-      "Resource": "*",
-      "Condition": {
-        "StringEquals": {
-          "aws:RequestedRegion": "eu-central-1"
+          "aws:RequestedRegion": "ap-southeast-2"
         }
       }
     },
@@ -258,7 +243,7 @@
       "Resource": "*"
     },
     {
-      "Sid": "NothingOutsideFrankfurt",
+      "Sid": "NothingOutsideSydney",
       "Effect": "Deny",
       "NotAction": [
         "iam:*",
@@ -270,7 +255,7 @@
       "Resource": "*",
       "Condition": {
         "StringNotEquals": {
-          "aws:RequestedRegion": "eu-central-1"
+          "aws:RequestedRegion": "ap-southeast-2"
         }
       }
     }

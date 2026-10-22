@@ -177,7 +177,7 @@ capped on the board and on the computer. Only the colour finder feeds the brain 
 
 ## 7. AWS
 
-What runs on AWS (Europe, Frankfurt `eu-central-1`; `deploy/`, one CloudFormation stack):
+What runs on AWS (Asia Pacific, Sydney `ap-southeast-2`, the Region AWS gives new accounts from Uzbekistan; `deploy/`, one CloudFormation stack):
 
 - **The web app** on one EC2 t3.micro (Ubuntu 24.04) behind Nginx with HTTPS (a Let's Encrypt
   certificate for the Elastic IP, renewed automatically). It checks every event against the
@@ -291,7 +291,7 @@ No ball at all â†’ one change, then `CHECK_FAILED`. A change that never helps â†
 - **The fly-brain car is measured only in simulation so far.** It zig-zags toward the ball.
 - **The planner scores above were tuned on the sentences they were measured on**; a fresh set is
   needed for an honest number.
-- **Text crosses borders.** The setup sentence passes through AWS Frankfurt, and with an AI
+- **Text crosses borders.** The setup sentence passes through AWS Sydney, and with an AI
   planner goes to AWS EU Regions (Bedrock) or Nebius. No approved cross-border route under
   Uzbekistan's personal-data law is set up; frames and biometric data never leave the device.
 - ESP32-CAM video on the local network is not encrypted. The computer must stay awake for live

@@ -21,7 +21,7 @@ const proxy=https.createServer({key:await readFile(join(temporary,'key.pem')),ce
  forward.on('error',()=>res.destroy());req.pipe(forward);res.on('close',()=>forward.destroy());
 });
 await new Promise(resolve=>proxy.listen(0,'127.0.0.1',resolve));const origin=`https://127.0.0.1:${proxy.address().port}`,password='offline-browser-test-password';
-async function start(){app=await createCloudApplication({KOZ_OWNER_PASSWORD:password,KOZ_PUBLIC_ORIGIN:origin,KOZ_TABLE:'koz-web',AWS_REGION:'eu-central-1'},{storage:createDynamoStore({table:'koz-web',region:'eu-central-1',client})});app.server.listen(0,'127.0.0.1');await once(app.server,'listening');}
+async function start(){app=await createCloudApplication({KOZ_OWNER_PASSWORD:password,KOZ_PUBLIC_ORIGIN:origin,KOZ_TABLE:'koz-web',AWS_REGION:'ap-southeast-2'},{storage:createDynamoStore({table:'koz-web',region:'ap-southeast-2',client})});app.server.listen(0,'127.0.0.1');await once(app.server,'listening');}
 const base=sampleEvidence()[0],emit=(type,data)=>ws?.readyState===1&&ws.send(JSON.stringify({...base,seq:++seq,type,job_id:job,trial_id:null,revision:job?1:null,minute:Math.floor(Date.now()/60000),data}));
 const status=()=>emit('status',{...base.data,state,privacy,planner:'bedrock',cameras:['mac_camera','esp32_cam']});
 let beat;
@@ -32,7 +32,7 @@ try{
  ws=new WebSocket(`ws://127.0.0.1:${app.server.address().port}/v1/runner`,{headers:{Host:new URL(origin).host,'X-Forwarded-Proto':'https',Authorization:`Bearer ${token}`}});await once(ws,'open');status();beat=setInterval(status,500);
  await page.locator('a[href="#setup"]').click();await page.locator('#camera-choice').waitFor();
  for(const lang of ['uz','ru','en']){await page.selectOption('#language',lang);assert.match(await page.locator('.planner-disclosure').innerText(),/AWS/);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);}
- assert.equal(await page.locator('.planner-disclosure').innerText(),'The text passes through AWS Frankfurt; with the Bedrock planner it is processed in AWS EU Regions; it is not stored.');
+ assert.equal(await page.locator('.planner-disclosure').innerText(),'The text passes through AWS Sydney; with the Bedrock planner it is processed in AWS EU Regions; it is not stored.');
  for(const theme of ['light','dark']){if(await page.locator('html').getAttribute('data-theme')!==theme)await page.click('#theme');await page.screenshot({path:join(out,`setup-${theme}-360.png`),fullPage:true});}
  await viewer.goto(origin);await viewer.selectOption('#language','en');await viewer.getByText('The owner has not shared a demonstration yet.').waitFor();assert.equal(await viewer.locator('a[href="#setup"], [data-action="stop"]').count(),0);
  await page.selectOption('#camera-choice','esp32_cam');await page.fill('#prompt','Find the red ball');const command=once(ws,'message');await page.click('#test');const received=JSON.parse((await command)[0]);assert.equal(received.data.camera_id,'esp32_cam');job=received.job_id;state='running';status();emit('recipe',{origin:'planner',caused_by:null,recipe:recipeFor('red_ball')});const observation=sampleEvidence().find(e=>e.type==='observation').data;emit('observation',{...observation,round:null,target:'left'});

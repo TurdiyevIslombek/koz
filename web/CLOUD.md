@@ -13,7 +13,7 @@ The existing installer/systemd service supplies these environment variables from
 | `KOZ_OWNER_PASSWORD` | Installer-generated owner secret, 16–256 characters |
 | `KOZ_DATA_DIR` | Absolute writable location, normally `/var/lib/koz` |
 | `KOZ_TABLE` | `koz-web`, with string `pk` / `sk` and numeric TTL `expires_at` |
-| `AWS_REGION` | `eu-central-1` |
+| `AWS_REGION` | `ap-southeast-2` (Sydney: the AWS project's Region) |
 | `NODE_ENV` | `production` |
 
 The cloud entry point uses **DynamoDB**, not the NDJSON fallback. It does not write application data to the checkout or another filesystem path. Startup fails closed if configuration or initial table access fails. `/api/health` returns 200 once startup succeeds; loopback HTTP health checks work before the external HTTPS request path is used.
@@ -25,7 +25,7 @@ Cookies are Secure, HttpOnly and SameSite=Strict in cloud mode. Mutations requir
 ## Owner and judges workflow
 
 1. Open the HTTPS URL and sign in. Choose **Connect device → Create runner token**; put the one-time token in the Mac runner's private `KOZ_RUNNER_TOKEN` configuration. Claude's outbound mode connects to `wss://<IP>/v1/runner`.
-2. Start the desired job. `status.planner` now accepts **`bedrock`**, alongside rules/Ollama/Nebius/null/legacy. Setup offers the reported camera slots and sends `camera_id` for both text and imported recipes. Cloud Setup explains AWS Frankfurt transit for every planner and AWS EU processing for Bedrock, in Uzbek/Russian/English. Prompt text is sent only over the active command socket and is never persisted.
+2. Start the desired job. `status.planner` now accepts **`bedrock`**, alongside rules/Ollama/Nebius/null/legacy. Setup offers the reported camera slots and sends `camera_id` for both text and imported recipes. Cloud Setup explains AWS Sydney transit for every planner and AWS EU processing for Bedrock, in Uzbek/Russian/English. Prompt text is sent only over the active command socket and is never persisted.
 3. In **Connect device**, choose any saved summaries to publish and click **Share current job with judges**. Sharing defaults off. Give judges `https://<IP>/#live`; use a separate/incognito browser to see their view. They get Live and Trials & proof, with no job controls. **Stop sharing** withdraws the view and resets connected viewers.
 
 Public APIs are server-scoped to the explicitly selected `(session_id, job_id)` and selected saved-summary IDs. `/api/public/snapshot` and `/api/events/public` exclude other jobs, command results and pending commands. Every owner command, pairing-token operation, replay operation, publication change and save/delete remains authenticated. A later job is not automatically public. The public SSE path deliberately matches the installer's `/api/events` Nginx location, so buffering stays disabled.

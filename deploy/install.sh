@@ -1,6 +1,6 @@
 #!/bin/bash
 # Installs the Ko'z web app on the EC2 server. Run once, as root, at first boot by deploy/koz-aws.json.
-#   install.sh --ip 1.2.3.4 --secret <secret ARN> --region eu-central-1 --table koz-web [--email you@x]
+#   install.sh --ip 1.2.3.4 --secret <secret ARN> --region ap-southeast-2 --table koz-web [--email you@x]
 # What it does, in order (log: /var/log/koz-install.log):
 #   1. Node.js 22 (official build, SHA-256 checked), Nginx, Certbot (snap, 5.4+ for IP certificates),
 #      AWS CLI (only to read the owner password from Secrets Manager with the server's role).

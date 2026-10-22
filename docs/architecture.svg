@@ -127,7 +127,7 @@
 
   <!-- AWS -->
   <rect x="905" y="150" width="285" height="430" rx="12" fill="#FFF6E8" stroke="#B7791F" stroke-width="1.5"/>
-  <text x="920" y="173" class="zone" fill="#8A5A12">AWS · eu-central-1 (Frankfurt)</text>
+  <text x="920" y="173" class="zone" fill="#8A5A12">AWS · ap-southeast-2 (Sydney)</text>
   <text x="920" y="190" class="s">one CloudFormation stack (deploy/)</text>
 
   <rect x="920" y="202" width="255" height="56" rx="6" class="aws"/>

@@ -27,7 +27,7 @@ The browser uses `http://127.0.0.1:4173`. `npm run fake-runner` optionally runs 
 
 ## Cloud entry point
 
-`node server/cloud.mjs` implements the AWS installer interface from `.collab/specs/aws-review.md`: loopback binding behind HTTPS, Secure owner sessions, an inbound token-authenticated runner, DynamoDB retention and owner-selected public sharing. Setup accepts Bedrock and explains AWS Frankfurt transit / AWS EU processing. Camera choice remains supported. See [CLOUD.md](CLOUD.md) for environment variables, pairing, the judges view, storage keys/expiry and verification limits. No AWS account actions or deployment were performed.
+`node server/cloud.mjs` implements the AWS installer interface from `.collab/specs/aws-review.md`: loopback binding behind HTTPS, Secure owner sessions, an inbound token-authenticated runner, DynamoDB retention and owner-selected public sharing. Setup accepts Bedrock and explains AWS Sydney transit / AWS EU processing. Camera choice remains supported. See [CLOUD.md](CLOUD.md) for environment variables, pairing, the judges view, storage keys/expiry and verification limits. No AWS account actions or deployment were performed.
 
 ## Runner connection
 

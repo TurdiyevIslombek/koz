@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "Ko'z web app on AWS (eu-central-1): one small server, one DynamoDB table, one fixed IP, HTTPS. The camera, OpenCV, privacy guard and motors stay on the owner's Mac; only contract JSON events reach AWS. Delete this stack after judging to remove everything.",
+  "Description": "Ko'z web app on AWS (ap-southeast-2, the project's Region): one small server, one DynamoDB table, one fixed IP, HTTPS. The camera, OpenCV, privacy guard and motors stay on the owner's Mac; only contract JSON events reach AWS. Delete this stack after judging to remove everything.",
   "Parameters": {
     "UbuntuAmi": {
       "Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",

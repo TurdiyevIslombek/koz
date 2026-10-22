@@ -6,7 +6,7 @@ import {sampleEvidence,known,unknown} from '../src/demo.js';
 import {summaryFor} from '../src/model.js';
 
 const row=event=>({event,receivedAt:Date.now()});
-function fixture(){const client=new FakeDynamo(),store=createDynamoStore({table:'koz-web',region:'eu-central-1',client});return {client,store};}
+function fixture(){const client=new FakeDynamo(),store=createDynamoStore({table:'koz-web',region:'ap-southeast-2',client});return {client,store};}
 test('DynamoDB TTL, duplicate transactions, rounded receipts and owner-scoped pagination',async()=>{
  const {client,store}=fixture(),base=sampleEvidence()[0];base.trial_id=null;
  for(let seq=1;seq<=6;seq++)await store.append(row({...base,seq}));

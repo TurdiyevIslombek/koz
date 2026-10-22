@@ -16,7 +16,7 @@
         "dynamodb:DescribeTable"
       ],
       "Resource": [
-        "arn:aws:dynamodb:eu-central-1:*:table/koz-web"
+        "arn:aws:dynamodb:ap-southeast-2:*:table/koz-web"
       ]
     },
     {
@@ -26,7 +26,7 @@
         "secretsmanager:GetSecretValue"
       ],
       "Resource": [
-        "arn:aws:secretsmanager:eu-central-1:*:secret:koz-owner-password-??????"
+        "arn:aws:secretsmanager:ap-southeast-2:*:secret:koz-owner-password-??????"
       ]
     }
   ]

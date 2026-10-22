@@ -42,7 +42,7 @@ def test_the_server_role_can_touch_only_its_table_and_its_password():
     actions = [a for s in statements for a in s["Action"]]
     assert all("*" not in a for a in actions)
     assert [r for s in statements for r in s["Resource"]] == [   # exactly that secret (+ AWS's 6 random characters)
-        "arn:aws:dynamodb:eu-central-1:*:table/koz-web", "arn:aws:secretsmanager:eu-central-1:*:secret:koz-owner-password-??????"]
+        "arn:aws:dynamodb:ap-southeast-2:*:table/koz-web", "arn:aws:secretsmanager:ap-southeast-2:*:secret:koz-owner-password-??????"]
     assert RES["OwnerPassword"]["Properties"]["Name"] == "koz-owner-password"
 
 
@@ -84,7 +84,7 @@ def test_nginx_keeps_the_app_private_and_streams_events_unbuffered():
     assert "User=koz" in service and "ProtectSystem=strict" in service and "NoNewPrivileges=true" in service
 
 
-def test_the_deployer_policy_is_frankfurt_only_and_cannot_read_the_password():
+def test_the_deployer_policy_is_sydney_only_and_cannot_read_the_password():
     """deploy/iam-deployer-policy.json: what Claude's AWS CLI user may do (Oct 20). Islombek creates
     it in the console; root credentials are never used."""
     text = (DEPLOY / "iam-deployer-policy.json").read_text()
@@ -97,10 +97,10 @@ def test_the_deployer_policy_is_frankfurt_only_and_cannot_read_the_password():
         assert not any(a.startswith("secretsmanager:GetSecretValue") for a in actions)
     deny = {s["Sid"]: s for s in statements if s["Effect"] == "Deny"}
     assert deny["NeverReadTheOwnerPassword"]["Action"] == "secretsmanager:GetSecretValue"
-    region = deny["NothingOutsideFrankfurt"]
-    assert region["Condition"] == {"StringNotEquals": {"aws:RequestedRegion": "eu-central-1"}}
+    region = deny["NothingOutsideSydney"]
+    assert region["Condition"] == {"StringNotEquals": {"aws:RequestedRegion": "ap-southeast-2"}}
     assert set(region["NotAction"]) == {"iam:*", "sts:*", "signin:*", "freetier:*", "budgets:*"}   # global services only
-    run = [s for s in allows if s["Action"] == "ec2:RunInstances" and s["Resource"] == "arn:aws:ec2:eu-central-1:*:instance/*"]
+    run = [s for s in allows if s["Action"] == "ec2:RunInstances" and s["Resource"] == "arn:aws:ec2:ap-southeast-2:*:instance/*"]
     assert run[0]["Condition"]["StringEquals"] == {"ec2:InstanceType": "t3.micro"}
     # IAM: pass the one server role to EC2 and read it; nothing that makes or changes IAM (review, Oct 20)
     iam = [a for s in allows for a in ([s["Action"]] if isinstance(s["Action"], str) else s["Action"]) if a.startswith("iam:")]

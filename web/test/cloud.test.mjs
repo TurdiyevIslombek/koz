@@ -11,9 +11,9 @@ import {FakeDynamo} from './fake-dynamo.mjs';
 import {sampleEvidence} from '../src/demo.js';
 
 const publicOrigin='https://203.0.113.20',password='test-owner-password-only';
-const config=()=>({KOZ_OWNER_PASSWORD:password,KOZ_PUBLIC_ORIGIN:publicOrigin,KOZ_TABLE:'koz-web',AWS_REGION:'eu-central-1',KOZ_DATA_DIR:'/private/tmp/koz-cloud-unused',PORT:'4173'});
+const config=()=>({KOZ_OWNER_PASSWORD:password,KOZ_PUBLIC_ORIGIN:publicOrigin,KOZ_TABLE:'koz-web',AWS_REGION:'ap-southeast-2',KOZ_DATA_DIR:'/private/tmp/koz-cloud-unused',PORT:'4173'});
 async function fixture(client=new FakeDynamo()){
- const env=config(),storage=createDynamoStore({table:'koz-web',region:'eu-central-1',client}),app=await createCloudApplication(env,{storage});assert.equal(env.KOZ_OWNER_PASSWORD,undefined);
+ const env=config(),storage=createDynamoStore({table:'koz-web',region:'ap-southeast-2',client}),app=await createCloudApplication(env,{storage});assert.equal(env.KOZ_OWNER_PASSWORD,undefined);
  app.server.listen(0,'127.0.0.1');await once(app.server,'listening');const origin=`http://127.0.0.1:${app.server.address().port}`;let cookie='';
  const headers={Host:new URL(publicOrigin).host,'X-Forwarded-Proto':'https',Origin:publicOrigin};
  const request=async(path,data,method=data===undefined?'GET':'POST',owner=true,extra={})=>{

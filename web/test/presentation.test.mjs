@@ -55,11 +55,11 @@ test('target locations cannot survive privacy stops or a dropped connection',()=
 });
 
 
-test('cloud Setup always discloses AWS Frankfurt and gives the planner-specific processing location',()=>{
+test('cloud Setup always discloses AWS Sydney and gives the planner-specific processing location',()=>{
  for(const [planner,key]of [['bedrock','cloudBedrock'],['rules','cloudLocal'],['ollama','cloudLocal'],['nebius','cloudNebius'],[null,'cloudDepends'],[undefined,'cloudDepends']]){
   const {disclosure}=plannerPresentation({planner},false,true);assert.equal(disclosure,key);
   for(const language of ['uz','ru','en'])assert.notEqual(t(language,key),key);
-  assert.match(t('en',key),/AWS Frankfurt/);
+  assert.match(t('en',key),/AWS Sydney/);
  }
  assert.match(t('en','cloudBedrock'),/AWS EU Regions; it is not stored/);
  assert.equal(plannerPresentation({planner:'bedrock'},true,true).disclosure,'cloudDepends');

@@ -3,6 +3,8 @@ import {pathToFileURL} from 'node:url';
 import {createApplication} from './index.mjs';
 import {createDynamoStore} from './dynamo.mjs';
 import {normalizeOrigin} from './security.mjs';
+// The AWS project's Region (Oct 21): new-experience accounts in Uzbekistan get Sydney; Frankfurt is blocked.
+const AWS_REGION='ap-southeast-2';
 
 export async function createCloudApplication(env=process.env,{storage}={}){
  let password=env.KOZ_OWNER_PASSWORD;
@@ -13,7 +15,7 @@ export async function createCloudApplication(env=process.env,{storage}={}){
   const port=Number(env.PORT||4173);
   if(!Number.isInteger(port)||port<1||port>65535)throw Error('Invalid PORT');
   const dataDir=env.KOZ_DATA_DIR||'/var/lib/koz';if(!isAbsolute(dataDir))throw Error('KOZ_DATA_DIR must be absolute');
-  if(env.AWS_REGION!=='eu-central-1'||!/^[-A-Za-z0-9_.]{3,255}$/.test(env.KOZ_TABLE||''))throw Error('KOZ_TABLE and AWS_REGION=eu-central-1 are required');
+  if(env.AWS_REGION!==AWS_REGION||!/^[-A-Za-z0-9_.]{3,255}$/.test(env.KOZ_TABLE||''))throw Error(`KOZ_TABLE and AWS_REGION=${AWS_REGION} are required`);
   const store=storage||createDynamoStore({table:env.KOZ_TABLE,region:env.AWS_REGION});
   try{return {...await createApplication({password,dataDir,storage:store,publicOrigin,localAccess:false,localRunnerUrl:null}),port};}
   catch(error){store.close?.();throw error;}
