@@ -183,4 +183,11 @@ these; the $1 budget warns you if real money is charged.
 - Oct 22 (security review): the deployer may change only the stack's own launch template, named by
   its ID in `deploy/iam-deployer-policy.json` (CloudFormation doesn't tag launch templates, so a tag
   can't name it). If the stack is ever made again from scratch, put the new ID there.
+- Oct 22, 09:33 UTC: **first server update** (Release `406c222`, Islombek's yes; he first pasted the
+  updated deployer policy). CloudFormation made a new launch template version and a new server, moved
+  the fixed IP, and removed the old server. HTTPS valid again after ~6 minutes (certificate 2 of 5 this
+  week). Checked: the page carries the new code; unknown pages 404; `/api/eye` 404; data 401 without
+  login; snapshots carry the server clock; judges' view loads no picture and no socket; one server running.
+  (The CLI's first update request went through but its answer was lost; its automatic retry then saw
+  the update already finishing.)
 
