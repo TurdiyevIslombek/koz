@@ -135,3 +135,9 @@ export function diagramCover(step){
   unknownOutput:'coverWaiting',offline:'coverOffline',planning:'coverPlanning'};
  return step.step in covers?covers[step.step]:'coverStopped';
 }
+
+// The eye picture of THIS computer on the AWS page (Oct 22): asked of Koʻz on 127.0.0.1 only by the
+// owner's page, in cloud mode, while a job runs or tests. Judges, the sample run and the local app never ask.
+export function macEyeWanted({cloud=false,owner=false,demo=false,step='idle'}={}){
+ return cloud&&owner&&!demo&&['running','testing'].includes(step);
+}

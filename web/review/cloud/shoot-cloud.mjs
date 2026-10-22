@@ -29,7 +29,7 @@ const proxy=https.createServer({key:await readFile(join(temporary,'key.pem')),ce
  const forward=http.request({host:'127.0.0.1',port:app.server.address().port,path:req.url,method:req.method,headers:{...req.headers,'x-forwarded-proto':'https'}},response=>{res.writeHead(response.statusCode,response.headers);response.pipe(res);});
  forward.on('error',()=>res.destroy());req.pipe(forward);res.on('close',()=>forward.destroy());
 });
-await new Promise(resolve=>proxy.listen(0,'127.0.0.1',resolve));const origin=`https://127.0.0.1:${proxy.address().port}`,password='offline-shoot-password';
+await new Promise(resolve=>proxy.listen(Number(process.env.KOZ_PROXY_PORT||0),'127.0.0.1',resolve));/* KOZ_PROXY_PORT: a fixed page origin, which the eye stream trusts */const origin=`https://127.0.0.1:${proxy.address().port}`,password='offline-shoot-password';
 app=await createCloudApplication({KOZ_OWNER_PASSWORD:password,KOZ_PUBLIC_ORIGIN:origin,KOZ_TABLE:'koz-web',AWS_REGION:'ap-southeast-2'},{storage:createDynamoStore({table:'koz-web',region:'ap-southeast-2',client})});app.server.listen(0,'127.0.0.1');await once(app.server,'listening');
 const base=sampleEvidence()[0],observation=sampleEvidence().find(e=>e.type==='observation').data;
 const emit=(type,data,extra={})=>ws?.readyState===1&&ws.send(JSON.stringify({...base,session_id:session,seq:++seq,type,job_id:job,trial_id:trial,revision,minute:Math.floor(Date.now()/60000),data,...extra}));
@@ -70,7 +70,7 @@ try{
   await page.fill('#prompt',"Do'konga kirgan odamlarni sana");await sleep(200);await shoot(page,'07-setup-typed');
   await page.click('#test');for(let i=0;i<40&&!job;i++)await sleep(100);
   emit('recipe',{origin:'planner',caused_by:null,recipe:recipeFor('classroom')});state='evaluating';status();await sleep(900);await shoot(page,'08-live-testing');
-  state='running';status();emit('observation',{...observation,round:null,target:null,occupancy:known(1),entered:known(2),exited:known(3)});await sleep(900);await shoot(page,'09-live-running-counter',{themes:['dark','light']});
+  state='running';status();emit('observation',{...observation,round:null,target:null,occupancy:known(1),entered:known(2),exited:known(3)});await sleep(900);if(process.env.KOZ_EYE_CHECK){await sleep(2500);console.log('mac eye:',JSON.stringify(await page.evaluate(()=>({src:document.querySelector('.mac-eye')?.getAttribute('src')||null,naturalWidth:document.querySelector('.mac-eye')?.naturalWidth||0,shown:Boolean(document.querySelector('.scene-frame.has-picture .mac-eye:not([hidden])')),heading:document.querySelector('.scene-heading h2')?.textContent}))));}await shoot(page,'09-live-running-counter',{themes:['dark','light']});
   emit('observation',{...observation,round:null,target:null,occupancy:unknown('OVERLOADED'),entered:unknown('OVERLOADED'),exited:unknown('OVERLOADED'),unknown_reason:'OVERLOADED'});await sleep(900);await shoot(page,'10-live-unknown');
   state='held';privacy='blocked';status();emit('fault',{code:'PRIVATE_BEDROOM',effect:'held',seen:'bed'});await sleep(900);await shoot(page,'11-live-privacy-stop');
   await page.locator('.tabs a[href="#trials"]').click();await sleep(900);await shoot(page,'12-trials');

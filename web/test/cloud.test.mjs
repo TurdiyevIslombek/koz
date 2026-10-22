@@ -1,4 +1,4 @@
-import test from 'node:test';
+import test from 'node:test';import { contentSecurityPolicy } from '../server/index.mjs';
 import assert from 'node:assert/strict';
 import {once} from 'node:events';
 import http from 'node:http';
@@ -104,4 +104,12 @@ test('cloud has no preview route and rejects binary/image-bearing input before S
    assert.doesNotMatch(JSON.stringify([...f.client.rows.values()]),/base64|data:image|"preview"/);
   }
  }finally{ws?.terminate();await f.app.close();}
+});
+
+test('the AWS page may show the eye picture of THIS computer (127.0.0.1:8766) as an image, and nothing else (Oct 22)',()=>{
+ const cloud=contentSecurityPolicy(true),local=contentSecurityPolicy(false);
+ assert.match(cloud,/img-src 'self' data: blob: http:\/\/127\.0\.0\.1:8766;/);
+ assert.match(cloud,/connect-src 'self';/);assert.match(cloud,/default-src 'self';/);   // no script or socket may reach the computer
+ assert.equal((cloud.match(/127\.0\.0\.1/g)||[]).length,1);
+ assert.doesNotMatch(local,/127\.0\.0\.1/);                                           // the local app has its own eye
 });

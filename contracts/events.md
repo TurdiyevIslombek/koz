@@ -733,8 +733,15 @@ to it.
 
 **Where.** Only on the runner's local socket, `ws://127.0.0.1:8765/v1/preview`, opened by the
 local web app's server (not a browser: a request with an `Origin` header gets HTTP 403). The runner
-serves it only on a loopback address. With `--cloud` the runner has no local socket, so there is no
-eye. The cloud link (section 5) and the judges' view never carry it.
+serves it only on a loopback address. With `--cloud` the runner has no local socket for the web app;
+since Oct 22 (Islombek: the owner must see what Koʻz sees inside the website) it serves the same picture
+as an MJPEG stream on `http://127.0.0.1:8766/eye.mjpg` only, for an `<img>` in the website's page opened
+on THIS computer: GET only, `Host` 127.0.0.1/localhost:8766 only, `Referer` origin = the website's origin
+(from the runner's `--cloud` address) only, no CORS headers (the page can show it, never read it), at most
+2 viewers; a blank lens during a gap; the stream ends when the job stops. The page's policy allows that one
+image source and no connection to this computer. The picture carries the counting line, its entry arrow,
+people boxes and the target ring (drawn on a copy). The cloud link (section 5) and the judges' view never
+carry it; on any other device the address reaches nothing and the diagram stays.
 
 **What the runner sends** (`koz/eye.py`):
 - **binary messages**: one JPEG each, of the newest frame the privacy guard **approved**, after the

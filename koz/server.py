@@ -450,6 +450,22 @@ async def serve(hub, host=HOST, port=PORT, started=None):
             beating.cancel()
 
 
+async def cloud_with_eye(hub, cloud_url, token, ask_new_token=None, eye_port=None, say=print):
+    """--cloud: the link to the website, and the eye for the website's page on THIS computer (an
+    MJPEG stream on 127.0.0.1 only; koz/eye.py serve_stream; Oct 22). The eye is extra: if its port
+    is taken, Ko'z still connects and says so."""
+    from . import eye
+    from .cloud import link_cloud
+
+    async def eye_stream():
+        try:
+            await eye.serve_stream(hub, eye.page_origin(cloud_url), port=eye_port or eye.STREAM_PORT)
+        except OSError:
+            say(f"The website's eye is off: port {eye_port or eye.STREAM_PORT} is in use (another Ko'z?).")
+
+    await asyncio.gather(link_cloud(hub, cloud_url, token, ask_new_token=ask_new_token), eye_stream())
+
+
 def show_window(hub, alive):
     """The local preview of the current job (--window): what the camera sees, faces blurred,
     with the status and the privacy check. On screen only, never saved or sent (rule 8).
@@ -658,8 +674,7 @@ def main(argv=None):
     def run_server():
         try:
             if cloud_url:
-                from .cloud import link_cloud
-                asyncio.run(link_cloud(hub, cloud_url, token, ask_new_token=ask_new_token))
+                asyncio.run(cloud_with_eye(hub, cloud_url, token, ask_new_token))
             else:
                 asyncio.run(serve(hub, port=args.port))
         except OSError as error:   # most often: another runner already uses the port

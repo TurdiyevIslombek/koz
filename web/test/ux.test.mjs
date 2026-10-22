@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createModel, ingest, liveView } from '../src/model.js';
 import { sampleEvidence } from '../src/demo.js';
-import { liveStep, stopWhy, todoFor, eyeClosedReason, TEST_SECONDS, deviceDialog, dockActions, diagramCover } from '../src/presentation.js';
+import { liveStep, stopWhy, todoFor, eyeClosedReason, TEST_SECONDS, deviceDialog, dockActions, diagramCover, macEyeWanted } from '../src/presentation.js';
 import { validateEvent } from '../src/protocol.js';
 import { t, languages } from '../src/i18n.js';
 
@@ -217,7 +217,7 @@ test('judges before anything is shared: "Not shared yet" with a sample run, neve
  const step=liveStep(offline,{notShared:true});
  assert.equal(step.step,'notShared');assert.equal(step.tone,'neutral');assert.equal(step.cta,'demo');assert.deepEqual(step.actions,[]);
  assert.equal(liveStep(offline,{}).step,'offline');   // the owner's own page still says offline
- for(const key of ['notSharedTitle','notSharedWhy','notSharedPill','capabilityHint','targetNotFoundTodo','trialsScope'])
+ for(const key of ['notSharedTitle','notSharedWhy','notSharedPill','capabilityHint','targetNotFoundTodo','trialsScope','picturePrivacy'])
   for(const lang of ['uz','ru','en'])assert.notEqual(t(lang,key),key,`${key} in ${lang}`);
 });
 test('a colour job that found nothing says what Koʻz can find (Oct 22: "three attempts failed")',()=>{
@@ -225,4 +225,14 @@ test('a colour job that found nothing says what Koʻz can find (Oct 22: "three a
  assert.equal(todoFor('ADJUSTMENT_LIMIT','counter'),'checkFailedTodo');
  assert.equal(todoFor('UNSUPPORTED_CAPABILITY'),'capabilityHint');   // a refusal lists what Koʻz can do
  assert.match(t('en','targetNotFoundTodo'),/round/);assert.match(t('en','capabilityHint'),/ball/);
+});
+
+test('the eye picture is asked of this computer only for the owner, on the AWS page, while a job runs or tests (Oct 22)',()=>{
+ const owner={cloud:true,owner:true,demo:false};
+ assert.equal(macEyeWanted({...owner,step:'running'}),true);assert.equal(macEyeWanted({...owner,step:'testing'}),true);
+ for(const step of ['privacyStop','confirming','cameraLost','offline','stopped','stoppedByYou','idle','planning','refused','problem','unknownOutput'])
+  assert.equal(macEyeWanted({...owner,step}),false,step);
+ assert.equal(macEyeWanted({cloud:true,owner:false,demo:false,step:'running'}),false);   // judges: never
+ assert.equal(macEyeWanted({cloud:true,owner:true,demo:true,step:'running'}),false);    // the sample run: no camera
+ assert.equal(macEyeWanted({cloud:false,owner:true,demo:false,step:'running'}),false);   // the local app has its own eye
 });

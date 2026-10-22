@@ -133,3 +133,37 @@ def quit_pressed(wait_ms, window=None):
     key = cv2.waitKey(wait_ms) & 0xFF
     return key in (ord("q"), 27) or cv2.getWindowProperty(window or WINDOW, cv2.WND_PROP_VISIBLE) < 1
 
+
+ENTRY = (255, 170, 60)
+
+
+def annotate(image, results, line):
+    """What the owner sees: a copy of the approved, blurred frame with the counting line (white, the
+    entry side marked by an arrow), people boxes (amber) and the target ring (green). In memory only;
+    `image` itself (the frame the blocks used) is never changed."""
+    if not results and not line:
+        return image
+    view = image.copy()
+    height, width = view.shape[:2]
+    for person in results.get("person_detector", ()):
+        x0, y0, x1, y1 = (int(v) for v in person.box)
+        cv2.rectangle(view, (x0, y0), (x1, y1), AMBER, 2)
+    if line:
+        (ax, ay), (bx, by) = line
+        a, b = (int(ax * width), int(ay * height)), (int(bx * width), int(by * height))
+        cv2.line(view, a, b, WHITE, 3)
+        # "in" is a crossing from the right of A->B to its left (koz/blocks/line_counter.py): the arrow
+        # starts on the right side, at the line's middle, and points across it
+        mx, my, dx, dy = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, b[0] - a[0], b[1] - a[1]
+        size = max((dx * dx + dy * dy) ** 0.5, 1.0)
+        nx, ny = -dy / size, dx / size                    # the left normal of A->B
+        reach = 0.12 * min(width, height)
+        start, end = (int(mx - nx * reach), int(my - ny * reach)), (int(mx + nx * reach), int(my + ny * reach))
+        cv2.arrowedLine(view, start, end, ENTRY, 3, tipLength=0.35)
+        cv2.putText(view, "IN", (end[0] + 6, end[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.6, ENTRY, 2)
+    target = results.get("color_finder") or results.get("object_finder")
+    if target is not None and getattr(target, "x", None) is not None:
+        centre = (int(target.x * width), int(target.y * height))
+        radius = max(10, int((target.area_ratio * width * height / 3.1416) ** 0.5))
+        cv2.circle(view, centre, radius, GREEN, 3)
+    return view

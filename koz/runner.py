@@ -26,6 +26,7 @@ from .events import SEEN_OBJECTS, count_known, count_unknown
 from .privacy import APPROVED, UNKNOWN, GuardCheck, PrivacyGate, PrivateObjects
 from .recipe import CheckedRecipe, check_recipe
 from .scene import PlacesSceneChecker
+from .preview import annotate
 
 OPENCV_MAJOR = int(cv2.__version__.split(".")[0])
 
@@ -104,6 +105,7 @@ class Runner:
         # frame after it was dropped (a check started, the job stopped).
         self.preview_t, self.preview_seq, self._preview_gap = None, 0, "not_running"
         self._preview_lock = threading.Lock()
+        self._annotated = (None, None)   # (seq, the eye's picture with the overlay) for the newest frame
         self.local_results = {}     # that frame's block results (e.g. where the target is); local only
         self._was_running = False
         self._last_reason_sent = None
@@ -318,7 +320,10 @@ class Runner:
                 return None, None, "checking"
             if self._clock() - self.preview_t > policy.MAX_FRAME_AGE_S:
                 return None, None, "not_fresh"
-            return self.preview, self.preview_seq, None
+            if self._annotated[0] != self.preview_seq:   # the owner's view: line, boxes, target ring (eye.annotate)
+                line = self._settings.get("line_counter", {}).get("line")
+                self._annotated = (self.preview_seq, annotate(self.preview, self.local_results, line))
+            return self._annotated[1], self.preview_seq, None
 
     def _privacy_state(self):
         return self._gate.last.state if self._gate.last else UNKNOWN

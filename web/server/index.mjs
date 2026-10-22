@@ -15,6 +15,10 @@ import {createEyeRelay,eyeRequestAllowed} from './eye.mjs';
 
 const id=()=>randomBytes(16).toString('hex'),hash=v=>createHash('sha256').update(v).digest('hex');
 const root=fileURLToPath(new URL('../',import.meta.url));
+// The page's policy. On AWS it may also show ONE thing from this computer: the eye picture that Koʻz
+// serves on 127.0.0.1:8766 to the owner's page on the camera computer (koz/eye.py serve_stream). An
+// image only: no script or connection may reach the computer, and the page can't read its pixels.
+export function contentSecurityPolicy(cloud){return `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:${cloud?' http://127.0.0.1:8766':''}; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'`;}
 export async function createApplication({password='',dataDir=resolve(root,'.data'),persist=true,localRunnerUrl=null,localAccess=false,retryMs=1000,publicOrigin=null,storage=null}={}){
  if(publicOrigin){normalizeOrigin(publicOrigin);if(localAccess||localRunnerUrl||!password)throw Error('Cloud mode requires owner authentication and inbound runner transport');}
  const cloud=Boolean(publicOrigin);
@@ -164,7 +168,7 @@ export async function createApplication({password='',dataDir=resolve(root,'.data
    const name=url.pathname==='/'?'index.html':decodeURIComponent(url.pathname).replace(/^\//,'');
    const path=resolve(root,'dist',name);if(!path.startsWith(resolve(root,'dist')+'/'))return json(res,404,{code:'INVALID_COMMAND'});
    let content;try{content=await readFile(path);}catch(error){if(['ENOENT','EISDIR','ENOTDIR'].includes(error.code))return json(res,404,{code:'INVALID_COMMAND'});throw error;}const types={'.html':'text/html','.js':'text/javascript','.css':'text/css','.ttf':'font/ttf','.txt':'text/plain'};
-   res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+   res.setHeader('Content-Security-Policy',contentSecurityPolicy(cloud));
    res.writeHead(200,{'Content-Type':`${types[extname(path)]||'application/octet-stream'}; charset=utf-8`,'Cache-Control':'no-cache'});res.end(req.method==='HEAD'?undefined:content);
   }catch(error){json(res,error instanceof ContractError?400:500,{code:error instanceof ContractError?error.code:'INTERNAL_ERROR'});}
  });
