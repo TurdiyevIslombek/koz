@@ -54,10 +54,6 @@
         "ec2:AuthorizeSecurityGroupEgress",
         "ec2:RevokeSecurityGroupEgress",
         "ec2:CreateLaunchTemplate",
-        "ec2:CreateLaunchTemplateVersion",
-        "ec2:DeleteLaunchTemplate",
-        "ec2:DeleteLaunchTemplateVersions",
-        "ec2:ModifyLaunchTemplate",
         "ec2:AllocateAddress",
         "ec2:ReleaseAddress",
         "ec2:AssociateAddress",
@@ -70,6 +66,17 @@
           "aws:RequestedRegion": "ap-southeast-2"
         }
       }
+    },
+    {
+      "Sid": "OnlyTheStacksLaunchTemplate",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateLaunchTemplateVersion",
+        "ec2:ModifyLaunchTemplate",
+        "ec2:DeleteLaunchTemplateVersions",
+        "ec2:DeleteLaunchTemplate"
+      ],
+      "Resource": "arn:aws:ec2:ap-southeast-2:*:launch-template/lt-0e2e49e711ea0efba"
     },
     {
       "Sid": "OnlyOneSmallServer",

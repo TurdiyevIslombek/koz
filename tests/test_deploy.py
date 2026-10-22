@@ -150,5 +150,10 @@ def test_a_new_release_replaces_only_the_server_and_says_what_it_installed():
     user_data = RES["Instance"]["Properties"]["UserData"]["Fn::Base64"]["Fn::Sub"]
     assert "installed commit %H (release ${Release})" in user_data
     policy = json.loads((DEPLOY / "iam-deployer-policy.json").read_text())
+    # changing a launch template: only the stack's own one, by its ID (review, Oct 22: it was any in Sydney;
+    # CloudFormation doesn't tag launch templates, so a tag condition can't name it; a new stack needs the new ID)
     network = next(s for s in policy["Statement"] if s["Sid"] == "StackNetworkAndTemplate")
-    assert {"ec2:CreateLaunchTemplateVersion", "ec2:ModifyLaunchTemplate"} <= set(network["Action"])
+    assert not any("LaunchTemplateVersion" in a or a in ("ec2:ModifyLaunchTemplate", "ec2:DeleteLaunchTemplate") for a in network["Action"])
+    own = next(s for s in policy["Statement"] if s["Sid"] == "OnlyTheStacksLaunchTemplate")
+    assert {"ec2:CreateLaunchTemplateVersion", "ec2:ModifyLaunchTemplate"} <= set(own["Action"])
+    assert re.fullmatch(r"arn:aws:ec2:ap-southeast-2:\*:launch-template/lt-[0-9a-f]{17}", own["Resource"])

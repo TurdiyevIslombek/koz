@@ -180,4 +180,7 @@ these; the $1 budget warns you if real money is charged.
 - Server updates without changing the address: a new `Release` parameter replaces only the server
   (fresh install from GitHub, commit in the install log); IP, table, password and device token stay.
   Let's Encrypt allows 5 certificates for the same IP a week: at most 3 more updates before Oct 29.
+- Oct 22 (security review): the deployer may change only the stack's own launch template, named by
+  its ID in `deploy/iam-deployer-policy.json` (CloudFormation doesn't tag launch templates, so a tag
+  can't name it). If the stack is ever made again from scratch, put the new ID there.
 
