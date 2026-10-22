@@ -200,4 +200,16 @@ these; the $1 budget warns you if real money is charged.
   unknown pages 404; `/api/eye` 404; events 401; judges' view: no camera picture, no socket (the
   one inline drawing is the dropdown arrow in the stylesheet). The planner change runs on the Mac
   (restart Koʻz there).
+- Correction (Oct 22, Let's Encrypt's rate-limit page): the 5-a-week limit refills one certificate
+  every 34 hours, so updates are not blocked until Oct 29. After the fourth update below, the next
+  slots come back about Oct 23 18:00, Oct 25 04:00 and Oct 26 14:00 UTC. Keep one for the
+  certificate's own renewal (6-day certificates; a new server gets a fresh one).
+- Oct 22, 12:35 UTC: **fourth server update** (Release `4f75ee0`, Islombek's yes): the eye picture
+  in the owner's page on the camera Mac (the page may show `http://127.0.0.1:8766` pictures; the
+  picture never passes through AWS), and the "Find a thing" job (object finder: names, recipe check).
+  Stack UPDATE_COMPLETE, one server; certificate 5 (valid to Oct 29 03:43 UTC); new code over HTTPS
+  after ~13 minutes. Checked: unknown pages 404; `/api/eye` 404; events 401 without login; judges'
+  view: no picture requests, no socket (the inline drawing is the dropdown arrow). Free plan ACTIVE,
+  $140 credits, $0 of the $1 budget spent. The waiting and object-finder changes run on the Mac
+  (restart Koʻz there).
 
