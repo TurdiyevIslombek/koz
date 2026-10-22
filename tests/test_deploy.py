@@ -126,3 +126,12 @@ def test_the_deployer_policy_is_sydney_only_and_cannot_read_the_password():
         if s["Action"] in ("ec2:RunInstances", "iam:PassRole"):
             assert s["Condition"]["ForAnyValue:StringEquals"] == via["ForAnyValue:StringEquals"], s["Sid"]
     assert next(s for s in allows if s["Sid"] == "OwnerPasswordSecretButNotItsValue")["Resource"].endswith("secret:koz-owner-password-*")
+
+
+def test_security_group_texts_use_only_what_ec2_accepts():
+    """EC2 refused the first stack (Oct 21): an apostrophe in "Ko'z" is not allowed in a security group
+    or rule description (a-zA-Z0-9. _-:/()#,@[]+=&;{}!$* only, under 256 characters)."""
+    allowed = re.compile(r"^[a-zA-Z0-9. _\-:/()#,@\[\]+=&;{}!$*]{0,255}$")
+    sg = RES["SecurityGroup"]["Properties"]
+    for text in [sg["GroupDescription"]] + [r["Description"] for r in sg["SecurityGroupIngress"]]:
+        assert allowed.match(text), text

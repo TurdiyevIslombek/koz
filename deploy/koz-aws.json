@@ -84,21 +84,21 @@
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
         "GroupName": "koz-web",
-        "GroupDescription": "Ko'z web: HTTPS (and HTTP for the certificate check) only. No SSH: use Session Manager.",
+        "GroupDescription": "Koz web: HTTPS (and HTTP for the certificate check) only. No SSH: use Session Manager.",
         "SecurityGroupIngress": [
           {
             "IpProtocol": "tcp",
             "FromPort": 80,
             "ToPort": 80,
             "CidrIp": "0.0.0.0/0",
-            "Description": "Let's Encrypt check and redirect to HTTPS"
+            "Description": "Lets Encrypt check and redirect to HTTPS"
           },
           {
             "IpProtocol": "tcp",
             "FromPort": 443,
             "ToPort": 443,
             "CidrIp": "0.0.0.0/0",
-            "Description": "Dashboard and the runner's outbound WebSocket"
+            "Description": "Dashboard and the runners outbound WebSocket"
           }
         ]
       }
