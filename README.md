@@ -35,8 +35,9 @@ live readings become unknown rather than presenting old values as current.
 **Owner: turn on sharing** (English labels):
 
 1. Open the live website → **English** → **Owner sign-in** → enter the owner password → **Sign in**.
-2. With the camera computer connected, close the dialog, open **Set up a job**, choose the camera,
-   enter a job and click **Test it**. Wait for the plan and job status in **Live job**.
+2. With the camera computer connected, open **Set up a job**, choose a camera if the selector
+   appears, enter a job and click **Test it**. Wait for the plan and job status in **Live job**.
+   If your intended job is already running, keep it and go straight to the next step.
 3. Click **Connect device** → scroll to **Share with judges** → tick the saved trial summaries
    you want public → **Share current job with judges**. The button requires an existing job.
 4. Open [https://16.178.45.27/#live](https://16.178.45.27/#live) in a private/incognito window to
