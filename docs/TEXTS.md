@@ -384,6 +384,12 @@ Shown when a running job stops, or a command or recipe is refused.
 - UZ: Saqlash muddatlari o'zgarmaydi.
 - [ ] Russian OK   - [ ] Uzbek OK
 
+### `VIDEO_UNREADABLE`
+- EN: video file not found or unreadable.
+- RU: Видеофайл не найден или не читается.
+- UZ: Video fayl topilmadi yoki uni o'qib bo'lmaydi.
+- [ ] Russian OK   - [ ] Uzbek OK
+
 ### `BUSY`
 - EN: Stop the current job first.
 - RU: Сначала остановите текущее задание.

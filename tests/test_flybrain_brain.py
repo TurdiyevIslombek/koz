@@ -1,6 +1,7 @@
 """koz/brains/flybrain/brain.py fires exactly the same neurons as Islombek's original flybrain.py
 (koz/brains/flybrain/original/brain/flybrain.py) for the same inputs and seed."""
 import importlib.util
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -13,7 +14,12 @@ ORIGINAL = Path(__file__).resolve().parent.parent / "koz" / "brains" / "flybrain
 def original_module():
     spec = importlib.util.spec_from_file_location("islombek_flybrain", ORIGINAL)
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    saved_flag = sys.dont_write_bytecode
+    try:
+        sys.dont_write_bytecode = True
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = saved_flag
     return module
 
 

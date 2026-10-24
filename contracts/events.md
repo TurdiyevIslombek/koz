@@ -616,6 +616,9 @@ up → `UNSUPPORTED_CAPABILITY`. A chosen camera that can't be opened or sends n
 `unknown` with `FRAME_STALE`. Never a silent switch to another camera. The recipe's `camera.source` stays `device_camera`:
 recipes and imports never choose a camera.
 
+For a local `--video` recording, a missing file or an undecodable first frame instead returns
+`VIDEO_UNREADABLE` ("video file not found or unreadable"). The file path never travels in events.
+
 **stop_job** — `data` is `{}`. Stops at once, before any planner work; cancels
 pending evaluation and planner results; goes idle; sends `command_result` and
 `status`. Repeating it is harmless. A late planner answer can't restart a
@@ -684,6 +687,7 @@ may hold codes and numbers only, never frames, prompts, passwords or personal da
 | `MOTOR_SAFETY_STOP` | 11 | Firmware timer, obstacle, switch or motor fault | Motor safety stop. | Защитная остановка моторов. | Motorlar xavfsizlik uchun to'xtadi. |
 | `RETENTION_LOCKED` | 12 | Asking to keep data longer | Storage times are fixed. | Сроки хранения фиксированы. | Saqlash muddatlari o'zgarmaydi. |
 | `UNSUPPORTED_CAPABILITY` | — | Block, camera type or OpenCV feature not available | This feature is not available. | Эта функция недоступна. | Bu imkoniyat mavjud emas. |
+| `VIDEO_UNREADABLE` | — | Recorded video missing or no decodable first frame | video file not found or unreadable. | Видеофайл не найден или не читается. | Video fayl topilmadi yoki uni o'qib bo'lmaydi. |
 | `INVALID_COMMAND` | — | Unknown command, bad fields or wrong state | Command is invalid. | Команда недопустима. | Buyruq yaroqsiz. |
 | `BUSY` | — | Another job or trial is active | Stop the current job first. | Сначала остановите текущее задание. | Avval joriy vazifani to'xtating. |
 | `COMMAND_EXPIRED` | — | Command arrived after its expiry | Command expired. | Срок команды истёк. | Buyruq muddati tugadi. |

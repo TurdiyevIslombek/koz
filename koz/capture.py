@@ -13,6 +13,7 @@ import threading
 import time
 import urllib.parse
 from dataclasses import dataclass
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -43,9 +44,17 @@ class FileCamera:
 
     def __init__(self, path, clock=time.monotonic, realtime=False):
         self._clock = clock
+        if not Path(path).is_file():
+            raise KozError("VIDEO_UNREADABLE")
         self._cap = cv2.VideoCapture(str(path))
-        if not self._cap.isOpened():
-            raise KozError("UNSUPPORTED_CAPABILITY", "video file cannot be opened")
+        try:
+            ok, image = self._cap.read() if self._cap.isOpened() else (False, None)
+        except cv2.error:
+            ok, image = False, None
+        if not ok or image is None or not image.size:
+            self._cap.release()
+            raise KozError("VIDEO_UNREADABLE")
+        self._first_image = image   # validate decoding now, but still hand out frame zero
         fps = self._cap.get(cv2.CAP_PROP_FPS)
         self._period = (1.0 / fps if fps and 1 <= fps <= 120 else 1 / 15) if realtime else 0.0
         self._started = None
@@ -60,7 +69,11 @@ class FileCamera:
             wait = self._started + self._index * self._period - time.monotonic()
             if wait > 0:
                 time.sleep(wait)
-        ok, image = self._cap.read() if self.is_open else (False, None)
+        if self.is_open and self._first_image is not None:
+            ok, image = True, self._first_image
+            self._first_image = None
+        else:
+            ok, image = self._cap.read() if self.is_open else (False, None)
         if not ok:
             self.close()
             return None

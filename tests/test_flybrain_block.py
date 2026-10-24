@@ -31,13 +31,19 @@ def original_driver_class():
 
 
 def test_same_wheels_as_the_original_driver():
+    # Previous runs or tools may have cached imports. Check that THIS comparison writes
+    # nothing, including changes to existing caches; never delete someone's cache to pass.
+    def caches():
+        return {p: p.read_bytes() for p in ORIGINAL.rglob("*.pyc")}
+
+    before = caches()
     theirs, ours = original_driver_class()(), BrainDriver(seed=0)
     for step in range(60):   # 3 s: left looming, then right, then both, then nothing
         eyes = [(200.0, 0.0), (0.0, 120.0), (250.0, 250.0), (0.0, 0.0)][step // 15]
         _, hz_theirs, wheels_theirs = theirs.tick(*eyes, ms=50)
         hz_ours, wheels_ours = ours.tick(*eyes, ms=50)
         assert wheels_ours == wheels_theirs and hz_ours == hz_theirs, f"step {step}"
-    assert not list(ORIGINAL.rglob("__pycache__"))   # nothing was written into the copy
+    assert caches() == before
 
 
 # --- option B: the ball's side -> the OTHER eye --------------------------------------------------

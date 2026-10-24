@@ -96,7 +96,7 @@ def main(argv=None):
             if link is not None:
                 link.halt()                  # and the motors stop and disarm at once
 
-    def open_camera():
+    def camera_factory():
         if args.video:
             return FileCamera(args.video, realtime=True)
         return open_camera(args.camera, upside_down=args.upside_down, mirror=args.mirror)
@@ -115,7 +115,7 @@ def main(argv=None):
             return 1
         link.arm_by_hand()
         time.sleep(0.3)   # the board's next report says it is armed
-    agent = Agent(planner, setup, open_camera, events, on_frame=on_frame, on_plan=on_plan, motor_link=link)
+    agent = Agent(planner, setup, camera_factory, events, on_frame=on_frame, on_plan=on_plan, motor_link=link)
     try:
         result = agent.run(args.job)
     except KozError as error:
@@ -157,7 +157,7 @@ def main(argv=None):
         link.close()
     if not args.no_window:
         cv2.destroyAllWindows()
-    return 0 if result.state in ("running", "idle") else 2
+    return 0 if result.state in ("running", "idle") and result.code is None else 2
 
 
 if __name__ == "__main__":

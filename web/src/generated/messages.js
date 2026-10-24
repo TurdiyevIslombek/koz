@@ -165,6 +165,11 @@ export const messages = {
     "ru": "Эта функция недоступна.",
     "uz": "Bu imkoniyat mavjud emas."
   },
+  "VIDEO_UNREADABLE": {
+    "en": "video file not found or unreadable.",
+    "ru": "Видеофайл не найден или не читается.",
+    "uz": "Video fayl topilmadi yoki uni o'qib bo'lmaydi."
+  },
   "INVALID_COMMAND": {
     "en": "Command is invalid.",
     "ru": "Команда недопустима.",

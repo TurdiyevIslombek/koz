@@ -4,7 +4,7 @@ import time
 import pytest
 
 from helpers import LABELS
-from koz.capture import LiveCamera
+from koz.capture import FileCamera, LiveCamera
 from koz.errors import KozError
 
 
@@ -34,6 +34,50 @@ def test_a_camera_that_cannot_open_is_refused(tmp_path):
     with pytest.raises(KozError) as caught:
         LiveCamera(str(tmp_path / "no-such-camera.avi"), warmup_s=0)
     assert caught.value.code == "UNSUPPORTED_CAPABILITY"
+
+
+@pytest.mark.parametrize("kind", ["missing", "directory", "empty", "corrupt"])
+def test_unreadable_recordings_have_a_specific_error(tmp_path, kind):
+    path = tmp_path / "video.mp4"
+    if kind == "directory":
+        path.mkdir()
+    elif kind != "missing":
+        path.write_bytes(b"" if kind == "empty" else b"not a video")
+    with pytest.raises(KozError) as caught:
+        FileCamera(path)
+    assert caught.value.code == "VIDEO_UNREADABLE"
+
+
+def test_a_container_without_a_decodable_first_frame_is_released(tmp_path, monkeypatch):
+    from koz import capture
+
+    class BrokenVideo:
+        released = False
+
+        def isOpened(self):
+            return True
+
+        def read(self):
+            return False, None
+
+        def release(self):
+            self.released = True
+
+    path = tmp_path / "video.mp4"
+    path.touch()
+    video = BrokenVideo()
+    monkeypatch.setattr(capture.cv2, "VideoCapture", lambda _: video)
+    with pytest.raises(KozError) as caught:
+        FileCamera(path)
+    assert caught.value.code == "VIDEO_UNREADABLE" and video.released
+
+
+def test_validating_a_recording_does_not_drop_its_first_frame(test_video):
+    with FileCamera(test_video) as camera:
+        frames = []
+        while (frame := camera.read()) is not None:
+            frames.append(frame)
+    assert [f.index for f in frames] == list(range(len(LABELS)))
 
 
 def test_a_recording_can_play_at_its_own_speed(test_video):
