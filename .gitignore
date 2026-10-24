@@ -18,3 +18,6 @@ tools/
 
 # Screenshots made by web/review/states/shoot.mjs (only the contact sheets are kept)
 web/review/states/shots/
+
+# The camera sketch's Wi-Fi name and password (firmware/camera_stream): filled in by Islombek, never committed
+firmware/camera_stream/wifi_settings.h
