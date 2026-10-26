@@ -101,7 +101,7 @@ def main():
     except KozError as error:
         print(f"Ko'z did not start: {error.code}: {messages.get(error.code, '')}")
         camera_problem = camera is None and not args.video and args.camera.isdigit() \
-            and error.code == "UNSUPPORTED_CAPABILITY"
+            and error.code in ("UNSUPPORTED_CAPABILITY", "CAMERA_UNAVAILABLE")
         if camera_problem:
             print("The camera could not be opened. On a Mac this usually means the app that started\n"
                   "this command may not use the camera. Double-click demo-blur.command (it runs in\n"

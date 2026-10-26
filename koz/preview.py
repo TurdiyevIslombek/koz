@@ -166,4 +166,9 @@ def annotate(image, results, line):
         centre = (int(target.x * width), int(target.y * height))
         radius = max(10, int((target.area_ratio * width * height / 3.1416) ** 0.5))
         cv2.circle(view, centre, radius, GREEN, 3)
+        # "FOUND" next to the ring, so the enlarged view shows at a glance that Ko'z sees the target
+        cv2.putText(view, "FOUND", (max(4, centre[0] - radius), max(18, centre[1] - radius - 8)),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, GREEN, 2)
+    elif target is not None:
+        cv2.putText(view, "LOOKING...", (10, height - 14), cv2.FONT_HERSHEY_SIMPLEX, 0.6, AMBER, 2)
     return view

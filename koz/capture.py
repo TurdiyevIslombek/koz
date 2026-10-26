@@ -109,7 +109,7 @@ class LiveCamera:
         self._warmup_s = warmup_s   # frames from the first second are dropped: still too dark
         self._cap = cv2.VideoCapture(source)
         if not self._cap.isOpened():
-            raise KozError("UNSUPPORTED_CAPABILITY", "camera cannot be opened")
+            raise KozError("CAMERA_UNAVAILABLE", "camera cannot be opened")
         if isinstance(source, int):   # ask for 4:3, so frames aren't squashed to 640 x 480 later
             self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
             self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
@@ -123,7 +123,7 @@ class LiveCamera:
             self._new_frame.wait_for(lambda: self._latest is not None, timeout=warmup_s + first_frame_timeout_s)
         if self._latest is None:
             self.close()
-            raise KozError("UNSUPPORTED_CAPABILITY", "camera sent no picture")
+            raise KozError("CAMERA_UNAVAILABLE", "camera sent no picture")
 
     def _keep_reading(self):
         index, opened = 0, time.monotonic()
@@ -192,7 +192,7 @@ class MjpegCamera:
             self._new_frame.wait_for(lambda: self._latest is not None, timeout=first_frame_timeout_s)
         if self._latest is None:
             self.close()
-            raise KozError("UNSUPPORTED_CAPABILITY", "camera sent no picture")
+            raise KozError("CAMERA_UNAVAILABLE", "camera sent no picture")
 
     def _connect(self):
         p = self._parts

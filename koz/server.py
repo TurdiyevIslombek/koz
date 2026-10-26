@@ -87,12 +87,18 @@ def command_problem(command, session_id, now):
     return None
 
 
+ENTRY_DIRECTIONS = ("right_to_left", "left_to_right")
+
+
 def _data_ok(name, data):
     if name == "start_job":
         # optional camera_id: one of the fixed slots (contract 10, Oct 16); never an address
         if "camera_id" in data and (type(data["camera_id"]) is not str or data["camera_id"] not in CAMERA_SLOTS):
             return False
-        keys = set(data) - {"camera_id"}
+        # optional entry: which way across the counting line is "in" (contract, Oct 25)
+        if "entry" in data and (data.get("input") != "prompt" or data["entry"] not in ENTRY_DIRECTIONS):
+            return False
+        keys = set(data) - {"camera_id", "entry"}
         if data.get("input") == "prompt":
             return (keys == {"input", "language", "text"} and data["language"] in ("uz", "ru", "en")
                     and type(data["text"]) is str and 0 < len(data["text"].strip()) and len(data["text"]) <= MAX_TEXT)
@@ -366,7 +372,7 @@ class Hub:
     def _work(self, agent, job_id, start):
         try:
             if start["input"] == "prompt":
-                result = agent.run(start["text"])
+                result = agent.run(start["text"], entry=start.get("entry"))
             else:
                 result = agent.run_recipe(start["recipe"], origin="import")
             with self.lock:

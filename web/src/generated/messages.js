@@ -170,6 +170,11 @@ export const messages = {
     "ru": "Видеофайл не найден или не читается.",
     "uz": "Video fayl topilmadi yoki uni o'qib bo'lmaydi."
   },
+  "CAMERA_UNAVAILABLE": {
+    "en": "The camera can't be reached. Check that it is on and on the same Wi-Fi.",
+    "ru": "Камера недоступна. Проверьте, что она включена и в той же сети Wi-Fi.",
+    "uz": "Kameraga ulanib bo'lmadi. U yoqilganini va shu Wi-Fi tarmog'ida ekanini tekshiring."
+  },
   "INVALID_COMMAND": {
     "en": "Command is invalid.",
     "ru": "Команда недопустима.",

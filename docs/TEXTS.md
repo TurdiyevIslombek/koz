@@ -390,6 +390,12 @@ Shown when a running job stops, or a command or recipe is refused.
 - UZ: Video fayl topilmadi yoki uni o'qib bo'lmaydi.
 - [ ] Russian OK   - [ ] Uzbek OK
 
+### `CAMERA_UNAVAILABLE`
+- EN: The camera can't be reached. Check that it is on and on the same Wi-Fi.
+- RU: Камера недоступна. Проверьте, что она включена и в той же сети Wi-Fi.
+- UZ: Kameraga ulanib bo'lmadi. U yoqilganini va shu Wi-Fi tarmog'ida ekanini tekshiring.
+- [ ] Russian OK   - [ ] Uzbek OK
+
 ### `BUSY`
 - EN: Stop the current job first.
 - RU: Сначала остановите текущее задание.

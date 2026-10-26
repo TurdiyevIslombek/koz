@@ -1,6 +1,13 @@
 export const languages = ['uz','ru','en'];
 const rows = {
  eyeLive:['Jonli tasvir','Прямой вид','Live view'],
+ squareView:['Toʻrtburchak koʻrinish','Прямоугольный вид','Square view'],
+ eyeView:['Koʻz shaklida','В форме глаза','Eye shape'],
+ biggerView:['Kattaroq','Крупнее','Bigger'],
+ smallerView:['Kichikroq','Мельче','Smaller'],
+ entryChoice:['Qaysi yoʻnalish «kirish» hisoblanadi? (sanash uchun)','Какое направление считать «вход»? (для подсчёта)','Which way counts as "in"? (for counting)'],
+ right_to_left:['Oʻngdan chapga ←','Справа налево ←','Right to left ←'],
+ left_to_right:['Chapdan oʻngga →','Слева направо →','Left to right →'],
  eyeLocal:['Yuzlar xiralashtirilgan · faqat shu kompyuterda','Лица размыты · только на этом компьютере','Faces blurred · this computer only'],
  eyeChecking:['Koʻrinish tekshirilmoqda','Проверка вида','Checking the view'],
  eyeLate:['Kamera tasviri kechikmoqda','Изображение с камеры запаздывает','Camera picture is late'],

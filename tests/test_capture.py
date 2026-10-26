@@ -27,13 +27,13 @@ def test_warmup_frames_are_dropped(test_video):
     """A file is read in a few milliseconds, all inside the warm-up: nothing usable arrives."""
     with pytest.raises(KozError) as caught:
         LiveCamera(str(test_video), warmup_s=1.0, first_frame_timeout_s=0.1)
-    assert caught.value.code == "UNSUPPORTED_CAPABILITY"
+    assert caught.value.code == "CAMERA_UNAVAILABLE"
 
 
 def test_a_camera_that_cannot_open_is_refused(tmp_path):
     with pytest.raises(KozError) as caught:
         LiveCamera(str(tmp_path / "no-such-camera.avi"), warmup_s=0)
-    assert caught.value.code == "UNSUPPORTED_CAPABILITY"
+    assert caught.value.code == "CAMERA_UNAVAILABLE"
 
 
 @pytest.mark.parametrize("kind", ["missing", "directory", "empty", "corrupt"])

@@ -609,10 +609,15 @@ ball; the owner judges the physical result.
     {"input": "recipe", "recipe": { …a complete recipe object… }}
 
 An imported recipe goes through the same checks and the same 3-round evaluation.
+The prompt form may add `"entry": "left_to_right"` (or the default `"right_to_left"`): which way
+across a counting line is "in", picked by the owner to match where the camera hangs (Oct 25). The
+runner turns the line around; nothing else changes. Not allowed with an imported recipe (its line
+already says it). Any other value → `INVALID_COMMAND`.
 Both forms may add `"camera_id"`: one of the slots in `status.cameras`. Missing → the runner's
 default (its first camera). Not a slot name → `INVALID_COMMAND`. A slot this runner hasn't set
 up → `UNSUPPORTED_CAPABILITY`. A chosen camera that can't be opened or sends no first picture
-→ fault `UNSUPPORTED_CAPABILITY` (the job doesn't run); one that stops sending later → outputs
+→ fault `CAMERA_UNAVAILABLE` (the job doesn't run; changed from `UNSUPPORTED_CAPABILITY` on Oct 25,
+because "this feature is not available" told the owner nothing about an unreachable robot camera); one that stops sending later → outputs
 `unknown` with `FRAME_STALE`. Never a silent switch to another camera. The recipe's `camera.source` stays `device_camera`:
 recipes and imports never choose a camera.
 
@@ -688,6 +693,7 @@ may hold codes and numbers only, never frames, prompts, passwords or personal da
 | `RETENTION_LOCKED` | 12 | Asking to keep data longer | Storage times are fixed. | Сроки хранения фиксированы. | Saqlash muddatlari o'zgarmaydi. |
 | `UNSUPPORTED_CAPABILITY` | — | Block, camera type or OpenCV feature not available | This feature is not available. | Эта функция недоступна. | Bu imkoniyat mavjud emas. |
 | `VIDEO_UNREADABLE` | — | Recorded video missing or no decodable first frame | video file not found or unreadable. | Видеофайл не найден или не читается. | Video fayl topilmadi yoki uni o'qib bo'lmaydi. |
+| `CAMERA_UNAVAILABLE` | — | The chosen camera can't be opened or sends no first picture (e.g. the robot camera is off or on another Wi-Fi) | The camera can't be reached. Check that it is on and on the same Wi-Fi. | Камера недоступна. Проверьте, что она включена и в той же сети Wi-Fi. | Kameraga ulanib bo'lmadi. U yoqilganini va shu Wi-Fi tarmog'ida ekanini tekshiring. |
 | `INVALID_COMMAND` | — | Unknown command, bad fields or wrong state | Command is invalid. | Команда недопустима. | Buyruq yaroqsiz. |
 | `BUSY` | — | Another job or trial is active | Stop the current job first. | Сначала остановите текущее задание. | Avval joriy vazifani to'xtating. |
 | `COMMAND_EXPIRED` | — | Command arrived after its expiry | Command expired. | Срок команды истёк. | Buyruq muddati tugadi. |

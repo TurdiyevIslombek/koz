@@ -96,8 +96,9 @@ class Agent:
         self.plan = None     # the plan, once there is one
         self.runner = None   # the runner of the revision being tried or run (the server's window shows it)
 
-    def run(self, text):
-        """One sentence -> JobResult."""
+    def run(self, text, entry=None):
+        """One sentence -> JobResult. `entry` ("right_to_left", the default, or "left_to_right") says
+        which way across a counting line is "in": the owner picks it to match where the camera hangs."""
         check_text(text)
         if self.stop_requested:
             return self._stopped(None)
@@ -117,7 +118,7 @@ class Agent:
             return self._stopped(plan)
         if plan.refusal:
             return self._refuse(plan, plan.refusal)
-        return self.run_recipe(plan.recipe, origin="planner", plan=plan)
+        return self.run_recipe(with_entry(plan.recipe, entry), origin="planner", plan=plan)
 
     def run_recipe(self, recipe, origin="import", plan=None):
         """A recipe (from the planner or an import) -> tried, adjusted, run. If anything fails on the
@@ -291,3 +292,18 @@ class Agent:
         self.events.emit("status", {"state": state, "camera_on": False, "privacy": "unknown",
                                     "school": self.setup.school, "motor": "not_present",
                                     "opencv_major": OPENCV_MAJOR, "capabilities": []})
+
+
+def with_entry(recipe, entry):
+    """The recipe with its counting line turned around when "in" is left-to-right. The line counter
+    counts a crossing from the right of A->B to its left as "in" (koz/blocks/line_counter.py), so
+    swapping A and B swaps in and out; the eye's IN arrow follows the line. Other jobs: unchanged."""
+    if entry != "left_to_right":
+        return recipe
+    blocks = []
+    for block in recipe["blocks"]:
+        if block["type"] == "line_counter":
+            a, b = block["settings"]["line"]
+            block = {**block, "settings": {**block["settings"], "line": [list(b), list(a)]}}
+        blocks.append(block)
+    return {**recipe, "blocks": blocks}

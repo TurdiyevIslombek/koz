@@ -33,14 +33,17 @@ class Plan:
 
 LOCKED = [{"type": "privacy_guard", "settings": {}}, {"type": "face_blur", "settings": {}}]
 CAMERA = {"source": "device_camera", "size": "640x480", "fps": 15}
-HUES = {"red": 0, "orange": 12, "yellow": 28, "green": 60, "blue": 110, "purple": 140}   # OpenCV hue, 0..179
+HUES = {"red": 0, "orange": 12, "yellow": 28, "green": 52, "blue": 110, "purple": 140}   # OpenCV hue, 0..179
+# How wide each colour is. "Green" covers lime/yellow-green balls (hue ~32) up to pure green (~70):
+# a lime ball was "lost" with green at 60 +-10 (live test, Oct 25).
+HUE_WIDTHS = {"green": 20, "blue": 15}
 
 
 def colour_recipe(colour, language, school=False):
     """school=True only when an AI planner said so: the recipe check then refuses it (SCHOOL_COUNTS_ONLY)."""
     return {"version": 1, "language": language, "camera": dict(CAMERA),
             "blocks": copy.deepcopy(LOCKED) + [{"type": "color_finder", "settings": {
-                "hue_center": HUES[colour], "hue_half_width": 10, "saturation_min": 120,
+                "hue_center": HUES[colour], "hue_half_width": HUE_WIDTHS.get(colour, 10), "saturation_min": 120,
                 "value_min": 70, "min_area_ratio": 0.002}}],
             "brain": {"type": "none"}, "actions": [{"type": "dashboard"}], "privacy": {"school": school}}
 

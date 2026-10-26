@@ -92,7 +92,7 @@ export const readRecipe = text => validateRecipe(parseStrict(text,16384,'INVALID
 export function validateCommandData(command,data,capabilities=[],cameras=undefined) {
   let valid=false;
   if(command==='start_job') {
-    valid=closed(data,{input:one('prompt'),language:one('uz','ru','en'),text:v=>typeof v==='string'&&Array.from(v.trim()).length>0&&Array.from(v).length<=2000},{camera_id:cameraSlot});
+    valid=closed(data,{input:one('prompt'),language:one('uz','ru','en'),text:v=>typeof v==='string'&&Array.from(v.trim()).length>0&&Array.from(v).length<=2000},{camera_id:cameraSlot,entry:one('right_to_left','left_to_right')});
     if(!valid&&closed(data,{input:one('recipe'),recipe:obj},{camera_id:cameraSlot})){validateRecipe(data.recipe,capabilities);valid=true;}
     if(valid&&Object.hasOwn(data,'camera_id')&&cameras!==undefined&&!cameras.includes(data.camera_id))fail('UNSUPPORTED_CAPABILITY');
   } else if(command==='stop_job')valid=closed(data,{});

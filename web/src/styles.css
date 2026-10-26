@@ -227,3 +227,10 @@ select,.tools select,.trial-selector,.camera-choice select,.trial-form select{ba
 [data-mac-eye]{position:relative}
 .mac-eye{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;clip-path:url(#mac-eye-clip);cursor:zoom-in;animation:eye-open .32s cubic-bezier(.16,1,.3,1) both}
 .scene-frame.has-picture .eye-view,.scene-frame.has-picture .target-legend{opacity:0}
+/* Oct 25 (Islombek): the owner chooses the eye's shape (eye or square) and size; the choice stays in this browser. */
+.view-controls{display:flex;gap:8px;justify-content:flex-end;margin:8px 0 0}.view-controls button.chip{min-height:36px;padding:6px 12px;font-size:.78rem;border-radius:999px;background:var(--surface)}
+:root[data-eye-shape=square] .eye-picture,:root[data-eye-shape=square] .mac-eye{clip-path:none;object-fit:contain;background:#000;border-radius:12px}
+:root[data-eye-shape=square] .live-eye:not(.is-closed) .live-eye-shape,:root[data-eye-shape=square] .live-eye:not(.is-closed) .eye-rim{opacity:0}
+:root[data-eye-size=large] .live-grid{grid-template-columns:1fr!important}:root[data-eye-size=large] .live-grid .scene{grid-column:1/-1!important;grid-row:auto!important;order:-1}
+:root[data-entry=right_to_left] .entry-arrow{transform:scaleX(-1);transform-box:view-box;transform-origin:180px 178px}
+:root[data-eye-size=large] .live-grid .status,:root[data-eye-size=large] .live-grid .readout{grid-column:1!important;grid-row:auto!important}:root[data-eye-size=large] .live-grid .scene{grid-row:1!important}:root[data-eye-size=large] .live-grid .status{grid-row:2!important}:root[data-eye-size=large] .live-grid .readout{grid-row:3!important}
