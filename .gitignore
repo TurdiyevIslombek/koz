@@ -21,3 +21,6 @@ web/review/states/shots/
 
 # The camera sketch's Wi-Fi name and password (firmware/camera_stream): filled in by Islombek, never committed
 firmware/camera_stream/wifi_settings.h
+
+# Raw screen recordings and the unblurred face clip (Oct 26): never committed
+videos/

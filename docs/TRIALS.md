@@ -439,3 +439,98 @@ large view: 640 px, 160 KiB (contract section 14). No guard or detector setting 
 ## Fly-brain car (demo 1) and classroom counter (demo 2)
 
 To be written.
+
+## Car calibration — 26 October 2026, in progress
+
+**STOPPED: hardware overheating incident.** Islombek reported the ESP32-CAM became
+very hot, its light was on, and it burned his hand. Instructed immediate battery
+and USB disconnection and no camera reconnection. Cause and actual camera supply
+voltage are unconfirmed. All movement and powered camera tests are on hold.
+The proposed second raised-wheel MOVE 100 for supply-voltage measurement was not sent.
+
+Uploaded `firmware/stop_test` to the Arduino on `/dev/cu.usbserial-120`;
+serial confirmed `READY stop_test`. Camera wire to Arduino D0 disconnected.
+Firmware currently assumes BATTERY_V = 9.5. After the failed raised-wheel check,
+Islombek reported a battery-terminal reading of 9 V with motors stopped.
+Islombek also reported 9 V between the L298N supply input labelled 12V and GND
+with motors stopped. Voltage under motor load has not yet been measured.
+
+- Sensor checks initially returned `PING,0` three times (no echo). With battery off and
+  USB connected, two readings were `PING,18`. Islombek confirmed the box was close;
+  the distance was not independently measured (no ruler available).
+- After battery power was restored, readings were `PING,21` and `PING,20`.
+  The sensor responded, but the earlier no-echo cause remains unconfirmed.
+- Raised-wheel check: `MOVE 100: start 43 cm`, then `MOVED,100,0`.
+  Islombek initially confirmed both sides turned forward and stopped after about one second.
+  Later he clarified that with the wheels raised at command 100 only one individual
+  motor out of four spun. The earlier PASS is withdrawn: raised-wheel check FAIL.
+  Which wheel turned and the cause are not yet known. Further movement commands are
+  on hold while checking the motor power supply and operation.
+  Zero travel with the wheels raised is expected; this is not a floor-distance measurement.
+
+- First floor movement attempt: `MOVE 20: start 61 cm`, then `MOVED,20,0`.
+  Sensor-reported travel is 0 cm; Islombek reported a brief unusual sound for about
+  one second and no movement. Command 20 did not move the car on this floor;
+  the sound's cause has not been confirmed. The starting echo
+  was 61 cm, not the requested approximate 1.5 m; check clearance before increasing speed.
+
+- Second floor attempt: clearance check `PING,61`, then `MOVE 40: start 61 cm`
+  and `MOVED,40,0`. Sensor-reported travel is 0 cm; owner's observation is pending.
+  This was a bounded one-second movement check, not a stopping-distance run.
+
+- User-requested repeat of command 40: reconnected the serial monitor after a closed-pipe
+  error and confirmed `READY stop_test`. `PING,46`, `MOVE 40: start 46 cm`,
+  then `MOVED,40,0`. Sensor-reported travel is 0 cm; Islombek confirmed only a brief
+  sound and no movement. Command 40 did not move the car in this setup.
+
+Further floor movement checks, stopping-distance calibration, camera orientation, steering checks and
+the ten chase trials are still pending. No measured speed_cap or stop_cm selected yet.
+
+After the overheating incident, Islombek requested no further incremental speed
+tests and a command ceiling of 180, based on his earlier original-car experience.
+Prepared motor_listener with speed_cap 180 and the reported 9.0 V battery value;
+stop_cm remains the unmeasured default 35. No live run at this new setting has occurred.
+Prepared camera build koz-flash-off-v1: GPIO4 held LOW before camera/network setup,
+low-voltage reset protection no longer explicitly disabled. Previous source already
+set GPIO4 LOW once, so this is hardening, not a confirmed overheating root-cause fix.
+Upload and physical verification are pending; all powered motion remains on hold.
+
+## Laptop trials on the live camera — recorded Oct 25, read Oct 26
+
+Source: the owner's 5 screen recordings (kept on his Mac only, git-ignored). Read by Claude from
+frames sampled every 4–5 s, so short events between samples can be missed and stop times are not
+measured. Times are positions in each recording.
+
+**Counter** (`Counter_test`, 2:46, entry direction "left to right", a doorway, one person walking
+in and out): at 2:40 Ko'z showed **11 in, 9 out**. The walker alternated in and out, so the true
+numbers differ by at most 1: at least one crossing was missed or counted wrongly. The crossings
+were not counted by hand, so the exact error is unknown. Early on (0:16) a first crossing counted
+as "out". "People Ko'z detects now" often showed 0 while a person stood partly in view (the
+detector needs the body from the waist up).
+
+**Privacy guard** (`privacy_t,s,b`, `privacy_c,normalroom`):
+| Time | View | What Ko'z showed |
+|---|---|---|
+| t,s,b 0:25, 0:40 | moving toward the bathroom | Stopped for privacy: "This looks like a changing room" (room model) |
+| t,s,b 0:55–1:00 | bed | Stopped: "A bed is in view" |
+| t,s,b 1:40–1:45 | bathroom sink | Stopped: "A sink is in view, in what looks like a bathroom" |
+| t,s,b 2:15 | toilet | Stopped: "A toilet is in view" |
+| c,normal 0:05 | lens covered | Stopped: could not be sure the view is allowed (too dark) |
+| c,normal 0:25–0:45 | room | Stopped: "A bed is in view" (not confirmed whether a bed was visible) |
+| c,normal 1:10–1:15 | normal room | Running |
+Every private view tried was stopped. One possible false stop (bed) in the normal room.
+
+**Agent adjust on the live camera** (`tracking_test`): "Track a red ball" with a lime ball: lost
+(correct: it isn't red). With a lime ball and the green/lime request: observation "lost" →
+decision "check target visible: fail" → new setting `color_finder.hue_center` **52 → 31** → next
+observation "left"; then the target was followed left / center / right with the FOUND ring. The
+Trials & proof page shows this chain. In `privacy_t,s,b` 1:15, a job whose ball was never seen
+ended "Three attempts failed. Job is off" (the 3-round limit working).
+
+**Face blur on a real face:** in every sampled frame (about 90 across the 4 recordings) where the
+owner's face was visible, it was blurred. A sample, not a check of every frame.
+
+**Car (demo 1):** not run. On Oct 26 the ESP32-CAM became hot enough to burn the owner's hand,
+and with the wheels raised only 1 of 4 motors turned at command 100 (commands 20 and 40 did not
+move the car). All powered car tests were stopped for safety. The fly-brain chase is shown only
+in simulation.

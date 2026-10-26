@@ -19,6 +19,14 @@ review). Tested on the Mac: `firmware/tests/` (logic and the real sketch).
 
 Before the first drive, measure `speed_cap` and `stop_cm` with `firmware/stop_test` (its README).
 
+Oct 26 configuration: owner requested `speed_cap = 180` and reported 9 V at the
+battery and driver while stopped, so `BATTERY_V = 9.0` (PWM range 65..218).
+This is a command ceiling, not a constant drive command. The Python runner still
+scales wheel commands by the lower of its local cap and the recipe's speed ratio.
+The requested ceiling has not been validated on the floor; `stop_cm = 35` remains
+provisional. Only one of four motors turned in the raised-wheel command-100 check.
+Do not describe these settings as calibrated or the car as ready for a chase.
+
 Upload (Arduino on USB; the ESP32-CAM link on D0/D1 disconnected):
 ```bash
 tools/bin/arduino-cli compile --upload -p /dev/cu.usbmodem1101 --fqbn arduino:avr:uno firmware/motor_listener

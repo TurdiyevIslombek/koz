@@ -234,14 +234,14 @@ static void parserChecks() {
 }
 
 static void softStartChecks() {
-  // --- Oct 18: a 9.5 V pack. At most 6 V on the motors; soft start; stop before reversing --------------
+  // --- PWM voltage estimate follows the configured supply; soft start; stop before reversing --------
   {  // full command: never above the 6 V PWM, and it ramps up instead of jumping
     reset();
     send("ARM\n");
     for (int i = 0; i < 40; i++) { Serial.feed("M,255,255\n"); loop(); now_ms += 5; }
     int highest = 0;
     for (auto& w : writes) highest = w.second > highest ? w.second : highest;
-    CHECK(highest <= MAX_PWM && MAX_PWM <= 204);
+    CHECK(highest <= MAX_PWM && MAX_PWM * MOTOR_SUPPLY_V / 255.0 <= MOTOR_MAX_V);
     CHECK(writes.front().second < 30);                       // the first step is small
   }
   {  // a reversal goes to 0 at once, stays 0 for the pause, then ramps the other way

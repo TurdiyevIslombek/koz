@@ -1,0 +1,11 @@
+Laptop trials, recorded Oct 25 (read from the screen recordings on Oct 26 by Claude; details in docs/TRIALS.md)
+counter: one 2:46 session, entry left to right: Ko'z 11 in / 9 out; true counts differ by at most 1 (alternating walks), not hand-counted
+privacy toilet: stopped ("A toilet is in view") - privacy_t,s,b 2:15
+privacy bathroom sink: stopped ("A sink is in view, in what looks like a bathroom") - privacy_t,s,b 1:40
+privacy bed: stopped ("A bed is in view") - privacy_t,s,b 0:55
+privacy changing-room view: stopped twice (room model) - privacy_t,s,b 0:25, 0:40
+privacy lens covered: stopped (too dark) - privacy_c,normalroom 0:05
+privacy normal room: ran once (1:10); stopped once with "A bed is in view" (0:25, unconfirmed)
+adjust on live camera: lost -> fail -> hue_center 52 -> 31 -> left, then followed - tracking_test 1:30
+face blur: blurred in every sampled frame with a face (~90 frames)
+car: not run (hot ESP32-CAM, 1 of 4 motors turning) - stopped for safety

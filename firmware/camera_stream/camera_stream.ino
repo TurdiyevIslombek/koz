@@ -15,13 +15,12 @@
 #include <WiFi.h>
 #include <WiFiMulti.h>
 #include <ESPmDNS.h>
+#include "flash_off.h"
 #include "wifi_settings.h"
 #ifndef HOTSPOT_NAME             // an older wifi_settings.h without the hotspot lines
 #define HOTSPOT_NAME ""
 #define HOTSPOT_PASSWORD ""
 #endif
-#include "soc/soc.h"
-#include "soc/rtc_cntl_reg.h"
 
 // ---------- WiFi <-> Arduino bridge ----------
 #define LINK_RX 13        // <- Arduino D1 (TX), through the resistors (5 V -> 3 V). IO15 also works (auto-detected).
@@ -61,7 +60,6 @@ int pickRxPin() {
 #define CAM_VSYNC 25
 #define CAM_HREF 23
 #define CAM_PCLK 22
-#define FLASH_LED 4
 
 #define BOUNDARY "flycarframe"
 static const char *STREAM_TYPE = "multipart/x-mixed-replace;boundary=" BOUNDARY;
@@ -137,6 +135,7 @@ static esp_err_t indexHandler(httpd_req_t *req) {
 static esp_err_t statusHandler(httpd_req_t *req) {
   char t[420];
   snprintf(t, sizeof(t),
+           "Firmware: koz-flash-off-v1; white LED control held LOW\n"
            "WiFi: %s, signal %d dBm (-50 very good, -67 good, -75 weak, -85 too weak)\n"
            "Arduino wire found on: IO%d\nbytes FROM the Arduino: %lu\nbytes TO the Arduino: %lu\nlaptop connected: %s\n"
            "\n(refresh this page while the car app runs stage 1 or 2: 'FROM' must keep growing)\n",
@@ -230,20 +229,18 @@ void startWifi() {
     WiFi.softAP(AP_NAME, AP_PASSWORD);
     WiFi.setSleep(false);
     address = WiFi.softAPIP().toString();
-    Serial.printf("Made its own WiFi: \"%s\", password \"%s\". Connect the Mac to it.\n", AP_NAME, AP_PASSWORD);
+    Serial.println("Made its own WiFi. Use the access-point settings saved in wifi_settings.h.");
   }
   if (MDNS.begin("flycar-cam")) MDNS.addService("http", "tcp", 80);
 }
 
 void setup() {
-  // The ESP32-CAM resets itself when its 5 V dips for a moment (WiFi sending pulls big current spikes).
-  // This turns that self-reset off, so a short dip doesn't kill the stream. Still give it good power:
-  // short thick wires straight from the LM2596, plus a 100-470 uF capacitor across 5V and GND if you have one.
-  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
+  disableFlashLight();                // first operation, before camera/WiFi initialization
+  // Keep the platform's brownout detector enabled. An unstable supply must reset
+  // the camera rather than run with low-voltage protection deliberately disabled.
   Serial.begin(115200);
-  pinMode(FLASH_LED, OUTPUT);
-  digitalWrite(FLASH_LED, LOW);
   Serial.println();
+  Serial.println("Firmware: koz-flash-off-v1; white LED control held LOW");
   if (!startCamera()) {
     Serial.println("Check the camera ribbon cable and the 5 V power. Restarting in 3 s.");
     delay(3000);

@@ -14,7 +14,8 @@
 // Commands are exact lines (motor_logic.h: parseCommand); anything else is ignored.
 //
 // The numbers marked MEASURE come from firmware/stop_test (see its README). Until they are
-// measured, these defaults are deliberately slow and careful.
+// measured, the stop distance is provisional. The command cap below is owner-selected,
+// not a measured safe speed or a guarantee that all four motors will turn.
 #include <Servo.h>
 #include "motor_logic.h"
 
@@ -24,19 +25,18 @@ const int CENTER_DEG = 90;               // straight ahead (car.ino CENTER_DEG)
 const int ENA = 5, IN1 = 7, IN2 = 8;     // L298N, left motors
 const int ENB = 6, IN3 = 9, IN4 = 10;    // L298N, right motors
 
-// Islombek's battery and motors (his car.ino, Oct 18): a 9.5 V pack, and the L298N loses about 2 V,
-// so the motors could get 7.5 V. Yellow TT motors are made for 3-6 V: commands are lifted into
-// MIN_PWM..MAX_PWM, which gives them 1.8-6 V. Measure the pack with a multimeter and write it here.
-const float BATTERY_V = 9.5;
+// Owner measured 9 V at the battery and L298N input at rest (Oct 26). The driver
+// drop is an estimate; this PWM scaling is not a regulated motor power supply.
+const float BATTERY_V = 9.0;
 const float MOTOR_MAX_V = 6.0, MOTOR_MIN_V = 1.8, DRIVER_DROP_V = 2.0;
 const float MOTOR_SUPPLY_V = BATTERY_V - DRIVER_DROP_V;
-const int MAX_PWM = 255.0 * MOTOR_MAX_V / MOTOR_SUPPLY_V > 255 ? 255 : (int)(255.0 * MOTOR_MAX_V / MOTOR_SUPPLY_V);   // 204
-const int MIN_PWM = (int)(255.0 * MOTOR_MIN_V / MOTOR_SUPPLY_V);                                                     // 61
+const int MAX_PWM = 255.0 * MOTOR_MAX_V / MOTOR_SUPPLY_V > 255 ? 255 : (int)(255.0 * MOTOR_MAX_V / MOTOR_SUPPLY_V);   // 218
+const int MIN_PWM = (int)(255.0 * MOTOR_MIN_V / MOTOR_SUPPLY_V);                                                     // 65
 const int RAMP_PER_MS = 2;                 // soft start: 0 -> full speed in about 0.1 s (car.ino)
 const uint32_t REVERSE_PAUSE_MS = 40;      // a change of direction waits this long at a stop
 
 MotorSettings settings = {
-  /* speed_cap   */ 120,     // MEASURE: the fastest command whose stopping distance you accept
+  /* speed_cap   */ 180,     // owner requested Oct 26; stopping distance NOT calibrated
   /* reverse_cap */ 90,      // backwards is blind: slower
   /* min_pwm     */ MIN_PWM, // below this the motors only buzz
   /* stop_cm     */ 35,      // MEASURE: stopping distance at speed_cap + reaction distance + 10 cm

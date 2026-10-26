@@ -1,12 +1,12 @@
 # Ko'z: tell a camera what job to do
 
-**Technical report, OpenCV AI Competition 2026. Draft of Oct 16.**
-Islombek Turdiyev (Tashkent, Uzbekistan). Every measured number below comes from
-`docs/TRIALS.md`, which also keeps the failures. **TODO** marks numbers that are not measured yet
-(the robot car, live trials, AWS); they stay TODO until they are measured.
+**Technical report, OpenCV AI Competition 2026. Oct 26.**
+Islombek Turdiyev (Uzbekistan). Every measured number below comes from
+`docs/TRIALS.md`, which also keeps the failures. Numbers that were not measured say "not measured" or "not run"
+(mostly the robot car); nothing unmeasured is claimed.
 
-Architecture diagram: `docs/architecture.svg`. Repository: TODO (public GitHub link).
-Live endpoint: TODO (`https://<Elastic IP>/`, Oct 19).
+Architecture diagram: `docs/architecture.svg`. Repository: https://github.com/TurdiyevIslombek/koz
+Live endpoint: https://16.178.45.27/ (AWS, Sydney; judges see a read-only view).
 
 ---
 
@@ -170,11 +170,11 @@ capped on the board and on the computer. Only the colour finder feeds the brain 
 | Simulation: reaching a ball 2 m away from 0, ±25 and +40 degrees | about 3 s (simulation only; car speed assumed) |
 | Simulation: ball never seen, on the right | still 101 cm away after 6 s (it searches left first) |
 | Simulation: ball in the middle of the view | 26–37% of the time (it zig-zags) |
-| Speed cap and stopping distance on the car (`firmware/stop_test`) | **TODO** |
-| 10 chase trials on the car: reached the ball | **TODO** / 10, failures: **TODO** |
-| Time to reach the ball (median) | **TODO** |
-| Frames per second from the ESP32-CAM | **TODO** |
-| Option B (the brain chases) vs the Oct 21 time box | **TODO** (reliable = at least 7 of 10 trials; if not by Oct 21, the brain only avoids obstacles and a simple pull steers, and the report says so) |
+| Speed cap and stopping distance on the car (`firmware/stop_test`) | **Not measured.** On Oct 26 only 1 of 4 motors turned at command 100 with the wheels raised, and the car did not move at commands 20 and 40 |
+| 10 chase trials on the car: reached the ball | **Not run** (stopped for safety, see below) |
+| Time to reach the ball (median) | **Not measured** |
+| Frames per second from the ESP32-CAM | **Not measured** |
+| Option B (the brain chases) on the real car | **Not shown.** Tested only in simulation (reaches the ball in about 3 s from most start angles). Car trials were stopped on Oct 26: the ESP32-CAM became hot enough to burn the owner's hand and only 1 of 4 motors turned. Safety came first; this is an open result, not a pass |
 
 ## 7. AWS
 
@@ -184,9 +184,9 @@ What runs on AWS (Asia Pacific, Sydney `ap-southeast-2`, the Region AWS gives ne
   certificate for the Elastic IP, renewed automatically). It checks every event against the
   contract, delivers the owner's 4 commands, and streams the live view to browsers.
 - **DynamoDB** (table `koz-web`, made by the stack with the database's own auto-delete, TTL) for
-  events (7 days), totals (30 days) and saved trial summaries. The web app's DynamoDB storage and
-  the 30-day totals are **TODO** (Codex); today it keeps events in a local file and filters out and
-  removes those older than 7 days.
+  events (7 days), totals (30 days) and saved trial summaries. On AWS the web app stores events and 30-day
+  totals in DynamoDB with TTL set (`web/server/dynamo.mjs`); on the local computer it keeps events in
+  a file and removes those older than 7 days.
 - **Amazon Bedrock**: the AI planner option, Amazon Nova 2 Lite through the EU cross-region
   inference profile (requests stay in AWS EU Regions). It sees only the typed sentence.
 
@@ -199,11 +199,11 @@ command or re-arms motors.
 
 | AWS result | Value |
 |---|---|
-| Deployed and reachable over HTTPS | **TODO** (Oct 19) |
-| Event delay, camera computer → judge's browser | **TODO** |
-| Offline shown after unplugging the computer | **TODO** s |
-| Bedrock planner on the 40 test sentences | **TODO** / 20 and **TODO** / 20 (bar: 18 / 20 each, as for Gemma), **TODO** s per plan |
-| Cost for the competition period | **TODO** (AWS Billing) |
+| Deployed and reachable over HTTPS | Yes: CloudFormation stack in ap-southeast-2 (Sydney), one t3.micro, valid HTTPS certificate, updated 4 times (`docs/AWS_DAY.md`) |
+| Event delay, camera computer → judge's browser | Not measured |
+| Offline shown after unplugging the computer | Not measured |
+| Bedrock planner on the 40 test sentences | 0 / 20 and 0 / 20: every call failed, because this new account has a zero daily Bedrock allowance; the rule planner stays the default |
+| Cost for the competition period | $0 real money; about $0.48 a day from the free-plan credits |
 
 ## 8. Evaluation
 
@@ -235,7 +235,7 @@ stops all 23. NanoDet found a bed in 7 of 11 bedroom photos and a toilet in 7 of
 | Quick turn from a desk to a bed | 0.07 s |
 | Moving-car setting | 0.20 s (worst case about 0.57 s) |
 | Slow 1 s pan to a toilet | before the toilet was half in view |
-| **Live camera** | **TODO** |
+| **Live camera (Oct 25 recordings)** | Stopped every time a bed, a sink in a bathroom or a toilet came into view; exact stop time not measured from the screen recording (sampled every 5 s) |
 
 Speed on the MacBook Air (640 × 480, guard + face blur + colour finder): 87–93 frames per second
 with a still view, 82–86 while the camera swings (the camera itself gives about 30).
@@ -262,24 +262,24 @@ while panning across the seam (a false stop, on the safe side).
 | 20 sentences (5 English, 5 Russian, 5 Uzbek Latin, 5 Uzbek Cyrillic, 3 refusals), camera running | Rule planner **18/20**; Gemma 4 on the laptop **14/20** (refused every counting job), 5.5 s median per plan. The rule planner stayed the default |
 | Islombek's 20 fresh sentences, scored before any fix | 20/20, but 4 of 7 refusals only because no job word matched (an AI planner would have seen them) |
 | The same after new refusal rules | 20/20, every refusal by a rule. **Tuned on this set: not a fair score** |
-| A fresh, unseen set | **TODO** |
-| Bedrock (Nova 2 Lite) | **TODO** (section 7) |
+| A fresh, unseen set | Not run |
+| Bedrock (Nova 2 Lite) | Could not run (zero daily allowance, section 7) |
 
 ### 8.5 The agent's adjust step (test clips)
 
 On drawn test clips: asked for red, the ball looks orange-red → `hue_center` 0 → 13 → found, runs.
 No ball at all → one change, then `CHECK_FAILED`. A change that never helps → 3 rounds, then
 `ADJUSTMENT_LIMIT`. From the Setup page on a recorded clip: "Yashil koptokni top" → `hue_center`
-60 → 77 → found. **On a live camera: TODO.**
+60 → 77 → found. **On the live camera (Oct 25 recording `tracking_test`):** a lime ball was lost at `hue_center` 52, the check "target visible" failed, the tuner measured the ball's colour and changed `hue_center` 52 → 31, and the next observation said "left". The website's evidence panel shows this chain: observation → decision → new setting → next observation.
 
 ### 8.6 Trials still to run (10 per demo)
 
 | Demo | Trials | Result |
 |---|---|---|
-| 1. Fly-brain car chases the red ball | 10 | **TODO** |
-| 2. Classroom counter, faces blurred (counted vs counted by hand) | 10 | **TODO** |
-| 3. Privacy guard (`TRIALS.md` trials 1–10, S1–S2) | 12 | **TODO** |
-| Face blur on real faces | — | **TODO** |
+| 1. Fly-brain car chases the red ball | 0 of 10 run | Stopped for safety (hot camera board, motors not turning) |
+| 2. Counter, faces blurred (one 2 min 40 s session, walking in and out of a doorway) | 1 session | Ko'z counted 11 in and 9 out. The walker alternated in and out, so the true numbers differ by at most 1: at least one crossing was missed or miscounted. Not counted by hand, so the exact error is unknown |
+| 3. Privacy guard (Oct 25 recordings) | 9 stops observed | Toilet: stopped. Sink in a bathroom: stopped. Bed: stopped (several times). Lens covered: stopped ("too dark"). Room model: stopped twice with "looks like a changing room". In a normal room it ran once and stopped once with "a bed is in view" (whether a bed was in the picture is not confirmed) |
+| Face blur on real faces | 4 recordings | In every sampled frame (every 4–5 s, about 90 frames) where the owner's face was visible, it was blurred. A sample, not every frame |
 
 ## 9. Limitations
 
@@ -288,7 +288,7 @@ No ball at all → one change, then `CHECK_FAILED`. A change that never helps �
   At a desk in a bedroom it can stop often. Strict mode stops all 23 but refuses most homes.
 - **Software can't prove who owns a camera or where it points.** Ko'z asks the owner to confirm
   ownership and draw the allowed area, and says so.
-- **Face blur is not yet tested on real faces** (TODO). The colour finder counts any round thing
+- **Face blur was checked on one person's face only** (sampled frames of the Oct 25 recordings). The colour finder counts any round thing
   of that colour (a red plate, a red lamp). The object finder (Oct 22) is **not yet measured on
   real things**; small things far away (a phone across the room) are hard for NanoDet at 320 px,
   and "silver" is read as grey. Someone swaying on the counting line can be counted in
@@ -318,7 +318,7 @@ Safety lives in fixed code, not in the AI (`CLAUDE.md`, rules agreed Oct 14):
 | The cloud gets numbers, not pictures | the event format has no field for images, names, free text or track numbers |
 | Stale means "unknown", not 0 | late frames → `unknown`; motors stop |
 | Motors stop by themselves | disarmed at start, 250 ms watchdog, obstacle stop, armed only by a person |
-| Data deletes itself | events after 7 days (built in the web app's local storage; DynamoDB TTL on AWS: TODO), totals after 30 (TODO) |
+| Data deletes itself | events after 7 days (local file on the computer; DynamoDB TTL on AWS), totals after 30 days (DynamoDB TTL) |
 
 Refused jobs never run (section 2). Trials run in Islombek's home or places he has permission to
 film, with nobody undressed or asleep in view; the video is filmed outside the bedroom, only with
